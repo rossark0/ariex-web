@@ -1,0 +1,64 @@
+'use client';
+
+import { useAuth } from '@/contexts/auth/AuthStore';
+import { useUiStore } from '@/contexts/ui/UiStore';
+import { cn } from '@/lib/utils';
+import { Chat } from '../chat';
+import { usePathname } from 'next/navigation';
+import { getFullUserProfile } from '@/contexts/auth/data/mock-users';
+import type { FullClientMock } from '@/lib/mocks/client-full';
+import { getStrategistById } from '@/lib/mocks/strategist-full';
+
+export default function ChatSidebar() {
+  const pathname = usePathname();
+  const user = useAuth(state => state.user);
+  const isStrategist = user?.role === 'STRATEGIST';
+  const isClient = user?.role === 'CLIENT';
+  const { isChatSidebarCollapsed } = useUiStore();
+
+  // Hide sidebar for all client routes
+  const isClientsRoute = pathname.startsWith('/strategist/clients');
+  
+  if (isClientsRoute) {
+    return null;
+  }
+
+  // Get strategist info for client users
+  let chatTitle: string | undefined;
+  let chatSubtitle: string | undefined;
+  let strategistName: string | undefined;
+
+  if (isClient && user) {
+    const clientProfile = getFullUserProfile(user) as FullClientMock | null;
+    if (clientProfile?.strategistId) {
+      const strategist = getStrategistById(clientProfile.strategistId);
+      if (strategist && strategist.user.name) {
+        strategistName = strategist.user.name;
+        chatTitle = strategistName;
+        chatSubtitle = 'Your Tax Strategist';
+      }
+    }
+  }
+
+  // Determine chat mode
+  const chatMode = isStrategist ? 'multi' : 'single';
+
+  return (
+    <div
+      className={cn(
+        'relative hidden h-full flex-col gap-4 transition-all duration-300 ease-in-out md:flex',
+        isChatSidebarCollapsed ? 'w-0' : 'w-90'
+      )}
+    >
+      {/* Expanded State - Show full chat */}
+      <div
+        className={cn(
+          'h-full w-full flex-col gap-4 transition-opacity duration-200',
+          isChatSidebarCollapsed ? 'hidden opacity-0' : 'flex opacity-100'
+        )}
+      >
+        <Chat mode={chatMode} title={chatTitle} subtitle={chatSubtitle} />
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,12 @@
+
+> web@0.0.0 dev /Users/ederrosa/Documents/clients/ariex/apps/web
+> next dev --turbo
+
+  [1m[38;2;173;127;168m▲ Next.js 14.2.33[39m[22m (turbo)
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ [32m[1m✓[22m[39m Starting...
+ [32m[1m✓[22m[39m Compiled in 271ms
+ [32m[1m✓[22m[39m Ready in 1241ms
+[?25h
