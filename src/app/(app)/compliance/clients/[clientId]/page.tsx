@@ -138,11 +138,11 @@ export default function ComplianceClientDetailPage({ params }: Props) {
             <div className="flex-1">
               <div className="font-medium text-zinc-900">{strategyDoc.originalName}</div>
               <div className="text-sm text-zinc-500">
-                {strategyDoc.signedAt
+                {/* {strategyDoc.signedAt
                   ? `Signed on ${strategyDoc.signedAt.toLocaleDateString()}`
-                  : strategyDoc.sentAt
-                    ? `Sent on ${strategyDoc.sentAt.toLocaleDateString()}`
-                    : 'Draft'}
+                  : strategyDoc?.sentAt
+                    ? `Sent on ${strategyDoc?.sentAt.toLocaleDateString()}`
+                    : 'Draft'} */}
               </div>
             </div>
             <Button

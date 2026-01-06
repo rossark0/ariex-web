@@ -1,9 +1,22 @@
 import { z } from 'zod';
 import { authenticatedProcedure } from '../base';
-import type { Subscription } from '@ariexai/shared';
-import { SubscriptionStatus, PlanType } from '@ariexai/shared';
 
-// Mock data store - Replace with actual database calls
+// Local type definitions
+export type SubscriptionStatus = 'ACTIVE' | 'CANCELLED' | 'EXPIRED' | 'PENDING';
+export type PlanType = 'FREE' | 'BASIC' | 'PREMIUM' | 'ENTERPRISE';
+
+export interface Subscription {
+  id: string;
+  userId: string;
+  planType: PlanType;
+  status: SubscriptionStatus;
+  startDate: Date;
+  endDate: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Mock data store
 const subscriptions: Subscription[] = [];
 
 /**
@@ -11,8 +24,6 @@ const subscriptions: Subscription[] = [];
  */
 export const getCurrentSubscription = authenticatedProcedure.handler(
   async ({ context }): Promise<Subscription | null> => {
-    // TODO: Replace with actual database query
-    // For now, returning a mock subscription
     return subscriptions.find(s => s.userId === context.userId) || null;
   }
 );
@@ -21,19 +32,14 @@ export const getCurrentSubscription = authenticatedProcedure.handler(
  * Get subscription by ID
  */
 export const getSubscription = authenticatedProcedure
-  .input(
-    z.object({
-      id: z.string().uuid(),
-    })
-  )
+  .input(z.object({ id: z.string() }))
   .handler(async ({ input, context }): Promise<Subscription> => {
-    // TODO: Replace with actual database query
-    const subscription = subscriptions.find(s => s.id === input.id && s.userId === context.userId);
-
+    const subscription = subscriptions.find(
+      s => s.id === input.id && s.userId === context.userId
+    );
     if (!subscription) {
       throw new Error('Subscription not found');
     }
-
     return subscription;
   });
 
@@ -43,27 +49,20 @@ export const getSubscription = authenticatedProcedure
 export const createSubscription = authenticatedProcedure
   .input(
     z.object({
-      planType: z.nativeEnum(PlanType),
-      stripeSubscriptionId: z.string().optional(),
-      stripeCustomerId: z.string().optional(),
+      planType: z.enum(['FREE', 'BASIC', 'PREMIUM', 'ENTERPRISE']),
     })
   )
   .handler(async ({ input, context }): Promise<Subscription> => {
-    // TODO: Replace with actual database insert and Stripe integration
     const newSubscription: Subscription = {
-      id: crypto.randomUUID(),
+      id: `sub_${Date.now()}`,
       userId: context.userId,
-      status: SubscriptionStatus.ACTIVE,
       planType: input.planType,
-      currentPeriodStart: new Date(),
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-      cancelAtPeriodEnd: false,
-      stripeSubscriptionId: input.stripeSubscriptionId || null,
-      stripeCustomerId: input.stripeCustomerId || null,
+      status: 'ACTIVE',
+      startDate: new Date(),
+      endDate: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-
     subscriptions.push(newSubscription);
     return newSubscription;
   });
@@ -74,56 +73,43 @@ export const createSubscription = authenticatedProcedure
 export const updateSubscription = authenticatedProcedure
   .input(
     z.object({
-      id: z.string().uuid(),
-      status: z.nativeEnum(SubscriptionStatus).optional(),
-      planType: z.nativeEnum(PlanType).optional(),
-      cancelAtPeriodEnd: z.boolean().optional(),
+      id: z.string(),
+      planType: z.enum(['FREE', 'BASIC', 'PREMIUM', 'ENTERPRISE']).optional(),
+      status: z.enum(['ACTIVE', 'CANCELLED', 'EXPIRED', 'PENDING']).optional(),
     })
   )
   .handler(async ({ input, context }): Promise<Subscription> => {
-    // TODO: Replace with actual database update
-    const subscriptionIndex = subscriptions.findIndex(
+    const index = subscriptions.findIndex(
       s => s.id === input.id && s.userId === context.userId
     );
-
-    if (subscriptionIndex === -1) {
+    if (index === -1) {
       throw new Error('Subscription not found');
     }
-
-    const { id, ...updates } = input;
-    subscriptions[subscriptionIndex] = {
-      ...subscriptions[subscriptionIndex],
-      ...updates,
+    subscriptions[index] = {
+      ...subscriptions[index],
+      ...input,
       updatedAt: new Date(),
     };
-
-    return subscriptions[subscriptionIndex];
+    return subscriptions[index];
   });
 
 /**
  * Cancel subscription
  */
 export const cancelSubscription = authenticatedProcedure
-  .input(
-    z.object({
-      id: z.string().uuid(),
-    })
-  )
+  .input(z.object({ id: z.string() }))
   .handler(async ({ input, context }): Promise<Subscription> => {
-    // TODO: Replace with actual Stripe cancellation and database update
-    const subscriptionIndex = subscriptions.findIndex(
+    const index = subscriptions.findIndex(
       s => s.id === input.id && s.userId === context.userId
     );
-
-    if (subscriptionIndex === -1) {
+    if (index === -1) {
       throw new Error('Subscription not found');
     }
-
-    subscriptions[subscriptionIndex] = {
-      ...subscriptions[subscriptionIndex],
-      cancelAtPeriodEnd: true,
+    subscriptions[index] = {
+      ...subscriptions[index],
+      status: 'CANCELLED',
+      endDate: new Date(),
       updatedAt: new Date(),
     };
-
-    return subscriptions[subscriptionIndex];
+    return subscriptions[index];
   });

@@ -1,6 +1,28 @@
 import { z } from 'zod';
 import { authenticatedProcedure, baseProcedure } from '../base';
-import type { User, CreateUserDto, UpdateUserDto } from '@ariexai/shared';
+
+// Local type definitions (previously from @ariexai/shared)
+export interface User {
+  id: string;
+  email: string;
+  name: string | null;
+  role: 'ADMIN' | 'CLIENT';
+  createdAt: Date;
+  updatedAt: Date;
+  clerkId: string;
+  avatarUrl: string | null;
+}
+
+export interface CreateUserDto {
+  firebaseId: string;
+  email: string;
+  name?: string;
+  role?: 'ADMIN' | 'CLIENT';
+}
+
+export interface UpdateUserDto {
+  name?: string;
+}
 
 // Mock data store - Replace with actual database calls
 const users: User[] = [];
