@@ -124,7 +124,7 @@ function groupDocumentsByDate(
 
 export default function ClientHomePage() {
   useRoleRedirect('CLIENT');
-  const user = useAuth(state => state.user);
+  const { user } = useAuth();
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
 
   const toggleDocSelection = (docId: string) => {

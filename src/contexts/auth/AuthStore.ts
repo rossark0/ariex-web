@@ -1,44 +1,46 @@
-import { createStore } from 'zustand/vanilla';
-import { useStore } from 'zustand';
+import { create } from 'zustand';
 import { User } from '@/types/user';
-import { authenticateUser, getFullUserProfile, getRoleHomePath } from './data/mock-users';
+import { authenticateUser, getRoleHomePath } from './data/mock-users';
 
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  isHydrated: boolean;
   setUser: (user: User | null) => void;
   setIsAuthenticated: (authenticated: boolean) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   login: (email: string, password: string) => Promise<{ success: boolean; redirectTo?: string }>;
   logout: () => void;
+  hydrate: () => void;
 }
 
-// Check if auth is bypassed and get initial user from localStorage
-const bypassAuth = process.env.NEXT_PUBLIC_AUTH_BYPASS === 'true';
-let initialUser: User | null = null;
-
-if (typeof window !== 'undefined' && bypassAuth) {
-  const stored = localStorage.getItem('ariex_mock_user');
-  if (stored) {
-    try {
-      initialUser = JSON.parse(stored);
-    } catch (e) {
-      console.error('Failed to parse stored user', e);
+// Helper function to safely access localStorage (only on client)
+const getStoredUser = (): User | null => {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const stored = localStorage.getItem('ariex_mock_user');
+    if (stored) {
+      return JSON.parse(stored);
     }
+  } catch (e) {
+    console.error('Failed to parse stored user', e);
   }
-}
+  return null;
+};
 
-export const authStore = createStore<AuthState>((set, get) => ({
-  user: initialUser,
-  isAuthenticated: !!initialUser,
+export const useAuthStore = create<AuthState>((set, get) => ({
+  user: null,
+  isAuthenticated: false,
+  isHydrated: false,
   isLoading: false,
   error: null,
   setUser: user => {
     set({ user, isAuthenticated: !!user, error: null });
-    if (typeof window !== 'undefined' && bypassAuth) {
+    if (typeof window !== 'undefined') {
       if (user) {
         localStorage.setItem('ariex_mock_user', JSON.stringify(user));
         // Also set cookie for middleware access
@@ -68,7 +70,7 @@ export const authStore = createStore<AuthState>((set, get) => ({
       set({ user, isAuthenticated: true, isLoading: false, error: null });
 
       // Store in localStorage and cookies for persistence
-      if (typeof window !== 'undefined' && bypassAuth) {
+      if (typeof window !== 'undefined') {
         localStorage.setItem('ariex_mock_user', JSON.stringify(user));
         // Set cookies for middleware
         document.cookie = `ariex_user_role=${user.role}; path=/; max-age=86400`;
@@ -83,13 +85,22 @@ export const authStore = createStore<AuthState>((set, get) => ({
   },
   logout: () => {
     set({ user: null, isAuthenticated: false, error: null });
-    if (typeof window !== 'undefined' && bypassAuth) {
+    if (typeof window !== 'undefined') {
       localStorage.removeItem('ariex_mock_user');
       // Clear cookies
       document.cookie = 'ariex_user_role=; path=/; max-age=0';
       document.cookie = 'ariex_user_id=; path=/; max-age=0';
     }
   },
+  hydrate: () => {
+    const storedUser = getStoredUser();
+    set({ 
+      user: storedUser, 
+      isAuthenticated: !!storedUser,
+      isHydrated: true 
+    });
+  },
 }));
 
-export const useAuth = <T>(selector: (state: AuthState) => T) => useStore(authStore, selector);
+// Backwards compatible export - use useAuthStore directly
+export const useAuth = useAuthStore;

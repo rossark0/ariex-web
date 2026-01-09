@@ -8,21 +8,22 @@ import { Button } from '@/components/ui/button';
 
 export default function LoginPage() {
   const router = useRouter();
-  const login = useAuth(state => state.login);
-  const isLoading = useAuth(state => state.isLoading);
-  const error = useAuth(state => state.error);
-  const user = useAuth(state => state.user);
-  const isAuthenticated = useAuth(state => state.isAuthenticated);
+  const { login, isLoading, error, user, isAuthenticated, isHydrated, hydrate } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  // Hydrate auth state from localStorage on mount
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isHydrated && isAuthenticated && user) {
       router.push(getRoleHomePath(user.role));
     }
-  }, [isAuthenticated, user, router]);
+  }, [isHydrated, isAuthenticated, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

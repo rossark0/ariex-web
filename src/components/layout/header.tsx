@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button';
 
 export default function Header() {
   const router = useRouter();
-  const user = useAuth(state => state.user);
-  const logout = useAuth(state => state.logout);
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
     logout();

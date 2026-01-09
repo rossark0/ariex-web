@@ -23,8 +23,7 @@ interface SidebarProps {
 export default function Sidebar({ items, className }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const user = useAuth(state => state.user);
-  const logout = useAuth(state => state.logout);
+  const { user, logout } = useAuth();
   const { isSidebarCollapsed } = useUiStore();
   const isClientRole = user?.role === 'CLIENT';
   const isStrategistRole = user?.role === 'STRATEGIST';

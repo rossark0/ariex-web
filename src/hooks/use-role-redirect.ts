@@ -14,9 +14,7 @@ const roleHomeMap: Record<Role, string> = {
 
 export function useRoleRedirect(allowedRoles?: Role[] | Role) {
   const router = useRouter();
-  const user = useAuth(state => state.user);
-  const isAuthenticated = useAuth(state => state.isAuthenticated);
-  const isLoading = useAuth(state => state.isLoading);
+  const { user, isAuthenticated, isLoading } = useAuth();
   const role = (user?.role as Role | undefined) ?? null;
   const bypassAuth = process.env.NEXT_PUBLIC_AUTH_BYPASS === 'true';
 

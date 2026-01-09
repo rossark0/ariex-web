@@ -46,7 +46,7 @@ export default function ClientAppLayout({ children }: { children: React.ReactNod
   useRoleRedirect('CLIENT');
   const router = useRouter();
   const pathname = usePathname();
-  const user = useAuth(state => state.user);
+  const { user } = useAuth();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {

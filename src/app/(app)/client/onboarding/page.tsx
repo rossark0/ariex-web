@@ -342,7 +342,7 @@ function StepIndicator({ currentStep, steps }: StepIndicatorProps) {
 
 export default function ClientOnboardingPage() {
   const router = useRouter();
-  const user = useAuth(state => state.user);
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
 
   // Get client data

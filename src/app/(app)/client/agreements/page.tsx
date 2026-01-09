@@ -92,7 +92,7 @@ function groupDocumentsByDate(
 
 export default function ClientAgreementsPage() {
   useRoleRedirect('CLIENT');
-  const user = useAuth(state => state.user);
+  const { user } = useAuth();
   const [selectedAgreements, setSelectedAgreements] = useState<Set<string>>(new Set());
   const setSelection = useUiStore(state => state.setSelection);
 

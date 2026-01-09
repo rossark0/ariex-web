@@ -124,7 +124,7 @@ function groupDocumentsByDate(
 
 export default function ClientDashboardPage() {
   useRoleRedirect('CLIENT');
-  const user = useAuth(state => state.user);
+  const { user } = useAuth();
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
 
   // Get the current client data from auth

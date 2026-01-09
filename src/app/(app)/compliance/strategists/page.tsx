@@ -1,61 +1,133 @@
 'use client';
 
+import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
+import { SideSheet } from '@/components/ui/side-sheet';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
-import { useRouter } from 'next/navigation';
+import { getFullClientsByStrategist } from '@/lib/mocks/client-full';
+import { FullStrategistMock, getAllStrategists } from '@/lib/mocks/strategist-full';
+import { MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { ChevronDown } from 'lucide-react';
+import { useState } from 'react';
+import { StrategistCard, StrategistClientsSheetContent } from './components';
 
-// Mock strategist data
-const strategists = [
-  { id: 'strategist-001', name: 'Alex Morgan', clientCount: 23, status: 'Active' },
-  { id: 'strategist-002', name: 'Sarah Thompson', clientCount: 18, status: 'Active' },
-  { id: 'strategist-003', name: 'Michael Chen', clientCount: 15, status: 'Active' },
-  { id: 'strategist-004', name: 'Emily Rodriguez', clientCount: 21, status: 'Active' },
-  { id: 'strategist-005', name: 'David Kim', clientCount: 12, status: 'Active' },
-  { id: 'strategist-006', name: 'Jessica Martinez', clientCount: 19, status: 'Active' },
-];
+// Get all strategists
+const strategists = getAllStrategists();
 
 export default function ComplianceStrategistsPage() {
   useRoleRedirect('COMPLIANCE');
-  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStrategist, setSelectedStrategist] = useState<FullStrategistMock | null>(null);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+  const handleStrategistClick = (strategist: FullStrategistMock) => {
+    setSelectedStrategist(strategist);
+    setIsSheetOpen(true);
+  };
+
+  const handleCloseSheet = () => {
+    setIsSheetOpen(false);
+    setSelectedStrategist(null);
+  };
+
+  // Filter strategists based on search
+  const filteredStrategists = strategists.filter(strategist => {
+    const matchesSearch =
+      !searchQuery ||
+      strategist.user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      strategist.user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      strategist.profile.title?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchesSearch;
+  });
 
   return (
-    <section className="flex flex-col gap-6 p-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Strategists</h1>
-        <p className="mt-1 text-sm text-zinc-600">Monitor all tax strategists and their clients</p>
-      </div>
-
-      {/* Strategist List */}
-      <div className="flex flex-col gap-3">
-        {strategists.map(strategist => (
-          <button
-            key={strategist.id}
-            onClick={() => router.push(`/compliance/strategists/${strategist.id}`)}
-            className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-4 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50"
-          >
-            <div className="flex items-center gap-4">
-              {/* Avatar */}
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800 text-sm font-semibold text-white">
-                {strategist.name
-                  .split(' ')
-                  .map(n => n[0])
-                  .join('')}
-              </div>
-
-              {/* Info */}
+    <div className="flex min-h-full flex-col">
+      <div className="flex-1">
+        {/* Header Section */}
+        <div className="shrink-0 bg-white pt-20 pb-6">
+          <div className="mx-auto w-full max-w-[642px]">
+            {/* Title Row */}
+            <div className="mb-6 flex items-start justify-between">
               <div>
-                <div className="font-semibold text-zinc-900">{strategist.name}</div>
-                <div className="text-sm text-zinc-500">{strategist.clientCount} clients</div>
+                <h1 className="mb-2 text-2xl font-medium tracking-tight">Strategists</h1>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Monitor all tax strategists and their clients
+                </p>
               </div>
             </div>
 
-            {/* Status */}
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-700">
-              {strategist.status}
-            </span>
-          </button>
-        ))}
+            {/* Search Row */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              {/* Search Input */}
+              <div className="relative">
+                <MagnifyingGlassIcon
+                  weight="bold"
+                  className="absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500"
+                />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="h-[30px] w-64 rounded-lg border border-zinc-200 bg-white pr-3 pl-7 text-sm font-medium text-zinc-900 shadow placeholder:text-zinc-400 hover:bg-zinc-100 focus:border-zinc-300 focus:outline-none"
+                />
+              </div>
+              {/* Filter Button */}
+              <div className="flex items-center gap-2">
+                <button className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50">
+                  <span>Filter</span>
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Cards Grid Section */}
+        <div className="bg-white pb-42">
+          <div className="mx-auto w-full max-w-[642px] py-6">
+            {/* Cards Grid */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {filteredStrategists.map(strategist => (
+                <StrategistCard
+                  key={strategist.user.id}
+                  strategist={strategist}
+                  onClick={() => handleStrategistClick(strategist)}
+                />
+              ))}
+            </div>
+
+            {/* Empty State */}
+            {filteredStrategists.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="mb-1 text-lg font-semibold text-zinc-800">No strategists found</p>
+                <p className="text-sm text-zinc-400">
+                  {searchQuery ? 'Try adjusting your search' : 'No strategists available'}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-    </section>
+
+      <AiFloatingChatbot />
+
+      {/* Strategist Clients Sheet */}
+      <SideSheet
+        isOpen={isSheetOpen}
+        onClose={handleCloseSheet}
+        title={selectedStrategist?.user.name || ''}
+        subtitle={
+          selectedStrategist
+            ? `${getFullClientsByStrategist(selectedStrategist.user.id).length} clients`
+            : ''
+        }
+        width="lg"
+      >
+
+        {selectedStrategist && <StrategistClientsSheetContent strategist={selectedStrategist} />}
+
+      </SideSheet>
+    </div>
   );
 }

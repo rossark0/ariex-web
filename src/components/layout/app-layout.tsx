@@ -18,7 +18,7 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
   const pathname = usePathname();
   const isClientPage = pathname.startsWith('/strategist/clients/');
   const { isSidebarCollapsed, selectedCount, onClearSelection } = useUiStore();
-  const user = useAuth(state => state.user);
+  const { user } = useAuth();
   const isClientRole = user?.role === 'CLIENT';
   const isCompliance = pathname.startsWith('/compliance');
   const isPayments = pathname.startsWith('/client/payments');

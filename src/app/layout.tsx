@@ -1,4 +1,5 @@
 import { ThemeProvider } from '@/components/providers/theme-provider';
+import { AuthProvider } from '@/contexts/auth/components/auth-provider';
 import { ORPCProvider } from '@/orpc/react';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
@@ -22,7 +23,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           enableSystem
           disableTransitionOnChange
         >
-          <ORPCProvider>{children}</ORPCProvider>
+          <ORPCProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </ORPCProvider>
         </ThemeProvider>
       </body>
     </html>

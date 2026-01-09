@@ -88,7 +88,7 @@ function groupDocumentsByDate(
 
 export default function ClientDocumentsPage() {
   useRoleRedirect('CLIENT');
-  const user = useAuth(state => state.user);
+  const { user } = useAuth();
 
   // Get the current client data from auth
   if (!user) {

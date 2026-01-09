@@ -47,7 +47,7 @@ function formatDueDate(date: Date): { main: string; sub: string } {
 
 export default function ClientPaymentsPage() {
   useRoleRedirect('CLIENT');
-  const user = useAuth(state => state.user);
+  const { user } = useAuth();
   const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set());
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const setSelection = useUiStore(state => state.setSelection);

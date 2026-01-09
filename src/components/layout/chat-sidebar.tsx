@@ -16,6 +16,8 @@ export default function ChatSidebar() {
   const isClient = user?.role === 'CLIENT';
   const { isChatSidebarCollapsed } = useUiStore();
 
+console.log(user)
+
   // Hide sidebar for all client routes
   const isClientsRoute = pathname.startsWith('/strategist/clients');
   
