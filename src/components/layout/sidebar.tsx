@@ -1,13 +1,12 @@
 'use client';
 
-import Link from 'next/link';
-import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
-import { Icon, Command, User, Buildings, CaretDown, SignOut } from '@phosphor-icons/react';
-import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { useUiStore } from '@/contexts/ui/UiStore';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { Buildings, CaretDown, Command, Icon, SignOut, User } from '@phosphor-icons/react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 
 export interface SidebarItem {
   href: string;
@@ -92,7 +91,7 @@ export default function Sidebar({ items, className }: SidebarProps) {
         {/* User Profile */}
         <Popover>
           <PopoverTrigger asChild>
-            <button className="flex w-full items-center gap-3 rounded-lg p-1 transition-colors hover:bg-zinc-50">
+            <button className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-1 transition-colors hover:bg-zinc-50">
               <div className="relative h-8 w-8 overflow-hidden rounded-md bg-zinc-200">
                 <div className="flex h-full w-full items-center justify-center text-xs font-medium text-zinc-600">
                   {user?.name?.charAt(0) || 'U'}
@@ -104,19 +103,40 @@ export default function Sidebar({ items, className }: SidebarProps) {
               <CaretDown weight="bold" className="h-3 w-3 text-zinc-400" />
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-56 p-2" align="end" side="top">
-            <div className="flex flex-col gap-1">
-              <div className="px-2 py-1.5">
-                <p className="text-sm font-medium text-zinc-900">{user?.name || 'User'}</p>
-                <p className="text-xs text-zinc-500">{user?.email || ''}</p>
+          <PopoverContent className="w-56 p-0.5" align="start" side="top">
+            <div className="flex flex-col">
+              {/* User Info */}
+              <div className="flex items-center gap-3 rounded-md px-2 py-2">
+                <div className="relative h-8 w-8 overflow-hidden rounded-md bg-zinc-200">
+                  <div className="flex h-full w-full items-center justify-center text-xs font-medium text-zinc-600">
+                    {user?.name?.charAt(0) || 'U'}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-zinc-900">{user?.name || 'User'}</p>
+                  <p className="text-xs text-zinc-500">{user?.email || ''}</p>
+                </div>
               </div>
-              <div className="h-px bg-zinc-200" />
-              <button
-                onClick={handleLogout}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-100"
-              >
-                <SignOut weight="bold" className="h-4 w-4" />
-                Sign out
+
+              <div className='px-2 mb-2'>
+                {/* Sign Out */}
+                <button
+                  onClick={handleLogout}
+                  className="flex cursor-pointer w-full items-center justify-center gap-2 rounded-md bg-zinc-100 py-1.5 text-xs font-semibold text-zinc-500 transition-colors"
+                >
+                  <SignOut weight="bold" className="h-3.5 w-3.5 text-zinc-500" />
+                  Sign out
+                </button>
+              </div>
+
+              <div className='h-px mx-2 bg-zinc-200'/>
+
+              <button className="flex mt-2 cursor-pointer w-full items-center justify-between rounded-md px-2 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-100">
+                <div className="flex items-center gap-2">
+                  <Command weight="bold" className="h-4 w-4 text-zinc-400" />
+                  Settings
+                </div>
+                <span className="text-xs text-zinc-400">⌘,</span>
               </button>
             </div>
           </PopoverContent>

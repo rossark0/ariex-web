@@ -1,17 +1,26 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { MinusIcon, X, CaretUp, Paperclip, ArrowUp } from '@phosphor-icons/react';
+import { MinusIcon, X, CaretUp, Paperclip, ArrowUp, Robot, User } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { EmptyMessagesIllustration } from '@/components/ui/empty-messages-illustration';
+import { useUiStore, type AiMessage } from '@/contexts/ui/UiStore';
 
 interface AiFloatingChatbotProps {
   selectedCount?: number;
   onClearSelection?: () => void;
+  contextType?: string;
 }
 
-export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFloatingChatbotProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function AiFloatingChatbot({ selectedCount = 0, onClearSelection, contextType = 'item' }: AiFloatingChatbotProps) {
+  const { 
+    aiMessages, 
+    isAiChatOpen, 
+    setAiChatOpen, 
+    addAiMessage, 
+    askAriexWithContext,
+    clearAiMessages 
+  } = useUiStore();
   const [input, setInput] = useState('');
   const [isMultiLine, setIsMultiLine] = useState(false);
   const [showSelectionBar, setShowSelectionBar] = useState(false);
@@ -19,6 +28,12 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
   const [showFloatingButton, setShowFloatingButton] = useState(true);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [aiMessages]);
 
   // Handle selection bar visibility with animation
   useEffect(() => {
@@ -56,16 +71,16 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
   };
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isAiChatOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (!wrapperRef.current) return;
       if (!wrapperRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        setAiChatOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+  }, [isAiChatOpen, setAiChatOpen]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -75,28 +90,47 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
 
       if (event.key === '/' && !isInputFocused) {
         event.preventDefault();
-        setIsOpen(true);
+        setAiChatOpen(true);
         // Use a slight delay to ensure the textarea is rendered
         setTimeout(() => {
           textareaRef.current?.focus();
         }, 0);
       }
 
-      if (event.key === 'Escape' && isOpen) {
+      if (event.key === 'Escape' && isAiChatOpen) {
         event.preventDefault();
-        setIsOpen(false);
+        setAiChatOpen(false);
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
+  }, [isAiChatOpen, setAiChatOpen]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isAiChatOpen) {
       requestAnimationFrame(() => autoResize());
     }
-  }, [isOpen, input]);
+  }, [isAiChatOpen, input]);
+
+  const handleSendMessage = () => {
+    if (!input.trim()) return;
+    
+    addAiMessage({ role: 'user', content: input.trim() });
+    setInput('');
+    
+    // Simulate AI response
+    setTimeout(() => {
+      addAiMessage({ 
+        role: 'assistant', 
+        content: "I understand your question. As your AI tax assistant, I'm here to help you understand your tax documents, payments, and agreements. Is there anything specific you'd like me to explain or help you with?" 
+      });
+    }, 1000);
+  };
+
+  const handleAskAriex = () => {
+    askAriexWithContext(contextType, selectedCount);
+  };
 
   return (
     <div
@@ -122,7 +156,10 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
             </div>
 
             {/* Add to folder button */}
-            <button className="flex cursor-pointer items-center gap-1.5 rounded-full border border-zinc-200 bg-white py-1.5 pr-3 pl-3 text-sm font-medium text-teal-600 shadow-lg transition-colors hover:bg-teal-50">
+            <button 
+              onClick={handleAskAriex}
+              className="flex cursor-pointer items-center gap-1.5 rounded-full border border-zinc-200 bg-white py-1.5 pr-3 pl-3 text-sm font-medium text-teal-600 shadow-lg transition-colors hover:bg-teal-50"
+            >
               <span>Ask Ariex</span>
             </button>
           </div>
@@ -130,7 +167,7 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
       )}
 
       {/* Expanded chat surface */}
-      {isOpen && (
+      {isAiChatOpen && (
         <div
           className="absolute bottom-0 mb-2 w-full transition-all duration-300"
           aria-label="AI Chat Panel"
@@ -142,26 +179,66 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
                   Ask questions or generate strategy notes
                 </span>
               </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="rounded-full px-3 py-1 text-xs font-medium text-zinc-500 hover:bg-zinc-100"
-              >
-                <MinusIcon className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                {aiMessages.length > 0 && (
+                  <button
+                    onClick={clearAiMessages}
+                    className="rounded-full px-3 py-1 text-xs font-medium text-zinc-500 hover:bg-zinc-100"
+                  >
+                    Clear
+                  </button>
+                )}
+                <button
+                  onClick={() => setAiChatOpen(false)}
+                  className="rounded-full px-3 py-1 text-xs font-medium text-zinc-500 hover:bg-zinc-100"
+                >
+                  <MinusIcon className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
-            <div className="flex min-h-96 flex-col items-center justify-center gap-3 px-4 pb-4">
-              <div className="text-center -translate-y-4">
-                <p className="text-sm font-medium text-zinc-700">No messages yet</p>
-                <p className="mt-1 text-xs text-zinc-500">Ask Ariex anything to get started</p>
-              </div>
+            <div className="flex min-h-96 max-h-96 flex-col gap-6 overflow-y-auto px-6 pb-[200px]">
+              {aiMessages.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center gap-3">
+                  <div className="text-center -translate-y-4">
+                    <p className="text-sm font-medium text-zinc-700">No messages yet</p>
+                    <p className="mt-1 text-xs text-zinc-500">Ask Ariex anything to get started</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {aiMessages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={cn(
+                        'flex flex-col',
+                        message.role === 'user' ? 'items-end' : 'items-start'
+                      )}
+                    >
+                      {message.role === 'user' ? (
+                        <div className="max-w-[80%] rounded-2xl bg-zinc-100 px-4 py-2.5">
+                          <p className="text-base text-zinc-900">{message.content}</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-start gap-3">
+                          <p className="text-base text-zinc-900 whitespace-pre-wrap">{message.content}</p>
+                          <button className="rounded-full border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
+                            Say more
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
+                </>
+              )}
             </div>
           </div>
         </div>
       )}
 
       {/* Input anchored at bottom, grows upward */}
-      {isOpen ? (
+      {isAiChatOpen ? (
         <div className="z-40 -translate-y-4 scale-[97%] transition-all duration-300">
           <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 hover:bg-white focus-within:ring-2 focus-within:ring-zinc-300">
             {/* Textarea */}
@@ -173,6 +250,10 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
               onChange={e => setInput(e.target.value)}
               onInput={autoResize}
               onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
                 if (e.key === 'Enter' && e.shiftKey) {
                   requestAnimationFrame(() => autoResize());
                 }
@@ -193,6 +274,7 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
             <button
               type="button"
               disabled={!input.trim()}
+              onClick={handleSendMessage}
               className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white transition-all hover:bg-emerald-700 disabled:bg-zinc-300 disabled:cursor-not-allowed"
               aria-label="Send message"
             >
@@ -210,8 +292,8 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
               placeholder="Press '/' to use AriexAI..."
               value={input}
               onChange={e => setInput(e.target.value)}
-              onClick={() => setIsOpen(true)}
-              onFocus={() => setIsOpen(true)}
+              onClick={() => setAiChatOpen(true)}
+              onFocus={() => setAiChatOpen(true)}
               onInput={autoResize}
               onKeyDown={e => {
                 if (e.key === 'Enter' && e.shiftKey) {
@@ -225,7 +307,7 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
             {showFloatingButton && (
               <button
                 onClick={() => {
-                  setIsOpen(true);
+                  setAiChatOpen(true);
                   setTimeout(() => {
                     textareaRef.current?.focus();
                   }, 0);

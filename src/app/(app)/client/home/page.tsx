@@ -196,7 +196,7 @@ export default function ClientDashboardPage() {
         {/* Top Section - Onboarding Activity Timeline */}
         <div className="shrink-0 bg-zinc-50/90 pt-8 pb-6">
           <div className="mx-auto w-full max-w-[642px]">
-            <h2 className="mb-4 text-xl font-medium text-zinc-900">Your to-dos</h2>
+            <h2 className="mb-6 text-2xl font-medium text-zinc-900">Your to-dos</h2>
             <div className="relative pl-6">
               <div className="flex flex-col gap-0">
                 {/* Step 1: Account Created - Always complete */}
@@ -467,7 +467,7 @@ export default function ClientDashboardPage() {
         {/* Bottom Section - Recent Documents */}
         <div className="bg-white pb-42">
           <div className="mx-auto flex w-full max-w-[642px] flex-col py-6">
-            <h2 className="mb-4 text-xl font-medium text-zinc-900">Documents required</h2>
+            <h2 className="mb-4 text-lg font-medium text-zinc-900">Documents required</h2>
             {/* Empty State - No documents yet */}
             {currentClient.documents.filter(d => d.category !== 'contract').length === 0 && (
               <div className="flex flex-col items-center justify-center pt-24 pb-12 text-center">

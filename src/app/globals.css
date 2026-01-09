@@ -133,4 +133,12 @@
   *::-webkit-scrollbar-corner {
     background: transparent;
   }
+
+  /* Global text selection styling */
+  *::selection {
+    @apply bg-emerald-100 text-emerald-700;
+  }
+  *::-moz-selection {
+    @apply bg-emerald-100 text-emerald-700;
+  }
 }

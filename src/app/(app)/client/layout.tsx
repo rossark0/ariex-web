@@ -11,7 +11,7 @@ import type { FullClientMock } from '@/lib/mocks/client-full';
 
 const navItems = [
   { href: '/client/home', label: 'Home', icon: House },
-  { href: '/client/uploads', label: 'Uploads', icon: Upload },
+  { href: '/client/documents', label: 'Documents', icon: Upload },
   { href: '/client/agreements', label: 'Agreements', icon: FileText },
   { href: '/client/payments', label: 'Payments', icon: CreditCard },
 ];
@@ -82,7 +82,7 @@ export default function ClientAppLayout({ children }: { children: React.ReactNod
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-900" />
       </div>
     );
-  }
+  } 
 
   return (
     <AppLayout navItems={navItems}>{children}</AppLayout>

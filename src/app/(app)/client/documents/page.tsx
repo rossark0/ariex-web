@@ -86,7 +86,7 @@ function groupDocumentsByDate(
   return groups;
 }
 
-export default function ClientUploadsPage() {
+export default function ClientDocumentsPage() {
   useRoleRedirect('CLIENT');
   const user = useAuth(state => state.user);
 
@@ -96,7 +96,7 @@ export default function ClientUploadsPage() {
       <div className="flex min-h-full flex-col items-center justify-center">
         <div className="text-center">
           <h1 className="text-xl font-semibold text-zinc-900">Not authenticated</h1>
-          <p className="text-zinc-500">Please sign in to view your uploads.</p>
+          <p className="text-zinc-500">Please sign in to view your documents.</p>
         </div>
       </div>
     );
@@ -120,7 +120,7 @@ export default function ClientUploadsPage() {
   return (
     <div className="bg-white pb-24">
       <div className="mx-auto flex w-full max-w-[642px] flex-col py-6">
-        <h2 className="mb-4 text-xl font-medium text-zinc-900">Documents required</h2>
+        <h2 className="mb-6 text-2xl font-medium text-zinc-900">Documents</h2>
         
         {/* Empty State - No documents yet */}
         {currentClient.documents.filter(d => d.category !== 'contract').length === 0 && (

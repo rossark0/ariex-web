@@ -17,10 +17,21 @@ interface AppLayoutProps {
 export default function AppLayout({ children, navItems }: AppLayoutProps) {
   const pathname = usePathname();
   const isClientPage = pathname.startsWith('/strategist/clients/');
-  const { isSidebarCollapsed } = useUiStore();
+  const { isSidebarCollapsed, selectedCount, onClearSelection } = useUiStore();
   const user = useAuth(state => state.user);
   const isClientRole = user?.role === 'CLIENT';
   const isCompliance = pathname.startsWith('/compliance');
+  const isPayments = pathname.startsWith('/client/payments');
+  const isDocuments = pathname.startsWith('/client/documents');
+  const isAgreements = pathname.startsWith('/client/agreements');
+
+  // Determine context type for AI chatbot based on current page
+  const getContextType = () => {
+    if (isPayments) return 'payment';
+    if (isAgreements) return 'agreement';
+    if (isDocuments) return 'document';
+    return 'item';
+  };
 
   return (
     <div className="flex h-screen overscroll-none bg-white">
@@ -54,10 +65,10 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
             {children}
           </div>
           
-          {isClientRole && <AiFloatingChatbot />}
+          {isClientRole ? <AiFloatingChatbot selectedCount={selectedCount} onClearSelection={onClearSelection ?? undefined} contextType={getContextType()} /> : null}
         </div>
       </main>
-      {!isCompliance && <aside className="hidden h-[calc(100vh-0.5rem)] flex-col gap-4 pt-4 pr-4 md:flex">
+      {!isCompliance && !isPayments && !isDocuments && <aside className="hidden h-[calc(100vh-0.5rem)] flex-col gap-4 pt-4 pr-4 md:flex">
         <ChatSidebar />
       </aside>}
     </div>
