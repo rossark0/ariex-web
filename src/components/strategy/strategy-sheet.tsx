@@ -504,7 +504,7 @@ export function StrategySheet({ client, isOpen, onClose }: StrategySheetProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col">
+    <div className="fixed inset-0 z-[99999] flex flex-col">
       {/* Backdrop */}
       <div
         onClick={handleClose}
