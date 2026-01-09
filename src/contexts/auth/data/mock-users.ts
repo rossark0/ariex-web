@@ -61,19 +61,19 @@ export const mockUsers: MockUserWithPassword[] = [
   },
 
   // ADMIN ROLE
-  {
-    user: {
-      id: 'user-admin-001',
-      email: 'admin@ariex.ai',
-      name: 'System Administrator',
-      role: 'ADMIN',
-      createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-01'),
-    },
-    password: 'password',
-    displayName: 'System Administrator',
-    description: 'Full system access and configuration',
-  },
+  // {
+  //   user: {
+  //     id: 'user-admin-001',
+  //     email: 'admin@ariex.ai',
+  //     name: 'System Administrator',
+  //     role: 'ADMIN',
+  //     createdAt: new Date('2024-01-01'),
+  //     updatedAt: new Date('2024-01-01'),
+  //   },
+  //   password: 'password',
+  //   displayName: 'System Administrator',
+  //   description: 'Full system access and configuration',
+  // },
 ];
 
 /**

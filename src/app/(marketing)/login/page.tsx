@@ -43,7 +43,7 @@ export default function LoginPage() {
   // Don't render login form if already authenticated
   if (isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
+      <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="text-center">
           <div className="mb-4 text-lg text-zinc-600">Redirecting to your dashboard...</div>
         </div>
@@ -52,104 +52,92 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-12">
-      <div className="w-full max-w-6xl">
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-zinc-900">Ariex Platform</h1>
-          <p className="mt-2 text-zinc-600">Tax Strategy Management System</p>
-        </div>
+    <div className="flex min-h-screen flex-col bg-white">
+      {/* Header */}
+      <div className="flex items-center gap-2 p-6">
+        <span className="font-mono text-sm font-medium text-zinc-500 uppercase">ARIEX AI</span>
+      </div>
 
-        <div className="grid gap-8 lg:grid-cols-2">
-          {/* Login Form */}
-          <div className="rounded-lg bg-white p-8 shadow-sm">
-            <h2 className="mb-6 text-2xl font-semibold text-zinc-900">Sign In</h2>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-zinc-700">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  placeholder="user@ariex.ai"
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-zinc-700">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  placeholder="password"
-                  required
-                />
-              </div>
-
-              {error && (
-                <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">
-                  {error}
-                </div>
-              )}
-
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
-              >
-                {isLoading ? 'Signing in...' : 'Sign In'}
-              </Button>
-            </form>
+      {/* Main Content */}
+      <div className="flex flex-1 items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          {/* Title */}
+          <div className="mb-8">
+            <h1 className="text-2xl tracking-tight font-semibold text-zinc-900">Your tax workspace.</h1>
+            <p className="text-2xl tracking-tight text-zinc-400">Sign in to your account</p>
           </div>
 
           {/* Quick Login Options */}
-          <div className="rounded-lg bg-white p-8 shadow-sm">
-            <h2 className="mb-6 text-2xl font-semibold text-zinc-900">Quick Login</h2>
-            <p className="mb-6 text-sm text-zinc-600">
-              Development environment: Click any role to sign in instantly
-            </p>
-
-            <div className="space-y-3">
-              {mockUsers.map(mockUser => (
-                <button
-                  key={mockUser.user.id}
-                  onClick={() => handleQuickLogin(mockUser.user.email, mockUser.password)}
-                  disabled={isLoading}
-                  className="w-full rounded-lg border border-zinc-200 bg-white p-4 text-left transition-all hover:border-emerald-500 hover:bg-emerald-50 disabled:opacity-50"
+          <div className="space-y-2">
+            {mockUsers.map(mockUser => (
+              <button
+                key={mockUser.user.id}
+                onClick={() => handleQuickLogin(mockUser.user.email, mockUser.password)}
+                disabled={isLoading}
+                className="flex cursor-pointer w-full items-center gap-3 rounded-md border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+              >
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold ${getRoleBadgeColor(mockUser.user.role)}`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-zinc-900">{mockUser.displayName}</span>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${getRoleBadgeColor(mockUser.user.role)}`}
-                        >
-                          {mockUser.user.role}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-sm text-zinc-500">{mockUser.description}</p>
-                      <p className="mt-2 text-xs text-zinc-400">{mockUser.user.email}</p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
+                  {mockUser.user.role.charAt(0)}
+                </span>
+                <span>Continue as {mockUser.displayName}</span>
+              </button>
+            ))}
+          </div>
 
-            <div className="mt-6 rounded-md bg-zinc-50 p-4">
-              <p className="text-xs text-zinc-600">
-                <strong>Default Password:</strong> password
+          {/* Divider */}
+          <div className="my-6 h-px bg-zinc-200" />
+
+          {/* Email Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-xs text-zinc-500">
+                Work email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="mt-1 block w-full rounded-none border-b-2 border-zinc-300 bg-transparent px-0 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none focus:ring-0"
+                placeholder="user@ariex.ai"
+                required
+              />
+              <p className="mt-1 text-xs text-zinc-400">
+                Use an organization email to easily collaborate with teammates
               </p>
             </div>
-          </div>
+
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="hidden"
+              defaultValue="password"
+            />
+
+            {error && (
+              <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full rounded-md bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700"
+            >
+              {isLoading ? 'Signing in...' : 'Continue'}
+            </Button>
+          </form>
+
+          {/* Terms */}
+          <p className="mt-6 text-center text-xs text-zinc-500">
+            By continuing, you acknowledge that you understand and agree to the{' '}
+            <a href="#" className="text-zinc-600 underline">Terms & Conditions</a> and{' '}
+            <a href="#" className="text-zinc-600 underline">Privacy Policy</a>
+          </p>
         </div>
       </div>
     </div>
