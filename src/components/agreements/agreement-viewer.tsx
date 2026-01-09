@@ -101,7 +101,7 @@ export function AgreementViewer({ agreementId, onClose }: AgreementViewerProps) 
                   </div>
                   <h3 className="mb-2 font-semibold text-zinc-900">Quarterly Consultations</h3>
                   <p className="text-sm text-zinc-600 leading-relaxed">
-                    Regular check-ins to review progress, adjust strategies, and ensure you're on
+                    Regular check-ins to review progress, adjust strategies, and ensure you&apos;re on
                     track to meet your financial and tax goals.
                   </p>
                 </div>
