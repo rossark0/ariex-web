@@ -1,16 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
 import { useRouter } from 'next/navigation';
 import { getFullClientById } from '@/lib/mocks/client-full';
+import { getStrategistById } from '@/lib/mocks/strategist-full';
 import {
   getClientTimelineAndStatus,
   CLIENT_STATUS_CONFIG,
   type ClientStatusKey,
 } from '@/lib/client-status';
 import {
-  ArrowLeftIcon,
   BuildingsIcon,
   EnvelopeIcon,
   FileIcon,
@@ -20,8 +21,17 @@ import {
 } from '@phosphor-icons/react';
 import { Check, Clock, Strategy, Warning } from '@phosphor-icons/react/dist/ssr';
 import { Button } from '@/components/ui/button';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
 import { StrategySheet } from '@/components/strategy/strategy-sheet';
+import { useUiStore } from '@/contexts/ui/UiStore';
 import { ChevronDown } from 'lucide-react';
 
 interface Props {
@@ -112,6 +122,15 @@ export default function ComplianceClientDetailPage({ params }: Props) {
   const client = getFullClientById(params.clientId);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [isStrategySheetOpen, setIsStrategySheetOpen] = useState(false);
+  const { setSidebarCollapsed } = useUiStore();
+
+  // Collapse sidebar when entering this page
+  useEffect(() => {
+    setSidebarCollapsed(true);
+    return () => {
+      setSidebarCollapsed(false);
+    };
+  }, [setSidebarCollapsed]);
 
   const toggleDocSelection = (docId: string) => {
     setSelectedDocs(prev => {
@@ -172,21 +191,37 @@ export default function ComplianceClientDetailPage({ params }: Props) {
   const PlanIcon = statusIconMap[statusKey];
 
   const uploadedCount = client.documents.filter(d => d.category !== 'contract').length;
+  const strategist = getStrategistById(client.strategistId);
 
   return (
     <div className="flex min-h-full flex-col bg-white">
-      <div className="relative flex-1">
-        {/* Back Button */}
-        <div className="absolute top-4 left-4 mb-4 flex items-center gap-2">
-          <div
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-700"
-            onClick={() => router.back()}
-          >
-            <ArrowLeftIcon weight="bold" className="h-4 w-4" />
-          </div>
-        </div>
+      {/* Breadcrumb */}
+      <div className="fixed top-4 left-14 z-50 pl-2 pt-[15px] pb-2">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/compliance/strategists">Strategists</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href={`/compliance/strategists/${client.strategistId}`}>
+                  {strategist?.user.name || 'Unknown Strategist'}
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{client.user.name}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
 
-        <div className="relative z-40 mx-auto w-full max-w-2xl px-4 pt-22">
+      <div className="relative flex-1 pt-10">
+        <div className="relative z-40 mx-auto w-full max-w-2xl px-4 pt-8">
           {/* Banner color */}
           <div className="absolute top-0 left-0 -z-10 h-24 w-full bg-zinc-50" />
 

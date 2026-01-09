@@ -106,7 +106,7 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
   return (
     <div className="relative flex min-h-full flex-col bg-white">
       {/* Breadcrumb */}
-      <div className="shrink-0 pl-10.5 pt-[14px]">
+      <div className="fixed top-4 left-14 z-50 pl-2 pt-[15px] pb-2">
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -123,7 +123,7 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto pb-8">
+      <div className="flex-1 overflow-y-auto pt-10 pb-8">
         {/* Strategist Info */}
         <div className="mx-auto w-full max-w-[642px]">
           {/* Strategist Details Section */}
