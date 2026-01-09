@@ -1,6 +1,5 @@
 'use client';
 
-import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
 import { Button } from '@/components/ui/button';
 import { getFullClientsByStrategist, FullClientMock } from '@/lib/mocks/client-full';
 import { getClientStatus } from '@/lib/client-status';
@@ -387,8 +386,6 @@ export default function StrategistDashboardPage() {
           </div>
         </div>
       </div>
-
-      <AiFloatingChatbot />
     </div>
   );
 }

@@ -20,11 +20,12 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
   const { isSidebarCollapsed, selectedCount, onClearSelection } = useUiStore();
   const { user } = useAuth();
   const isClientRole = user?.role === 'CLIENT';
+  const isStrategistRole = user?.role === 'STRATEGIST';
   const isCompliance = pathname.startsWith('/compliance');
   const isComplianceStrategistDetail = pathname.match(/\/compliance\/strategists\/[^/]+$/);
-  const isPayments = pathname.startsWith('/client/payments');
-  const isDocuments = pathname.startsWith('/client/documents');
-  const isAgreements = pathname.startsWith('/client/agreements');
+  const isPayments = pathname.startsWith('/client/payments') || pathname.startsWith('/strategist/payments');
+  const isDocuments = pathname.startsWith('/client/documents') || pathname.startsWith('/strategist/documents');
+  const isAgreements = pathname.startsWith('/client/agreements') || pathname.startsWith('/strategist/agreements');
 
   // Determine context type for AI chatbot based on current page
   const getContextType = () => {
@@ -66,7 +67,7 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
             {children}
           </div>
           
-          {isClientRole ? <AiFloatingChatbot selectedCount={selectedCount} onClearSelection={onClearSelection ?? undefined} contextType={getContextType()} /> : null}
+          {(isClientRole || isStrategistRole) ? <AiFloatingChatbot selectedCount={selectedCount} onClearSelection={onClearSelection ?? undefined} contextType={getContextType()} /> : null}
         </div>
       </main>
       {(!isCompliance || isComplianceStrategistDetail) && <aside className="hidden h-[calc(100vh-0.5rem)] flex-col gap-4 pt-4 pr-4 md:flex">

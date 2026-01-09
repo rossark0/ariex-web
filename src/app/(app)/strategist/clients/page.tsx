@@ -1,6 +1,5 @@
 'use client';
 
-import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
 import { getClientStatus } from '@/lib/client-status';
 import { FullClientMock, getFullClientsByStrategist } from '@/lib/mocks/client-full';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
@@ -555,8 +554,6 @@ export default function StrategistClientsPage() {
           </div>
         </div>
       </div>
-
-      <AiFloatingChatbot />
 
       {/* Add Client Modal */}
       <AddClientModal

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
 import { ClientFloatingChat } from '@/components/chat/client-floating-chat';
 import { StrategySheet } from '@/components/strategy/strategy-sheet';
 import { Button } from '@/components/ui/button';
@@ -700,10 +699,6 @@ export default function StrategistClientDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <AiFloatingChatbot
-        selectedCount={selectedDocs.size}
-        onClearSelection={() => setSelectedDocs(new Set())}
-      />
       <ClientFloatingChat client={client} />
 
       {/* Strategy Sheet */}

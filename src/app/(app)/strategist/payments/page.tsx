@@ -225,7 +225,7 @@ export default function StrategistPaymentsPage() {
         {/* Payments Table */}
         {payments.length > 0 && (
           <div className="overflow-hidden rounded-lg">
-            <table className="w-full">
+            <table className="w-full table-fixed">
                 <thead className="bg-white border-b border-zinc-200">
                   <tr>
                     <th className="w-12 px-4 py-3">
@@ -242,16 +242,16 @@ export default function StrategistPaymentsPage() {
                         )}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">
+                    <th className="w-[35%] px-4 py-3 text-left text-xs font-medium text-zinc-500">
                       Description
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">
+                    <th className="w-[18%] px-4 py-3 text-left text-xs font-medium text-zinc-500">
                       Client
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">
+                    <th className="w-[15%] px-4 py-3 text-left text-xs font-medium text-zinc-500 whitespace-nowrap">
                       Due date
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">
+                    <th className="w-[15%] px-4 py-3 text-left text-xs font-medium text-zinc-500">
                       <button
                         onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
                         className="flex items-center gap-1 hover:text-zinc-700"
@@ -260,7 +260,7 @@ export default function StrategistPaymentsPage() {
                         <CaretUp className={`h-3 w-3 transition-transform ${sortDirection === 'desc' ? 'rotate-180' : ''}`} />
                       </button>
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500">
+                    <th className="w-[15%] px-4 py-3 text-right text-xs font-medium text-zinc-500">
                       Amount
                     </th>
                   </tr>
@@ -296,7 +296,7 @@ export default function StrategistPaymentsPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col">
-                            <span className="text-sm truncate max-w-42 font-medium text-zinc-900">
+                            <span className="truncate text-sm font-medium text-zinc-900" title={payment.description}>
                               {payment.description}
                             </span>
                             <span className="text-xs text-zinc-400">
@@ -305,12 +305,12 @@ export default function StrategistPaymentsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-sm text-zinc-700">
+                          <span className="truncate text-sm text-zinc-700">
                             {payment.clientName}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex flex-col">
+                          <div className="flex flex-col whitespace-nowrap">
                             <span className="text-sm font-medium text-zinc-900">{dueDate.main}</span>
                             <span className="text-xs text-zinc-400">{dueDate.sub}</span>
                           </div>
