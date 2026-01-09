@@ -9,7 +9,7 @@ const roleHomeMap: Record<Role, string> = {
   ADMIN: '/admin/dashboard',
   COMPLIANCE: '/compliance/strategists',
   STRATEGIST: '/strategist/home',
-  CLIENT: '/client/dashboard',
+  CLIENT: '/client/home',
 };
 
 export function useRoleRedirect(allowedRoles?: Role[] | Role) {

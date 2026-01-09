@@ -68,28 +68,26 @@ export default function Sidebar({ items, className }: SidebarProps) {
       {/* Bottom Section */}
       <div className="mt-auto flex flex-col gap-3">
         {/* Icon Buttons */}
-        <div className="flex items-center gap-2">
-          <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200">
-            <Command weight="bold" className="h-4 w-4" />
-          </button>
-          <button className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-600">
-            <User weight="fill" className="h-4 w-4" />
-          </button>
-          <button className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-600">
-            <Buildings weight="fill" className="h-4 w-4" />
-          </button>
-        </div>
+        {!isClientRole && (
+          <div className="flex items-center gap-2">
+            <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200">
+              <Command weight="bold" className="h-4 w-4" />
+            </button>
+            <button className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-600">
+              <User weight="fill" className="h-4 w-4" />
+            </button>
+            <button className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-600">
+              <Buildings weight="fill" className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Free Trial Badge */}
-        <button className="w-full rounded-md border border-zinc-200 py-0.5 text-xs font-medium tracking-wide text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700">
-          {isClientRole
-            ? 'CLIENT'
-            : isStrategistRole
-              ? 'TAX STRATEGIST'
-              : isComplianceRole
-                ? 'COMPLIANCE'
-                : 'ADMIN'}
-        </button>
+        {!isClientRole && (
+          <button className="w-full rounded-md border border-zinc-200 py-0.5 text-xs font-medium tracking-wide text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700">
+            {isStrategistRole ? 'TAX STRATEGIST' : isComplianceRole ? 'COMPLIANCE' : 'ADMIN'}
+          </button>
+        )}
 
         {/* User Profile */}
         <Popover>

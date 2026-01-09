@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { ChatMessage, type ChatMessageData } from './chat-message';
 import { useRef, useEffect, useState } from 'react';
 import { ArrowDown, ChatCircleDots } from '@phosphor-icons/react';
+import { EmptyMessagesIllustration } from '@/components/ui/empty-messages-illustration';
 
 interface ChatMessagesListProps {
   messages: ChatMessageData[];
@@ -71,6 +72,7 @@ export function ChatMessagesList({
         {/* Empty state */}
         {messages.length === 0 && !isTyping && (
           <div className="flex h-full flex-col items-center justify-center py-12 text-center">
+            <EmptyMessagesIllustration />
             <h3 className="mb-1 text-lg font-semibold text-zinc-800">{emptyStateTitle}</h3>
             <p className="max-w-sm text-sm font-medium text-zinc-500">{emptyStateSubtitle}</p>
           </div>

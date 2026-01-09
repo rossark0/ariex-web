@@ -135,7 +135,7 @@ export function getRoleHomePath(role: Role): string {
     ADMIN: '/admin/dashboard',
     COMPLIANCE: '/compliance/strategists',
     STRATEGIST: '/strategist/home',
-    CLIENT: '/client/dashboard',
+    CLIENT: '/client/home',
   };
 
   return roleHomeMap[role] || '/';

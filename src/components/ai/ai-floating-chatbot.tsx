@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { MinusIcon, X, CaretUp } from '@phosphor-icons/react';
+import { MinusIcon, X, CaretUp, Paperclip, ArrowUp } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 
 interface AiFloatingChatbotProps {
@@ -15,6 +15,7 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
   const [isMultiLine, setIsMultiLine] = useState(false);
   const [showSelectionBar, setShowSelectionBar] = useState(false);
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+  const [showFloatingButton, setShowFloatingButton] = useState(true);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -74,7 +75,10 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
       if (event.key === '/' && !isInputFocused) {
         event.preventDefault();
         setIsOpen(true);
-        textareaRef.current?.focus();
+        // Use a slight delay to ensure the textarea is rendered
+        setTimeout(() => {
+          textareaRef.current?.focus();
+        }, 0);
       }
     };
 
@@ -92,7 +96,7 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
     <div
       ref={wrapperRef}
       className={cn(
-        'sticky -bottom-1 z-50 mx-auto flex w-full max-w-2xl flex-col bg-transparent',
+        'relative sticky -bottom-1 z-50 mx-auto flex w-full max-w-2xl flex-col bg-transparent',
         showSelectionBar ? 'bg-transparent' : 'bg-white'
       )}
     >
@@ -146,26 +150,86 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
       )}
 
       {/* Input anchored at bottom, grows upward */}
-      <textarea
-        ref={textareaRef}
-        rows={1}
-        placeholder="Press '/' to use Ariex AI..."
-        value={input}
-        onChange={e => setInput(e.target.value)}
-        onClick={() => setIsOpen(true)}
-        onFocus={() => setIsOpen(true)}
-        onInput={autoResize}
-        onKeyDown={e => {
-          if (e.key === 'Enter' && e.shiftKey) {
-            requestAnimationFrame(() => autoResize());
-          }
-        }}
-        className={cn(
-          'z-40 min-h-[56px] w-full -translate-y-4 scale-[97%] resize-none rounded-4xl border border-zinc-200 bg-white px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-zinc-500 shadow-2xl transition-all duration-300 placeholder:text-zinc-500 hover:bg-white focus:outline-none',
-          // isMultiLine ? 'rounded-3xl' : 'rounded-full',
-          isOpen ? 'ring-2 ring-zinc-300' : ''
-        )}
-      />
+      {isOpen ? (
+        <div className="z-40 -translate-y-4 scale-[97%] transition-all duration-300">
+          <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 hover:bg-white focus-within:ring-2 focus-within:ring-zinc-300">
+            {/* Textarea */}
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              placeholder="Ask anything..."
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onInput={autoResize}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && e.shiftKey) {
+                  requestAnimationFrame(() => autoResize());
+                }
+              }}
+              className="flex-1 min-h-[56px] resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-black placeholder:text-zinc-500 focus:outline-none"
+            />
+
+            {/* Attachment Button */}
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 transition-all hover:bg-zinc-100"
+              aria-label="Attach file"
+            >
+              <Paperclip size={20} weight="bold" />
+            </button>
+
+            {/* Send Button */}
+            <button
+              type="button"
+              disabled={!input.trim()}
+              className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white transition-all hover:bg-emerald-700 disabled:bg-zinc-300 disabled:cursor-not-allowed"
+              aria-label="Send message"
+            >
+              <ArrowUp size={20} weight="bold" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="z-40 -translate-y-4 scale-[97%] transition-all duration-300">
+          <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 hover:bg-white focus-within:ring-2 focus-within:ring-zinc-300">
+            {/* Textarea */}
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              placeholder="Press '/' to use Ariex AI..."
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onClick={() => setIsOpen(true)}
+              onFocus={() => setIsOpen(true)}
+              onInput={autoResize}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && e.shiftKey) {
+                  requestAnimationFrame(() => autoResize());
+                }
+              }}
+              className="flex-1 min-h-[56px] resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-black placeholder:text-zinc-500 focus:outline-none"
+            />
+
+            {/* Floating Button - Right Side */}
+            {showFloatingButton && (
+              <button
+                onClick={() => {
+                  setIsOpen(true);
+                  setTimeout(() => {
+                    textareaRef.current?.focus();
+                  }, 0);
+                }}
+                className="mr-3 flex cursor-pointer items-center gap-2 rounded-full border border-zinc-200 bg-white px-2 py-2 transition-all hover:shadow-xl "
+              >
+                <div className="flex h-5 w-5 items-center justify-center rounded-md bg-emerald-100">
+                  <span className="text-sm font-extrabold text-emerald-600">/</span>
+                </div>
+                <span className="text-sm font-medium text-zinc-700">Ask AriexAI</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

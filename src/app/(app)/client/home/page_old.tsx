@@ -401,7 +401,7 @@ export default function ClientHomePage() {
                           ? `Initial documents uploaded · ${uploadedCount} files`
                           : step4Sent
                             ? 'Waiting for document upload'
-                            : 'Document request pending'}
+                            : 'Documents'}
                       </span>
                       <span className="text-sm text-zinc-500">
                         {step4Complete

@@ -7,7 +7,7 @@ const roleHomeMap: Record<Role, string> = {
   ADMIN: '/admin/dashboard',
   COMPLIANCE: '/compliance/strategists',
   STRATEGIST: '/strategist/home',
-  CLIENT: '/client/dashboard',
+  CLIENT: '/client/home',
 };
 
 // Define which roles can access which route patterns
