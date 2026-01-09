@@ -37,7 +37,7 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
     <div className="flex h-screen overscroll-none bg-white">
       <aside
         className={cn(
-          'hidden flex-col gap-4 p-4 px-2 pt-8 md:flex',
+          'hidden flex-col gap-4 p-4 px-2 pt-6 md:flex',
           isSidebarCollapsed ? 'w-0' : 'w-48',
           'transition-all duration-300 ease-in-out'
         )}
@@ -68,7 +68,7 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
           {isClientRole ? <AiFloatingChatbot selectedCount={selectedCount} onClearSelection={onClearSelection ?? undefined} contextType={getContextType()} /> : null}
         </div>
       </main>
-      {!isCompliance && !isPayments && !isDocuments && <aside className="hidden h-[calc(100vh-0.5rem)] flex-col gap-4 pt-4 pr-4 md:flex">
+      {!isCompliance && <aside className="hidden h-[calc(100vh-0.5rem)] flex-col gap-4 pt-4 pr-4 md:flex">
         <ChatSidebar />
       </aside>}
     </div>

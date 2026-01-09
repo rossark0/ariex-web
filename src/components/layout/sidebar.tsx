@@ -4,9 +4,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { useUiStore } from '@/contexts/ui/UiStore';
 import { cn } from '@/lib/utils';
-import { Buildings, CaretDown, Command, Icon, SignOut, User } from '@phosphor-icons/react';
+import { Buildings, CaretDown, Command, Icon, SignOut, User, Check } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export interface SidebarItem {
   href: string;
@@ -28,6 +29,9 @@ export default function Sidebar({ items, className }: SidebarProps) {
   const isClientRole = user?.role === 'CLIENT';
   const isStrategistRole = user?.role === 'STRATEGIST';
   const isComplianceRole = user?.role === 'COMPLIANCE';
+  const [selectedYear, setSelectedYear] = useState(2025);
+
+  const availableYears = [2025, 2024, 2023, 2022];
 
   const handleLogout = () => {
     logout();
@@ -40,6 +44,11 @@ export default function Sidebar({ items, className }: SidebarProps) {
 
   return (
     <div className={cn('flex h-full flex-col', className)}>
+      {/* Header */}
+      <div className='flex pl-2 items-center gap-2 mb-8'>
+        <span className="font-mono text-sm font-medium text-zinc-500 uppercase">ARIEX AI</span>
+      </div>
+
       {/* Navigation Items */}
       <nav className="flex flex-col gap-1">
         {items.map(item => {
@@ -88,6 +97,38 @@ export default function Sidebar({ items, className }: SidebarProps) {
           </button>
         )}
 
+        {/* Year Selector for Clients */}
+        {isClientRole && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="w-full cursor-pointer rounded-md border border-zinc-200 py-0.5 text-xs font-medium tracking-wide text-zinc-700 transition-colors duration-500 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700">
+                {selectedYear} TAX YEAR
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-36 px-0.5 py-1" align="start" side="top">
+              <div className="flex flex-col">
+                {availableYears.map(year => (
+                  <button
+                    key={year}
+                    onClick={() => setSelectedYear(year)}
+                    className={cn(
+                      'flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors',
+                      selectedYear === year
+                        ? 'bg-zinc-100 text-zinc-900'
+                        : 'text-zinc-600 hover:bg-zinc-50'
+                    )}
+                  >
+                    {year}
+                    {selectedYear === year && (
+                      <Check weight="bold" className="h-3.5 w-3.5 text-teal-600" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
+
         {/* User Profile */}
         <Popover>
           <PopoverTrigger asChild>
@@ -118,20 +159,20 @@ export default function Sidebar({ items, className }: SidebarProps) {
                 </div>
               </div>
 
-              <div className='px-2 mb-2'>
+              <div className="mb-2 px-2">
                 {/* Sign Out */}
                 <button
                   onClick={handleLogout}
-                  className="flex cursor-pointer w-full items-center justify-center gap-2 rounded-md bg-zinc-100 py-1.5 text-xs font-semibold text-zinc-500 transition-colors"
+                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-zinc-100 py-1.5 text-xs font-semibold text-zinc-500 transition-colors"
                 >
                   <SignOut weight="bold" className="h-3.5 w-3.5 text-zinc-500" />
                   Sign out
                 </button>
               </div>
 
-              <div className='h-px mx-2 bg-zinc-200'/>
+              <div className="mx-2 h-px bg-zinc-200" />
 
-              <button className="flex mt-2 cursor-pointer w-full items-center justify-between rounded-md px-2 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-100">
+              <button className="mt-2 flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-100">
                 <div className="flex items-center gap-2">
                   <Command weight="bold" className="h-4 w-4 text-zinc-400" />
                   Settings

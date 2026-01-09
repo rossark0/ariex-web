@@ -246,7 +246,7 @@ export function AiFloatingChatbot({
                             </div>
                           )}
                           <div className="max-w-[80%] rounded-2xl bg-zinc-100 px-4 py-2.5">
-                            <p className="text-base text-zinc-900">{message.content}</p>
+                            <p className="text-base text-zinc-900 break-words">{message.content}</p>
                           </div>
                         </div>
                       ) : (
@@ -288,7 +288,7 @@ export function AiFloatingChatbot({
                   requestAnimationFrame(() => autoResize());
                 }
               }}
-              className="min-h-[56px] flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-black placeholder:text-zinc-500 focus:outline-none"
+              className="min-h-[56px] flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-normal text-black placeholder:text-zinc-500 focus:outline-none"
             />
 
             {/* Attachment Button */}
@@ -330,7 +330,7 @@ export function AiFloatingChatbot({
                   requestAnimationFrame(() => autoResize());
                 }
               }}
-              className="min-h-[56px] flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-black placeholder:text-zinc-500 focus:outline-none"
+              className="min-h-[56px] flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-normal text-black placeholder:text-zinc-500 focus:outline-none"
             />
 
             {/* Floating Button - Right Side */}

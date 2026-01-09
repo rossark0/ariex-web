@@ -53,17 +53,17 @@ export function ChatHeader({
         <img
           src={avatarUrl}
           alt={title}
-          className="h-8 w-8 rounded-full object-cover"
+          className="h-8 w-8 rounded-lg object-cover"
         />
       ) : (
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-xs font-medium text-white">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-800 text-xs font-medium text-white">
           {title.includes(' ') ? getInitials(title) : <Robot weight="fill" className="h-4 w-4" />}
         </div>
       )}
 
       {/* Title and status */}
       <div className="flex-1">
-        <p className="text-lg font-medium text-zinc-900">{title}</p>
+        <p className="text-base font-medium text-zinc-900">{title}</p>
         <div className="flex items-center gap-1">
           <div className="relative flex h-1.5 w-1.5">
             {isOnline && (
