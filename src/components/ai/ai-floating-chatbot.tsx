@@ -1,9 +1,21 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { MinusIcon, X, CaretUp, Paperclip, ArrowUp, Robot, User } from '@phosphor-icons/react';
+import {
+  MinusIcon,
+  X,
+  CaretUp,
+  Paperclip,
+  ArrowUp,
+  Robot,
+  User,
+  ClipboardIcon,
+  PaperclipIcon,
+} from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { EmptyMessagesIllustration } from '@/components/ui/empty-messages-illustration';
+import { MarkdownContent } from '@/components/ui/markdown-content';
+import { MiniDocumentStack, MiniPaymentStack, MiniFileStack } from '@/components/ui/mini-document-illustration';
 import { useUiStore, type AiMessage } from '@/contexts/ui/UiStore';
 
 interface AiFloatingChatbotProps {
@@ -12,14 +24,18 @@ interface AiFloatingChatbotProps {
   contextType?: string;
 }
 
-export function AiFloatingChatbot({ selectedCount = 0, onClearSelection, contextType = 'item' }: AiFloatingChatbotProps) {
-  const { 
-    aiMessages, 
-    isAiChatOpen, 
-    setAiChatOpen, 
-    addAiMessage, 
+export function AiFloatingChatbot({
+  selectedCount = 0,
+  onClearSelection,
+  contextType = 'item',
+}: AiFloatingChatbotProps) {
+  const {
+    aiMessages,
+    isAiChatOpen,
+    setAiChatOpen,
+    addAiMessage,
     askAriexWithContext,
-    clearAiMessages 
+    clearAiMessages,
   } = useUiStore();
   const [input, setInput] = useState('');
   const [isMultiLine, setIsMultiLine] = useState(false);
@@ -115,15 +131,16 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection, context
 
   const handleSendMessage = () => {
     if (!input.trim()) return;
-    
+
     addAiMessage({ role: 'user', content: input.trim() });
     setInput('');
-    
+
     // Simulate AI response
     setTimeout(() => {
-      addAiMessage({ 
-        role: 'assistant', 
-        content: "I understand your question. As your AI tax assistant, I'm here to help you understand your tax documents, payments, and agreements. Is there anything specific you'd like me to explain or help you with?" 
+      addAiMessage({
+        role: 'assistant',
+        content:
+          "I understand your question. As your AI tax assistant, I'm here to help you understand your tax documents, payments, and agreements. Is there anything specific you'd like me to explain or help you with?",
       });
     }, 1000);
   };
@@ -156,7 +173,7 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection, context
             </div>
 
             {/* Add to folder button */}
-            <button 
+            <button
               onClick={handleAskAriex}
               className="flex cursor-pointer items-center gap-1.5 rounded-full border border-zinc-200 bg-white py-1.5 pr-3 pl-3 text-sm font-medium text-teal-600 shadow-lg transition-colors hover:bg-teal-50"
             >
@@ -197,17 +214,17 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection, context
               </div>
             </div>
 
-            <div className="flex min-h-96 max-h-96 flex-col gap-6 overflow-y-auto px-6 pb-[200px]">
+            <div className="flex max-h-96 min-h-96 flex-col gap-6 overflow-y-auto px-6 pb-[200px]">
               {aiMessages.length === 0 ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3">
-                  <div className="text-center -translate-y-4">
+                  <div className="text-center">
                     <p className="text-sm font-medium text-zinc-700">No messages yet</p>
                     <p className="mt-1 text-xs text-zinc-500">Ask Ariex anything to get started</p>
                   </div>
                 </div>
               ) : (
                 <>
-                  {aiMessages.map((message) => (
+                  {aiMessages.map(message => (
                     <div
                       key={message.id}
                       className={cn(
@@ -216,12 +233,25 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection, context
                       )}
                     >
                       {message.role === 'user' ? (
-                        <div className="max-w-[80%] rounded-2xl bg-zinc-100 px-4 py-2.5">
-                          <p className="text-base text-zinc-900">{message.content}</p>
+                        <div className="flex flex-col items-end gap-2">
+                          {message.context && (
+                            <div className="flex items-center gap-1">
+                              {message.context.type === 'payment' ? (
+                                <MiniPaymentStack count={message.context.count} />
+                              ) : message.context.type === 'document' ? (
+                                <MiniFileStack count={message.context.count} />
+                              ) : (
+                                <MiniDocumentStack count={message.context.count} />
+                              )}
+                            </div>
+                          )}
+                          <div className="max-w-[80%] rounded-2xl bg-zinc-100 px-4 py-2.5">
+                            <p className="text-base text-zinc-900">{message.content}</p>
+                          </div>
                         </div>
                       ) : (
                         <div className="flex flex-col items-start gap-3">
-                          <p className="text-base text-zinc-900 whitespace-pre-wrap">{message.content}</p>
+                          <MarkdownContent content={message.content} />
                           <button className="rounded-full border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
                             Say more
                           </button>
@@ -240,7 +270,7 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection, context
       {/* Input anchored at bottom, grows upward */}
       {isAiChatOpen ? (
         <div className="z-40 -translate-y-4 scale-[97%] transition-all duration-300">
-          <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 hover:bg-white focus-within:ring-2 focus-within:ring-zinc-300">
+          <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 focus-within:ring-2 focus-within:ring-emerald-100 focus:border-emerald-100! hover:bg-white">
             {/* Textarea */}
             <textarea
               ref={textareaRef}
@@ -258,7 +288,7 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection, context
                   requestAnimationFrame(() => autoResize());
                 }
               }}
-              className="flex-1 min-h-[56px] resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-black placeholder:text-zinc-500 focus:outline-none"
+              className="min-h-[56px] flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-black placeholder:text-zinc-500 focus:outline-none"
             />
 
             {/* Attachment Button */}
@@ -275,7 +305,7 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection, context
               type="button"
               disabled={!input.trim()}
               onClick={handleSendMessage}
-              className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white transition-all hover:bg-emerald-700 disabled:bg-zinc-300 disabled:cursor-not-allowed"
+              className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
               aria-label="Send message"
             >
               <ArrowUp size={20} weight="bold" />
@@ -284,7 +314,7 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection, context
         </div>
       ) : (
         <div className="z-40 -translate-y-4 scale-[97%] transition-all duration-300">
-          <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 hover:bg-white focus-within:ring-2 focus-within:ring-zinc-300">
+          <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 focus-within:ring-2 focus-within:ring-zinc-300 hover:bg-white">
             {/* Textarea */}
             <textarea
               ref={textareaRef}
@@ -300,7 +330,7 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection, context
                   requestAnimationFrame(() => autoResize());
                 }
               }}
-              className="flex-1 min-h-[56px] resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-black placeholder:text-zinc-500 focus:outline-none"
+              className="min-h-[56px] flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-black placeholder:text-zinc-500 focus:outline-none"
             />
 
             {/* Floating Button - Right Side */}
@@ -312,7 +342,7 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection, context
                     textareaRef.current?.focus();
                   }, 0);
                 }}
-                className="mr-3 flex cursor-pointer items-center gap-2 rounded-full border border-zinc-200 bg-white px-2 py-2 transition-all hover:shadow-xl "
+                className="mr-3 flex cursor-pointer items-center gap-2 rounded-full border border-zinc-200 bg-white px-2 py-2 transition-all hover:shadow-xl"
               >
                 <div className="flex h-5 w-8 items-center justify-center rounded-md bg-emerald-100">
                   <kbd className="text-xs font-extrabold text-emerald-600">TAB</kbd>

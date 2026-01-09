@@ -7,6 +7,10 @@ export interface AiMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  context?: {
+    type: string;
+    count: number;
+  };
 }
 
 interface UiState {
@@ -58,7 +62,7 @@ export const useUiStore = create<UiState>((set, get) => ({
     
     // Add user message with context
     const userMessage = `Analyze my ${count} selected ${contextType}${count > 1 ? 's' : ''}`;
-    addAiMessage({ role: 'user', content: userMessage });
+    addAiMessage({ role: 'user', content: userMessage, context: { type: contextType, count } });
     
     // Open the chat
     setAiChatOpen(true);
