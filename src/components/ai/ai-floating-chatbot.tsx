@@ -228,7 +228,7 @@ export function AiFloatingChatbot({
                     <div
                       key={message.id}
                       className={cn(
-                        'flex flex-col',
+                        'flex w-full flex-col',
                         message.role === 'user' ? 'items-end' : 'items-start'
                       )}
                     >
@@ -246,7 +246,7 @@ export function AiFloatingChatbot({
                             </div>
                           )}
                           <div className="max-w-[80%] rounded-2xl bg-zinc-100 px-4 py-2.5">
-                            <p className="text-base text-zinc-900">{message.content}</p>
+                            <p className="break-words text-base text-zinc-900">{message.content}</p>
                           </div>
                         </div>
                       ) : (
