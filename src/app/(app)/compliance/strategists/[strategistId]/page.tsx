@@ -41,7 +41,7 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
   const router = useRouter();
   const [showMore, setShowMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { setSidebarCollapsed } = useUiStore();
+  const { setSidebarCollapsed, isSidebarCollapsed } = useUiStore();
 
   // Collapse sidebar when entering this page
   useEffect(() => {
@@ -105,29 +105,29 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
 
   return (
     <div className="relative flex min-h-full flex-col bg-white">
-      {/* Breadcrumb */}
-      <div className="fixed top-4 left-14 z-50 pl-2 pt-[15px] pb-2">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link href="/compliance/strategists">Strategists</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{strategist.user.name}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </div>
+        {/* Breadcrumb */}
+        <div className={`fixed top-4 z-50 pl-2 pt-3.75 pb-2 transition-all duration-300 ${isSidebarCollapsed ? 'left-14' : 'left-56'}`}>
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href="/compliance/strategists">Strategists</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{strategist.user.name}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto pt-10 pb-8">
-        {/* Strategist Info */}
-        <div className="mx-auto w-full max-w-[642px]">
-          {/* Strategist Details Section */}
-          <div className="flex items-center gap-2 px-6 pt-8 pb-4">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto pt-10 pb-8">
+          {/* Strategist Info */}
+          <div className="mx-auto w-full max-w-[642px]">
+            {/* Strategist Details Section */}
+            <div className="flex items-center gap-2 px-6 pt-8 pb-4">
             <Avatar className="rounded-lg">
               <AvatarImage src="https://github.com/shadcn.png" />
               <AvatarFallback>CN</AvatarFallback>
@@ -210,11 +210,8 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
             <div className="h-px bg-zinc-200"></div>
           </div>
 
-         
-        </div>
-
-        {/* Clients Section */}
-        <div className="mx-auto w-full max-w-[642px] px-6 py-4">
+          {/* Clients Section */}
+          <div className="py-4 px-6">
           <div className="mb-4 flex items-center justify-between">
             <h4 className="text-xs font-medium uppercase tracking-wide text-zinc-400"> {clients.length} Clients</h4>
           </div>
@@ -332,10 +329,11 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
               </p>
             </div>
           )}
+          </div>
+          </div>
         </div>
-      </div>
 
-      <AiFloatingChatbot />
+        <AiFloatingChatbot />
     </div>
   );
 }

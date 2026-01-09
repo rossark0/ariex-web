@@ -122,7 +122,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
   const client = getFullClientById(params.clientId);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [isStrategySheetOpen, setIsStrategySheetOpen] = useState(false);
-  const { setSidebarCollapsed } = useUiStore();
+  const { setSidebarCollapsed, isSidebarCollapsed } = useUiStore();
 
   // Collapse sidebar when entering this page
   useEffect(() => {
@@ -196,7 +196,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
   return (
     <div className="flex min-h-full flex-col bg-white">
       {/* Breadcrumb */}
-      <div className="fixed top-4 left-14 z-50 pl-2 pt-[15px] pb-2">
+      <div className={`fixed top-4 z-50 pl-2 pt-3.75 pb-2 transition-all duration-300 ${isSidebarCollapsed ? 'left-14' : 'left-60'}`}>
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>

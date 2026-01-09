@@ -14,9 +14,12 @@ export default function ChatSidebar() {
   const user = useAuth(state => state.user);
   const isStrategist = user?.role === 'STRATEGIST';
   const isClient = user?.role === 'CLIENT';
+  const isCompliance = user?.role === 'COMPLIANCE';
   const { isChatSidebarCollapsed } = useUiStore();
 
-console.log(user)
+  // Check if on compliance strategist detail page
+  const complianceStrategistMatch = pathname.match(/\/compliance\/strategists\/([^/]+)$/);
+  const complianceStrategistId = complianceStrategistMatch?.[1];
 
   // Hide sidebar for strategist client routes and strategist documents/agreements/payments routes
   const isClientsRoute = pathname.startsWith('/strategist/clients');
@@ -28,7 +31,7 @@ console.log(user)
     return null;
   }
 
-  // Get strategist info for client users
+  // Get strategist info for client users or compliance viewing strategist
   let chatTitle: string | undefined;
   let chatSubtitle: string | undefined;
   let strategistName: string | undefined;
@@ -42,6 +45,13 @@ console.log(user)
         chatTitle = strategistName;
         chatSubtitle = 'Your Tax Strategist';
       }
+    }
+  } else if (isCompliance && complianceStrategistId) {
+    const strategist = getStrategistById(complianceStrategistId);
+    if (strategist && strategist.user.name) {
+      strategistName = strategist.user.name;
+      chatTitle = strategistName;
+      chatSubtitle = 'Tax Strategist';
     }
   }
 
