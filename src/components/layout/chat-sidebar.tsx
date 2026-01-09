@@ -18,10 +18,13 @@ export default function ChatSidebar() {
 
 console.log(user)
 
-  // Hide sidebar for all client routes
+  // Hide sidebar for strategist client routes and strategist documents/agreements/payments routes
   const isClientsRoute = pathname.startsWith('/strategist/clients');
+  const isStrategistDocuments = pathname.startsWith('/strategist/documents');
+  const isStrategistAgreements = pathname.startsWith('/strategist/agreements');
+  const isStrategistPayments = pathname.startsWith('/strategist/payments');
   
-  if (isClientsRoute) {
+  if (isClientsRoute || isStrategistDocuments || isStrategistAgreements || isStrategistPayments) {
     return null;
   }
 

@@ -21,6 +21,7 @@ import {
 import { Check, Clock, Strategy, Warning } from '@phosphor-icons/react/dist/ssr';
 import { Button } from '@/components/ui/button';
 import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
+import { StrategySheet } from '@/components/strategy/strategy-sheet';
 import { ChevronDown } from 'lucide-react';
 
 interface Props {
@@ -110,6 +111,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
   const router = useRouter();
   const client = getFullClientById(params.clientId);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  const [isStrategySheetOpen, setIsStrategySheetOpen] = useState(false);
 
   const toggleDocSelection = (docId: string) => {
     setSelectedDocs(prev => {
@@ -214,11 +216,11 @@ export default function ComplianceClientDetailPage({ params }: Props) {
               </div>
 
               <button
-                onClick={() => router.push(`/compliance/clients/${params.clientId}/comments`)}
-                className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+                onClick={() => setIsStrategySheetOpen(true)}
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-emerald-600 px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
               >
                 <ChatCircle className="h-4 w-4" />
-                <span>Comments</span>
+                <span>Strategy</span>
               </button>
             </div>
 
@@ -557,6 +559,13 @@ export default function ComplianceClientDetailPage({ params }: Props) {
       <AiFloatingChatbot
         selectedCount={selectedDocs.size}
         onClearSelection={() => setSelectedDocs(new Set())}
+      />
+
+      {/* Strategy Sheet */}
+      <StrategySheet
+        client={client}
+        isOpen={isStrategySheetOpen}
+        onClose={() => setIsStrategySheetOpen(false)}
       />
     </div>
   );

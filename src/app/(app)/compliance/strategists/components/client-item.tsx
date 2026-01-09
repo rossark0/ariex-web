@@ -51,7 +51,7 @@ export function ClientItem({ client, basePath = '/compliance/clients' }: ClientI
       {/* Client Row - clickable area */}
       <div
         onClick={() => router.push(`${basePath}/${client.user.id}`)}
-        className="flex cursor-pointer items-center gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-zinc-50"
+        className="flex cursor-pointer items-center gap-4 rounded-none py-4 transition-colors hover:bg-zinc-50"
       >
         {/* Client Avatar */}
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100">

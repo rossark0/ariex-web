@@ -61,7 +61,7 @@ export function ChatInput({
   };
 
   return (
-    <div className={cn('relative p-0', className)}>
+    <div className={cn('relative -translate-y-4 p-0', className)}>
       <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 hover:bg-white focus-within:ring-2 focus-within:ring-zinc-300">
         {/* Textarea */}
         <textarea

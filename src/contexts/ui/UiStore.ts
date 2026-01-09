@@ -19,6 +19,7 @@ interface UiState {
   toggleChatSidebar: () => void;
   toggleSidebar: () => void;
   setChatSidebarCollapsed: (collapsed: boolean) => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
   // Selection state for AI floating chatbot
   selectedCount: number;
   onClearSelection: (() => void) | null;
@@ -40,6 +41,7 @@ export const useUiStore = create<UiState>((set, get) => ({
     set(state => ({ isChatSidebarCollapsed: !state.isChatSidebarCollapsed })),
   toggleSidebar: () => set(state => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
   setChatSidebarCollapsed: (collapsed: boolean) => set({ isChatSidebarCollapsed: collapsed }),
+  setSidebarCollapsed: (collapsed: boolean) => set({ isSidebarCollapsed: collapsed }),
   // Selection state
   selectedCount: 0,
   onClearSelection: null,

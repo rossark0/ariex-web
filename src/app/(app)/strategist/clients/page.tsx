@@ -456,7 +456,7 @@ export default function StrategistClientsPage() {
     <div className="flex min-h-full flex-col">
       <div className="flex-1">
         {/* Header Section - matching home page zinc-50 style */}
-        <div className="shrink-0 bg-white pt-20 pb-6">
+        <div className="shrink-0 bg-white pt-6 pb-6">
           <div className="mx-auto w-full max-w-[642px]">
             {/* Title Row */}
             <div className="mb-6 flex items-start justify-between">

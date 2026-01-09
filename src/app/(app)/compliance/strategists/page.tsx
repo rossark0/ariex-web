@@ -1,32 +1,24 @@
 'use client';
 
 import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
-import { SideSheet } from '@/components/ui/side-sheet';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
-import { getFullClientsByStrategist } from '@/lib/mocks/client-full';
-import { FullStrategistMock, getAllStrategists } from '@/lib/mocks/strategist-full';
+import { getAllStrategists } from '@/lib/mocks/strategist-full';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { ChevronDown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { StrategistCard, StrategistClientsSheetContent } from './components';
+import { StrategistCard } from './components';
 
 // Get all strategists
 const strategists = getAllStrategists();
 
 export default function ComplianceStrategistsPage() {
   useRoleRedirect('COMPLIANCE');
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStrategist, setSelectedStrategist] = useState<FullStrategistMock | null>(null);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  const handleStrategistClick = (strategist: FullStrategistMock) => {
-    setSelectedStrategist(strategist);
-    setIsSheetOpen(true);
-  };
-
-  const handleCloseSheet = () => {
-    setIsSheetOpen(false);
-    setSelectedStrategist(null);
+  const handleStrategistClick = (strategistId: string) => {
+    router.push(`/compliance/strategists/${strategistId}`);
   };
 
   // Filter strategists based on search
@@ -92,7 +84,7 @@ export default function ComplianceStrategistsPage() {
                 <StrategistCard
                   key={strategist.user.id}
                   strategist={strategist}
-                  onClick={() => handleStrategistClick(strategist)}
+                  onClick={() => handleStrategistClick(strategist.user.id)}
                 />
               ))}
             </div>
@@ -111,23 +103,6 @@ export default function ComplianceStrategistsPage() {
       </div>
 
       <AiFloatingChatbot />
-
-      {/* Strategist Clients Sheet */}
-      <SideSheet
-        isOpen={isSheetOpen}
-        onClose={handleCloseSheet}
-        title={selectedStrategist?.user.name || ''}
-        subtitle={
-          selectedStrategist
-            ? `${getFullClientsByStrategist(selectedStrategist.user.id).length} clients`
-            : ''
-        }
-        width="lg"
-      >
-
-        {selectedStrategist && <StrategistClientsSheetContent strategist={selectedStrategist} />}
-
-      </SideSheet>
     </div>
   );
 }
