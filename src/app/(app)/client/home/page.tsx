@@ -1,6 +1,5 @@
 'use client';
 
-import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { getFullUserProfile } from '@/contexts/auth/data/mock-users';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
@@ -525,8 +524,6 @@ export default function ClientDashboardPage() {
           </div>
         </div>
       </div>
-
-      <AiFloatingChatbot />
     </div>
   );
 }

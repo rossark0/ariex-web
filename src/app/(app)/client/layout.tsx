@@ -84,5 +84,7 @@ export default function ClientAppLayout({ children }: { children: React.ReactNod
     );
   }
 
-  return <AppLayout navItems={navItems}>{children}</AppLayout>;
+  return (
+    <AppLayout navItems={navItems}>{children}</AppLayout>
+  );
 }

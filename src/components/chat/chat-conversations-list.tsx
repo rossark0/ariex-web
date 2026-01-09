@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { ChatConversationItem, type ConversationData } from './chat-conversation-item';
 import { MagnifyingGlass, Plus, ChatCircleDots } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { EmptyMessagesIllustration } from '@/components/ui/empty-messages-illustration';
 
 interface ChatConversationsListProps {
   conversations: ConversationData[];
@@ -68,9 +69,7 @@ export function ChatConversationsList({
       <div className="w-full flex-1 overflow-y-auto py-1">
         {filteredConversations.length === 0 ? (
           <div className="flex w-full flex-col items-center justify-center py-12 text-center">
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100">
-              <ChatCircleDots className="h-6 w-6 text-zinc-400" />
-            </div>
+            <EmptyMessagesIllustration />
             {searchQuery ? (
               <>
                 <p className="text-sm font-medium text-zinc-700">No results found</p>

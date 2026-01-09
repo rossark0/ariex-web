@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import ChatSidebar from './chat-sidebar';
 import { SidebarToggle } from './sidebar-toggle';
 import { useAuth } from '@/contexts/auth/AuthStore';
+import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -33,7 +34,7 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
         <Sidebar items={navItems} />
       </aside>
       <main className="relative max-h-screen flex-1 p-4 pb-2 pl-0">
-        <div className="relative h-full w-full flex-1 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <div className="relative flex h-full w-full flex-1 flex-col overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
           {/* Sidebar Close Button */}
           <div
             className={cn(
@@ -49,7 +50,11 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
             <ChatSidebarToggle />
           </div> */}
 
-          {children}
+          <div className="flex-1 overflow-y-auto">
+            {children}
+          </div>
+          
+          {isClientRole && <AiFloatingChatbot />}
         </div>
       </main>
       {!isCompliance && <aside className="hidden h-[calc(100vh-0.5rem)] flex-col gap-4 pt-4 pr-4 md:flex">

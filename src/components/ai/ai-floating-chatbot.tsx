@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils';
 import { MinusIcon, X, CaretUp, Paperclip, ArrowUp } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
+import { EmptyMessagesIllustration } from '@/components/ui/empty-messages-illustration';
 
 interface AiFloatingChatbotProps {
   selectedCount?: number;
@@ -80,11 +81,16 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
           textareaRef.current?.focus();
         }, 0);
       }
+
+      if (event.key === 'Escape' && isOpen) {
+        event.preventDefault();
+        setIsOpen(false);
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -144,7 +150,12 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
               </button>
             </div>
 
-            <div className="flex min-h-96 flex-col gap-3 px-4 pb-4"></div>
+            <div className="flex min-h-96 flex-col items-center justify-center gap-3 px-4 pb-4">
+              <div className="text-center -translate-y-4">
+                <p className="text-sm font-medium text-zinc-700">No messages yet</p>
+                <p className="mt-1 text-xs text-zinc-500">Ask Ariex anything to get started</p>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -196,7 +207,7 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
             <textarea
               ref={textareaRef}
               rows={1}
-              placeholder="Press '/' to use Ariex AI..."
+              placeholder="Press '/' to use AriexAI..."
               value={input}
               onChange={e => setInput(e.target.value)}
               onClick={() => setIsOpen(true)}
@@ -221,8 +232,8 @@ export function AiFloatingChatbot({ selectedCount = 0, onClearSelection }: AiFlo
                 }}
                 className="mr-3 flex cursor-pointer items-center gap-2 rounded-full border border-zinc-200 bg-white px-2 py-2 transition-all hover:shadow-xl "
               >
-                <div className="flex h-5 w-5 items-center justify-center rounded-md bg-emerald-100">
-                  <span className="text-sm font-extrabold text-emerald-600">/</span>
+                <div className="flex h-5 w-8 items-center justify-center rounded-md bg-emerald-100">
+                  <kbd className="text-xs font-extrabold text-emerald-600">TAB</kbd>
                 </div>
                 <span className="text-sm font-medium text-zinc-700">Ask AriexAI</span>
               </button>
