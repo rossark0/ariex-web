@@ -8,6 +8,7 @@ import { usePathname } from 'next/navigation';
 import { getFullUserProfile } from '@/contexts/auth/data/mock-users';
 import type { FullClientMock } from '@/lib/mocks/client-full';
 import { getStrategistById } from '@/lib/mocks/strategist-full';
+import { getFullClientById } from '@/lib/mocks/client-full';
 
 export default function ChatSidebar() {
   const pathname = usePathname();
@@ -20,6 +21,10 @@ export default function ChatSidebar() {
   // Check if on compliance strategist detail page
   const complianceStrategistMatch = pathname.match(/\/compliance\/strategists\/([^/]+)$/);
   const complianceStrategistId = complianceStrategistMatch?.[1];
+
+  // Check if on compliance client detail page
+  const complianceClientMatch = pathname.match(/\/compliance\/clients\/([^/]+)$/);
+  const complianceClientId = complianceClientMatch?.[1];
 
   // Hide sidebar for strategist client routes and strategist documents/agreements/payments routes
   const isClientsRoute = pathname.startsWith('/strategist/clients');
@@ -52,6 +57,12 @@ export default function ChatSidebar() {
       strategistName = strategist.user.name;
       chatTitle = strategistName;
       chatSubtitle = 'Tax Strategist';
+    }
+  } else if (isCompliance && complianceClientId) {
+    const client = getFullClientById(complianceClientId);
+    if (client && client.user.name) {
+      chatTitle = client.user.name;
+      chatSubtitle = 'Client';
     }
   }
 

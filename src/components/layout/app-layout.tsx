@@ -23,6 +23,7 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
   const isStrategistRole = user?.role === 'STRATEGIST';
   const isCompliance = pathname.startsWith('/compliance');
   const isComplianceStrategistDetail = pathname.match(/\/compliance\/strategists\/[^/]+$/);
+  const isComplianceClientDetail = pathname.match(/\/compliance\/clients\/[^/]+$/);
   const isPayments = pathname.startsWith('/client/payments') || pathname.startsWith('/strategist/payments');
   const isDocuments = pathname.startsWith('/client/documents') || pathname.startsWith('/strategist/documents');
   const isAgreements = pathname.startsWith('/client/agreements') || pathname.startsWith('/strategist/agreements');
@@ -70,7 +71,7 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
           {(isClientRole || isStrategistRole) ? <AiFloatingChatbot selectedCount={selectedCount} onClearSelection={onClearSelection ?? undefined} contextType={getContextType()} /> : null}
         </div>
       </main>
-      {(!isCompliance || isComplianceStrategistDetail) && <aside className="hidden h-[calc(100vh-0.5rem)] flex-col gap-4 pt-4 pr-4 md:flex">
+      {(!isCompliance || isComplianceStrategistDetail || isComplianceClientDetail) && <aside className="hidden h-[calc(100vh-0.5rem)] flex-col gap-4 pt-4 pr-4 md:flex">
         <ChatSidebar />
       </aside>}
     </div>
