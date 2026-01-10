@@ -100,7 +100,7 @@ export default function Sidebar({ items, className }: SidebarProps) {
         {isClientRole && (
           <Popover>
             <PopoverTrigger asChild>
-              <button className="w-full cursor-pointer rounded-md border border-zinc-200 py-0.5 text-xs font-medium tracking-wide text-zinc-700 transition-colors duration-500 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700">
+              <button className="w-full cursor-pointer rounded-md border border-emerald-200 py-0.5 text-xs font-medium tracking-wide text-emerald-700 transition-colors duration-500 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-900">
                 {selectedYear} TAX YEAR
               </button>
             </PopoverTrigger>
