@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ClientFloatingChat } from '@/components/chat/client-floating-chat';
+import { useUiStore } from '@/contexts/ui/UiStore';
 import { StrategySheet } from '@/components/strategy/strategy-sheet';
 import { Button } from '@/components/ui/button';
 import { getFullClientById } from '@/lib/mocks/client-full';
@@ -145,6 +145,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const client = getFullClientById(params.clientId);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [isStrategySheetOpen, setIsStrategySheetOpen] = useState(false);
+  const { setSelection } = useUiStore();
 
   const toggleDocSelection = (docId: string) => {
     setSelectedDocs(prev => {
@@ -158,7 +159,10 @@ export default function StrategistClientDetailPage({ params }: Props) {
     });
   };
 
-
+  // Sync selection state with UI store
+  useEffect(() => {
+    setSelection(selectedDocs.size, () => setSelectedDocs(new Set()));
+  }, [selectedDocs.size, setSelection]);
 
   if (!client) {
     return (
@@ -698,8 +702,6 @@ export default function StrategistClientDetailPage({ params }: Props) {
           </div>
         </div>
       </div>
-
-      <ClientFloatingChat client={client} />
 
       {/* Strategy Sheet */}
       <StrategySheet
