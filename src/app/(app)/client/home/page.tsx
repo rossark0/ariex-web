@@ -1,14 +1,17 @@
 'use client';
 
 import { useAuth } from '@/contexts/auth/AuthStore';
-import { getFullUserProfile } from '@/contexts/auth/data/mock-users';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
-import type { FullClientMock } from '@/lib/mocks/client-full';
-import { getStrategistById } from '@/lib/mocks/strategist-full';
-import { FileIcon, Check } from '@phosphor-icons/react';
+import { FileIcon, Check, SpinnerGap } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { EmptyDocumentsIllustration } from '@/components/ui/empty-documents-illustration';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import {
+  getClientDashboardData,
+  type ClientDashboardData,
+  type ClientAgreement,
+  type ClientDocument,
+} from '@/lib/api/client.api';
 
 // ============================================================================
 // ANIMATED DOTS COMPONENT
@@ -43,16 +46,15 @@ function AnimatedDots() {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-function formatRelativeTime(date: Date): string {
+function formatRelativeTime(date: Date | string): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffMs = now.getTime() - dateObj.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
   // If today, show time
   if (diffDays === 0) {
-    return date.toLocaleTimeString('en-US', {
+    return dateObj.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
@@ -70,22 +72,20 @@ function formatRelativeTime(date: Date): string {
   }
 
   // Otherwise show date
-  return date.toLocaleDateString('en-US', {
+  return dateObj.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
   });
 }
 
-function groupDocumentsByDate(
-  documents: (typeof import('@/lib/mocks/client-full').fullClientMocks)[0]['documents']
-) {
+function groupDocumentsByDate(documents: ClientDocument[]) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
 
-  const groups: { label: string; documents: typeof documents }[] = [];
+  const groups: { label: string; documents: ClientDocument[] }[] = [];
 
   const todayDocs = documents.filter(d => {
     const docDate = new Date(d.createdAt);
@@ -125,9 +125,42 @@ function groupDocumentsByDate(
 export default function ClientDashboardPage() {
   useRoleRedirect('CLIENT');
   const { user } = useAuth();
-  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  const [dashboardData, setDashboardData] = useState<ClientDashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Get the current client data from auth
+  // Fetch dashboard data from API
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setIsLoading(true);
+        const data = await getClientDashboardData();
+        setDashboardData(data);
+        setError(null);
+      } catch (err) {
+        console.error('[ClientDashboard] Failed to fetch data:', err);
+        setError('Failed to load dashboard data');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center">
+        <SpinnerGap className="h-8 w-8 animate-spin text-emerald-600" />
+        <p className="mt-4 text-sm text-zinc-500">Loading your dashboard...</p>
+      </div>
+    );
+  }
+
+  // Not authenticated
   if (!user) {
     return (
       <div className="flex min-h-full flex-col items-center justify-center">
@@ -139,51 +172,57 @@ export default function ClientDashboardPage() {
     );
   }
 
-  const clientProfile = getFullUserProfile(user) as FullClientMock | null;
-
-  if (!clientProfile) {
+  // Error state or no data
+  if (error || !dashboardData) {
     return (
       <div className="flex min-h-full flex-col items-center justify-center">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-zinc-900">Profile not found</h1>
-          <p className="text-zinc-500">Could not load your client profile.</p>
+          <h1 className="text-xl font-semibold text-zinc-900">Welcome to Ariex!</h1>
+          <p className="mt-2 text-zinc-500">
+            {error || 'Your dashboard is being set up. Please check back shortly.'}
+          </p>
+          <p className="mt-4 text-sm text-zinc-400">
+            Your tax strategist will reach out soon to get started.
+          </p>
         </div>
       </div>
     );
   }
 
-  const currentClient = clientProfile;
+  const { user: clientUser, profile, strategist, agreements, documents, todos } = dashboardData;
+  const clientName = clientUser.fullName || clientUser.name || clientUser.email.split('@')[0];
+  const businessName = profile?.businessName;
+  const createdAt = new Date(clientUser.createdAt);
 
-  // Get strategist information
-  const strategist = currentClient.strategistId
-    ? getStrategistById(currentClient.strategistId)
-    : null;
-  const taxYear = currentClient.user.createdAt.getFullYear();
-
-  // Timeline step completion states
-  const agreementTask = currentClient.onboardingTasks.find(t => t.type === 'sign_agreement');
-  const paymentTask = currentClient.onboardingTasks.find(t => t.type === 'pay_initial');
-  const documentsTask = currentClient.onboardingTasks.find(t => t.type === 'upload_documents');
-  const payment = currentClient.payments[0];
-  const agreementDoc = currentClient.documents.find(d => d.category === 'contract');
-
-  const step1Complete = true; // Account always created
-  const step2Complete = agreementTask?.status === 'completed';
-  const step2Sent = agreementDoc?.signatureStatus === 'SENT' || step2Complete;
-  const step3Complete = payment?.status === 'completed';
-  const step3Sent = payment !== undefined;
-  const step4Complete = documentsTask?.status === 'completed';
-  const step4Sent = documentsTask?.status !== 'pending';
-
-  // For brand new clients, there won't be a strategy yet
-  const strategyDoc = currentClient.documents.find(
-    d => d.category === 'contract' && d.originalName.toLowerCase().includes('strategy')
+  // Find service agreement
+  const serviceAgreement = agreements.find(
+    a => a.type === 'service_agreement' || a.type === 'onboarding'
   );
-  const step5Complete = strategyDoc?.signatureStatus === 'SIGNED';
-  const step5Sent = strategyDoc?.signatureStatus === 'SENT';
 
-  function formatDate(date: Date): string {
-    return date.toLocaleDateString('en-US', {
+  // Find strategy document
+  const strategyDoc = documents.find(d => d.type === 'strategy' || d.category === 'strategy');
+
+  // Uploaded documents (excluding agreements/strategies)
+  const uploadedDocs = documents.filter(
+    d => d.type !== 'agreement' && d.type !== 'strategy' && d.category !== 'contract'
+  );
+
+  // Calculate step completion states
+  const step1Complete = true; // Account always created
+  const step2Sent = serviceAgreement?.status === 'sent' || serviceAgreement?.status === 'signed';
+  const step2Complete = serviceAgreement?.status === 'signed' || serviceAgreement?.status === 'completed';
+  const step3Sent = !!serviceAgreement?.paymentReference || serviceAgreement?.paymentAmount !== undefined;
+  const step3Complete = serviceAgreement?.status === 'completed';
+  const step4Sent = step3Complete; // Docs requested after payment
+  const step4Complete = uploadedDocs.length > 0;
+  const step5Sent = strategyDoc?.signatureStatus === 'SENT';
+  const step5Complete = strategyDoc?.signatureStatus === 'SIGNED';
+
+  const paymentAmount = serviceAgreement?.paymentAmount || 499;
+
+  function formatDate(date: Date | string): string {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -208,14 +247,14 @@ export default function ClientDashboardPage() {
                   <div className="absolute top-5 bottom-2 -left-[19px] w-0.5 bg-emerald-200" />
                   <div className="flex flex-1 flex-col">
                     <span className="font-medium text-zinc-900">
-                      Account created for{' '}
-                      {currentClient.profile.businessName || currentClient.user.name}
+                      Account created for {businessName || clientName}
                     </span>
                     <span className="text-sm text-zinc-500">
                       Onboarding initiated by your tax strategist
                     </span>
                     <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                      {formatDate(currentClient.user.createdAt)}
+                      {formatDate(createdAt)}
+                      {strategist && ` · Created by ${strategist.name}`}
                     </span>
                   </div>
                 </div>
@@ -253,7 +292,7 @@ export default function ClientDashboardPage() {
                           : 'Your strategist will send the agreement shortly'}
                     </span>
                     <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                      {formatDate(agreementTask?.updatedAt || currentClient.user.createdAt)}
+                      {formatDate(serviceAgreement?.updatedAt || createdAt)}
                     </span>
                     {step1Complete && !step2Complete && (
                       <Badge variant={step2Sent ? 'warning' : 'warning'} className="mt-2 w-fit">
@@ -298,25 +337,21 @@ export default function ClientDashboardPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-zinc-900">
                         {step3Complete
-                          ? `Payment completed · $${payment?.amount || 499}`
+                          ? `Payment completed · $${paymentAmount}`
                           : step3Sent
-                            ? `Payment pending · $${payment?.amount || 499}`
+                            ? `Payment pending · $${paymentAmount}`
                             : 'Payment link pending'}
                       </span>
                     </div>
                     <span className="text-sm text-zinc-500">
                       {step3Complete
-                        ? `Onboarding Fee - Tax Strategy Setup via ${payment?.paymentMethod || 'stripe'}`
+                        ? 'Onboarding Fee - Tax Strategy Setup'
                         : step3Sent
                           ? 'Complete payment to activate your account'
                           : 'Payment link will be sent after agreement is signed'}
                     </span>
                     <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                      {payment?.paidAt
-                        ? formatDate(payment.paidAt)
-                        : payment?.dueDate
-                          ? `Due ${formatDate(payment.dueDate)}`
-                          : formatDate(currentClient.user.createdAt)}
+                      {formatDate(serviceAgreement?.updatedAt || createdAt)}
                     </span>
                     {step2Complete && !step3Complete && (
                       <Badge variant={step3Sent ? 'warning' : 'warning'} className="mt-2 w-fit">
@@ -361,7 +396,7 @@ export default function ClientDashboardPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-zinc-900">
                         {step4Complete
-                          ? `Initial documents uploaded · ${currentClient.documents.filter(d => d.category !== 'contract').length} files`
+                          ? `Initial documents uploaded · ${uploadedDocs.length} files`
                           : step4Sent
                             ? 'Waiting for document upload'
                             : 'Documents'}
@@ -375,7 +410,7 @@ export default function ClientDashboardPage() {
                           : 'You will be notified when documents are needed'}
                     </span>
                     <span className="mt-1 mb-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                      {formatDate(documentsTask?.updatedAt || currentClient.user.createdAt)}
+                      {formatDate(createdAt)}
                     </span>
                     {step3Complete && !step4Complete && (
                       <Badge variant={step4Sent ? 'warning' : 'warning'} className="w-fit">
@@ -424,17 +459,15 @@ export default function ClientDashboardPage() {
                     </div>
                     <span className="text-sm text-zinc-500">
                       {step5Complete
-                        ? strategyDoc?.originalName.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan'
+                        ? strategyDoc?.name || 'Tax Strategy Plan'
                         : step5Sent
                           ? 'Review and sign your personalized tax strategy'
                           : 'Your strategist will create your personalized tax strategy after documents are reviewed'}
                     </span>
                     <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                      {strategyDoc?.signedAt
-                        ? formatDate(strategyDoc.signedAt)
-                        : strategyDoc?.createdAt
-                          ? formatDate(strategyDoc.createdAt)
-                          : formatDate(currentClient.user.createdAt)}
+                      {strategyDoc?.createdAt
+                        ? formatDate(strategyDoc.createdAt)
+                        : formatDate(createdAt)}
                     </span>
                     {step4Complete && !step5Complete && (
                       <Badge variant={step5Sent ? 'warning' : 'warning'} className="mt-2 w-fit">
@@ -469,7 +502,7 @@ export default function ClientDashboardPage() {
           <div className="mx-auto flex w-full max-w-[642px] flex-col py-6">
             <h2 className="mb-4 text-lg font-medium text-zinc-900">Documents required</h2>
             {/* Empty State - No documents yet */}
-            {currentClient.documents.filter(d => d.category !== 'contract').length === 0 && (
+            {uploadedDocs.length === 0 && (
               <div className="flex flex-col items-center justify-center pt-24 pb-12 text-center">
                 {/* Empty */}
                 <EmptyDocumentsIllustration />
@@ -479,12 +512,12 @@ export default function ClientDashboardPage() {
             )}
 
             {/* Documents List */}
-            {currentClient.documents.filter(d => d.category !== 'contract').length > 0 && (
+            {uploadedDocs.length > 0 && (
               <div className="">
                 {groupDocumentsByDate(
-                  [...currentClient.documents]
+                  [...uploadedDocs]
                     .filter(d => d.category !== 'contract')
-                    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 ).map(group => (
                   <div key={group.label} className="mb-6">
                     {/* Date Group Label */}
@@ -504,7 +537,7 @@ export default function ClientDashboardPage() {
                             {/* Document Info */}
                             <div className="flex flex-1 flex-col">
                               <span className="font-medium text-zinc-900">
-                                {doc.originalName.replace(/\.[^/.]+$/, '')}
+                                {doc.name.replace(/\.[^/.]+$/, '')}
                               </span>
                               <span className="text-sm text-zinc-500">Me</span>
                             </div>

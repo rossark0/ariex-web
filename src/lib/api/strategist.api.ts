@@ -121,9 +121,6 @@ export async function listClients(): Promise<ApiClient[]> {
     
     // Handle both array and paginated response formats
     const clients = Array.isArray(response) ? response : (response.data || response.items || []);
-    
-    console.log('[API] listClients response:', JSON.stringify(response, null, 2));
-    console.log('[API] Clients count:', clients.length);
 
     // Map to ApiClient format
     return clients.map((user: any) => ({
@@ -143,7 +140,7 @@ export async function listClients(): Promise<ApiClient[]> {
         : undefined,
     }));
   } catch (error) {
-    console.error('[API] Failed to list clients:', error);
+    console.error('Failed to list clients:', error);
     return [];
   }
 }
@@ -396,6 +393,7 @@ export interface CreateClientData {
  * 1. Creates user in Cognito with temporary password
  * 2. Creates user in database with CLIENT role
  * 3. Sends invitation email with credentials
+ * 4. Creates client profile with additional data
  *
  * The client will need to set a new password on first login.
  */
@@ -423,6 +421,25 @@ export async function createClient(data: CreateClientData): Promise<ApiClient | 
     });
 
     console.log('[API] Client invited:', inviteResult);
+
+    // Create client profile with additional data
+    try {
+      await apiRequest(`/users/${inviteResult.id}/client-profile`, {
+        method: 'POST',
+        body: JSON.stringify({
+          phoneNumber: data.phone || null,
+          address: data.address || null,
+          businessName: data.businessName || null,
+          businessType: data.clientType === 'business' ? 'Business' : null,
+          onboardingComplete: false,
+        }),
+      });
+      console.log('[API] Client profile created for:', inviteResult.id);
+    } catch (profileError) {
+      console.error('[API] Failed to create client profile:', profileError);
+      // Don't fail the whole operation if profile creation fails
+      // The profile can be created later
+    }
 
     // Return the client data
     return {
