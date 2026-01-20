@@ -5,26 +5,12 @@ import { useUiStore } from '@/contexts/ui/UiStore';
 import { cn } from '@/lib/utils';
 import { Chat } from '../chat';
 import { usePathname } from 'next/navigation';
-import { getFullUserProfile } from '@/contexts/auth/data/mock-users';
-import type { FullClientMock } from '@/lib/mocks/client-full';
-import { getStrategistById } from '@/lib/mocks/strategist-full';
-import { getFullClientById } from '@/lib/mocks/client-full';
 
 export default function ChatSidebar() {
   const pathname = usePathname();
   const user = useAuth(state => state.user);
   const isStrategist = user?.role === 'STRATEGIST';
-  const isClient = user?.role === 'CLIENT';
-  const isCompliance = user?.role === 'COMPLIANCE';
   const { isChatSidebarCollapsed } = useUiStore();
-
-  // Check if on compliance strategist detail page
-  const complianceStrategistMatch = pathname.match(/\/compliance\/strategists\/([^/]+)$/);
-  const complianceStrategistId = complianceStrategistMatch?.[1];
-
-  // Check if on compliance client detail page
-  const complianceClientMatch = pathname.match(/\/compliance\/clients\/([^/]+)$/);
-  const complianceClientId = complianceClientMatch?.[1];
 
   // Hide sidebar for strategist client routes and strategist documents/agreements/payments routes
   const isClientsRoute = pathname.startsWith('/strategist/clients');
@@ -34,36 +20,6 @@ export default function ChatSidebar() {
   
   if (isClientsRoute || isStrategistDocuments || isStrategistAgreements || isStrategistPayments) {
     return null;
-  }
-
-  // Get strategist info for client users or compliance viewing strategist
-  let chatTitle: string | undefined;
-  let chatSubtitle: string | undefined;
-  let strategistName: string | undefined;
-
-  if (isClient && user) {
-    const clientProfile = getFullUserProfile(user) as FullClientMock | null;
-    if (clientProfile?.strategistId) {
-      const strategist = getStrategistById(clientProfile.strategistId);
-      if (strategist && strategist.user.name) {
-        strategistName = strategist.user.name;
-        chatTitle = strategistName;
-        chatSubtitle = 'Your Tax Strategist';
-      }
-    }
-  } else if (isCompliance && complianceStrategistId) {
-    const strategist = getStrategistById(complianceStrategistId);
-    if (strategist && strategist.user.name) {
-      strategistName = strategist.user.name;
-      chatTitle = strategistName;
-      chatSubtitle = 'Tax Strategist';
-    }
-  } else if (isCompliance && complianceClientId) {
-    const client = getFullClientById(complianceClientId);
-    if (client && client.user.name) {
-      chatTitle = client.user.name;
-      chatSubtitle = 'Client';
-    }
   }
 
   // Determine chat mode
@@ -83,7 +39,7 @@ export default function ChatSidebar() {
           isChatSidebarCollapsed ? 'hidden opacity-0' : 'flex opacity-100'
         )}
       >
-        <Chat mode={chatMode} title={chatTitle} subtitle={chatSubtitle} />
+        <Chat mode={chatMode} />
       </div>
     </div>
   );

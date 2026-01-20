@@ -2,14 +2,20 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { CaretUp } from '@phosphor-icons/react';
-import type { FullClientMock } from '@/lib/mocks/client-full';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 interface ClientFloatingChatProps {
-  client: FullClientMock;
+  client: {
+    id: string;
+    user: {
+      id: string;
+      name: string | null;
+      email: string;
+    };
+  };
 }
 
 interface ChatMessage {
@@ -18,36 +24,6 @@ interface ChatMessage {
   content: string;
   createdAt: Date;
 }
-
-// ============================================================================
-// MOCK CONVERSATION DATA
-// ============================================================================
-
-const getMockConversation = (clientName: string): ChatMessage[] => {
-  const now = new Date();
-  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  
-  return [
-    {
-      id: '1',
-      role: 'strategist',
-      content: `Hi ${clientName?.split(' ')[0]}, I've reviewed your documents. Do you have a few minutes to discuss?`,
-      createdAt: yesterday,
-    },
-    {
-      id: '2',
-      role: 'client',
-      content: 'Yes, I can chat now. What did you find?',
-      createdAt: new Date(yesterday.getTime() + 30 * 60 * 1000),
-    },
-    {
-      id: '3',
-      role: 'strategist',
-      content: 'I found some opportunities for deductions. I\'ll prepare a summary and send it over.',
-      createdAt: new Date(yesterday.getTime() + 35 * 60 * 1000),
-    },
-  ];
-};
 
 // ============================================================================
 // MAIN COMPONENT
@@ -61,9 +37,10 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
-  // Load mock conversation
+  // TODO: Load messages from API
   useEffect(() => {
-    setMessages(getMockConversation(client.user.name || 'Client'));
+    // Messages will be loaded from API when implemented
+    setMessages([]);
   }, [client]);
 
   // Click outside to minimize

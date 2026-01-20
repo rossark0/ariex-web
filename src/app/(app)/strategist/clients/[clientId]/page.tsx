@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useUiStore } from '@/contexts/ui/UiStore';
 import { StrategySheet } from '@/components/strategy/strategy-sheet';
 import { Button } from '@/components/ui/button';
-import { getFullClientById } from '@/lib/mocks/client-full';
+import { getFullClientById, FullClientMock } from '@/lib/mocks/client-full';
+import { getClientById, type ApiClient } from '@/lib/api/strategist.api';
 import {
   getClientTimelineAndStatus,
   CLIENT_STATUS_CONFIG,
@@ -19,6 +20,7 @@ import {
   PhoneIcon,
   Check as CheckIcon,
   StarFourIcon,
+  SpinnerGap,
 } from '@phosphor-icons/react';
 import {
   Check,
@@ -140,12 +142,95 @@ function groupDocumentsByDate(
   return groups;
 }
 
+// Loading spinner component
+function LoadingState() {
+  return (
+    <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
+      <SpinnerGap className="h-8 w-8 animate-spin text-zinc-400" />
+      <p className="text-sm text-zinc-500">Loading client details...</p>
+    </div>
+  );
+}
+
+// Convert API client to mock format for timeline and other features
+function apiClientToMockFormat(apiClient: ApiClient): FullClientMock {
+  const now = new Date();
+  return {
+    user: {
+      id: apiClient.id,
+      email: apiClient.email,
+      name: apiClient.name || apiClient.fullName || null,
+      role: 'CLIENT',
+      createdAt: new Date(apiClient.createdAt),
+      updatedAt: new Date(apiClient.updatedAt),
+    },
+    profile: {
+      id: apiClient.clientProfile?.id || `profile-${apiClient.id}`,
+      userId: apiClient.id,
+      phoneNumber: apiClient.clientProfile?.phoneNumber || apiClient.clientProfile?.phone || null,
+      address: apiClient.clientProfile?.address || null,
+      city: apiClient.clientProfile?.city || null,
+      state: apiClient.clientProfile?.state || null,
+      zipCode: apiClient.clientProfile?.zipCode || null,
+      taxId: apiClient.clientProfile?.taxId || null,
+      businessName: apiClient.clientProfile?.businessName || null,
+      onboardingComplete: apiClient.clientProfile?.onboardingComplete || false,
+      filingStatus: apiClient.clientProfile?.filingStatus || null,
+      dependents: apiClient.clientProfile?.dependents || null,
+      estimatedIncome: apiClient.clientProfile?.estimatedIncome || null,
+      businessType: apiClient.clientProfile?.businessType || null,
+      createdAt: apiClient.clientProfile?.createdAt ? new Date(apiClient.clientProfile.createdAt) : now,
+      updatedAt: apiClient.clientProfile?.updatedAt ? new Date(apiClient.clientProfile.updatedAt) : now,
+    },
+    strategistId: apiClient.strategists?.[0] || '',
+    isOnboardingComplete: apiClient.clientProfile?.onboardingComplete || false,
+    // Empty arrays for features not yet implemented in API
+    onboardingTasks: [],
+    documents: [],
+    payments: [],
+    conversations: [],
+    todos: [],
+  };
+}
+
 export default function StrategistClientDetailPage({ params }: Props) {
   const router = useRouter();
-  const client = getFullClientById(params.clientId);
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiClient, setApiClient] = useState<ApiClient | null>(null);
+  const [client, setClient] = useState<FullClientMock | null>(null);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [isStrategySheetOpen, setIsStrategySheetOpen] = useState(false);
   const { setSelection } = useUiStore();
+
+  // Load client data from API
+  useEffect(() => {
+    async function loadClient() {
+      setIsLoading(true);
+      try {
+        const data = await getClientById(params.clientId);
+        if (data) {
+          setApiClient(data);
+          setClient(apiClientToMockFormat(data));
+        } else {
+          // If API returns null, try mock data as fallback
+          const mockClient = getFullClientById(params.clientId);
+          if (mockClient) {
+            setClient(mockClient);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load client:', error);
+        // Fallback to mock data
+        const mockClient = getFullClientById(params.clientId);
+        if (mockClient) {
+          setClient(mockClient);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadClient();
+  }, [params.clientId]);
 
   const toggleDocSelection = (docId: string) => {
     setSelectedDocs(prev => {
@@ -164,6 +249,12 @@ export default function StrategistClientDetailPage({ params }: Props) {
     setSelection(selectedDocs.size, () => setSelectedDocs(new Set()));
   }, [selectedDocs.size, setSelection]);
 
+  // Show loading state
+  if (isLoading) {
+    return <LoadingState />;
+  }
+
+  // Show not found state
   if (!client) {
     return (
       <section className="flex flex-col items-center justify-center gap-4 p-12">

@@ -2,7 +2,17 @@
 
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
 import AppLayout from '@/components/layout/app-layout';
-import { ChartBar, AddressBook, ListChecks, ChartLineUp, Lifebuoy, House, Upload, FileText, CreditCard } from '@phosphor-icons/react';
+import {
+  ChartBar,
+  AddressBook,
+  ListChecks,
+  ChartLineUp,
+  Lifebuoy,
+  House,
+  Upload,
+  FileText,
+  CreditCard,
+} from '@phosphor-icons/react';
 
 const navItems = [
   { href: '/strategist/home', label: 'Home', icon: House },

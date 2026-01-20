@@ -205,93 +205,22 @@ export function Chat({
 }
 
 // ============================================================================
-// DEMO DATA
+// PLACEHOLDER FUNCTIONS (to be replaced with real API calls)
 // ============================================================================
 
 function getDemoConversations(): ConversationData[] {
-  const now = new Date();
-  return [
-    {
-      id: 'conv-1',
-      title: 'John Smith',
-      lastMessage: "Thanks! I'll send the documents tomorrow.",
-      lastMessageAt: new Date(now.getTime() - 5 * 60 * 1000),
-      unreadCount: 2,
-    },
-    {
-      id: 'conv-2',
-      title: 'Sarah Johnson',
-      lastMessage: 'Yes, I can chat now. What did you find?',
-      lastMessageAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
-    },
-    {
-      id: 'conv-3',
-      title: 'Michael Brown',
-      lastMessage: 'Perfect, that makes sense.',
-      lastMessageAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
-    },
-  ];
+  return [];
 }
 
 function getDemoMessagesForConversation(
-  conversationId: string,
-  clientName: string
+  _conversationId: string,
+  _clientName: string
 ): ChatMessageData[] {
-  const now = new Date();
-  const firstName = clientName?.split(' ')[0] || 'Client';
-
-  if (conversationId === 'conv-1') {
-    return [
-      {
-        id: 'msg-1',
-        role: 'user',
-        content: `Hi ${firstName}, I've reviewed your documents. Do you have a few minutes to discuss?`,
-        createdAt: new Date(now.getTime() - 10 * 60 * 1000),
-      },
-      {
-        id: 'msg-2',
-        role: 'assistant',
-        content: 'Yes, I can chat now. What did you find?',
-        createdAt: new Date(now.getTime() - 8 * 60 * 1000),
-        senderName: clientName,
-      },
-      {
-        id: 'msg-3',
-        role: 'user',
-        content:
-          "I found some opportunities for deductions. I'll prepare a summary and send it over.",
-        createdAt: new Date(now.getTime() - 5 * 60 * 1000),
-      },
-      {
-        id: 'msg-4',
-        role: 'assistant',
-        content: "Thanks! I'll send the documents tomorrow.",
-        createdAt: new Date(now.getTime() - 3 * 60 * 1000),
-        senderName: clientName,
-      },
-    ];
-  }
-
-  return [
-    {
-      id: 'msg-welcome',
-      role: 'user',
-      content: `Hi ${firstName}, welcome to Ariex! Let me know if you have any questions about getting started.`,
-      createdAt: new Date(now.getTime() - 60 * 60 * 1000),
-    },
-  ];
+  return [];
 }
 
-function getSimulatedClientResponse(userMessage: string): string {
-  const responses = [
-    "Thanks for letting me know! I'll take care of that.",
-    'That makes sense. When do you need it by?',
-    'Perfect, I appreciate you explaining that.',
-    "Got it. I'll have those documents ready soon.",
-    'Thanks! Is there anything else you need from me?',
-  ];
-
-  return responses[Math.floor(Math.random() * responses.length)];
+function getSimulatedClientResponse(_userMessage: string): string {
+  return '';
 }
 
 // Export individual components for flexibility

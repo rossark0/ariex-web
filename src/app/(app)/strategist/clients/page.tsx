@@ -1,32 +1,19 @@
 'use client';
 
-import { getClientStatus } from '@/lib/client-status';
-import { FullClientMock, getFullClientsByStrategist } from '@/lib/mocks/client-full';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import {
   Briefcase,
   Buildings,
   Calendar,
-  CheckCircle,
-  Envelope,
-  Folder,
-  Funnel,
-  Globe,
   Lock,
-  MapPin,
-  Phone,
   Plus,
-  Star,
   User,
   X,
 } from '@phosphor-icons/react/dist/ssr';
 import { ChevronDown, ChevronDownIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-
-// Current logged-in strategist
-const CURRENT_STRATEGIST_ID = 'strategist-001';
-const clients = getFullClientsByStrategist(CURRENT_STRATEGIST_ID);
+import { listClients, createClient, type ApiClient } from '@/lib/api/strategist.api';
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -42,112 +29,85 @@ function getInitials(name: string | null): string {
     .slice(0, 2);
 }
 
-function getClientDescription(client: FullClientMock): string {
-  const parts: string[] = [];
+function getClientStatus(client: ApiClient): {
+  label: string;
+  key: string;
+  badgeColor: string;
+  textClassName: string;
+} {
+  // Check user status first (invited, active, suspended)
+  if (client.status === 'invited') {
+    return {
+      label: 'Invited',
+      key: 'invited',
+      badgeColor: 'bg-blue-500',
+      textClassName: 'text-blue-700',
+    };
+  }
 
-  if (client.profile.businessName) {
-    parts.push(`Owner of ${client.profile.businessName}`);
-  }
-  if (client.profile.businessType) {
-    parts.push(client.profile.businessType);
-  }
-  if (client.profile.city && client.profile.state) {
-    parts.push(`based in ${client.profile.city}, ${client.profile.state}`);
-  }
-
-  if (parts.length === 0) {
-    return 'Tax strategy client';
+  if (client.status === 'suspended') {
+    return {
+      label: 'Suspended',
+      key: 'suspended',
+      badgeColor: 'bg-red-500',
+      textClassName: 'text-red-700',
+    };
   }
 
-  return parts.join(' · ');
+  // For active users, check onboarding status
+  const isOnboarding = !client.clientProfile?.onboardingComplete;
+
+  if (isOnboarding) {
+    return {
+      label: 'Onboarding',
+      key: 'onboarding',
+      badgeColor: 'bg-amber-500',
+      textClassName: 'text-amber-700',
+    };
+  }
+
+  return {
+    label: 'Active',
+    key: 'active',
+    badgeColor: 'bg-emerald-500',
+    textClassName: 'text-emerald-700',
+  };
 }
 
 // ============================================================================
 // CLIENT CARD COMPONENT
 // ============================================================================
 
-function ClientCard({ client }: { client: FullClientMock }) {
+function ClientCard({ client }: { client: ApiClient }) {
   const router = useRouter();
-  const initials = getInitials(client.user.name);
-  const documentCount = client.documents.length;
+  const initials = getInitials(client.name);
   const status = getClientStatus(client);
 
-  // Generate a consistent gradient based on client name
-  const gradients = [
-    'from-violet-100 via-purple-50 to-fuchsia-100',
-    'from-emerald-100 via-teal-50 to-cyan-100',
-    'from-amber-100 via-orange-50 to-yellow-100',
-    'from-rose-100 via-pink-50 to-red-100',
-    'from-blue-100 via-indigo-50 to-violet-100',
-    'from-lime-100 via-green-50 to-emerald-100',
-  ];
-  const gradientIndex = (client.user.name?.charCodeAt(0) || 0) % gradients.length;
-  const gradient = gradients[gradientIndex];
+  const description =
+    client.clientProfile?.city && client.clientProfile?.state
+      ? `Based in ${client.clientProfile.city}, ${client.clientProfile.state}`
+      : 'Tax strategy client';
 
   return (
     <div
-      onClick={() => router.push(`/strategist/clients/${client.user.id}`)}
+      onClick={() => router.push(`/strategist/clients/${client.id}`)}
       className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white transition-all hover:border-zinc-300 hover:shadow-md"
     >
-      {/* Icon Area with Gradient */}
-      {/* <div className={`flex h-24 items-start justify-start bg-linear-to-br ${gradient} p-4`}>
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/80 shadow-sm backdrop-blur-sm">
-          <span className="text-sm font-semibold text-zinc-700">{initials}</span>
-        </div>
-      </div> */}
-
-      {/* Content */}
       <div className="flex flex-1 flex-col items-start p-4">
-        {/* Status Badge */}
         <span
           className={`mb-4 flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 pl-2 text-xs font-medium ${status.textClassName}`}
         >
           <div className={`h-1 w-1 rounded-full ${status.badgeColor}`} />
-          {status.label.split(' ')[0]}
+          {status.label}
         </span>
-        {/* Title & Status */}
         <div className="mb-1 flex items-center justify-between gap-2">
           <h3 className="font-semibold text-zinc-900 group-hover:text-zinc-700">
-            {client.user.name}
+            {client.name || client.email}
           </h3>
         </div>
-
-        {/* Description */}
-        <p className="mb-4 line-clamp-2 text-sm text-zinc-500">{getClientDescription(client)}</p>
+        <p className="mb-4 line-clamp-2 text-sm text-zinc-500">{description}</p>
       </div>
     </div>
-  );
-}
-
-// ============================================================================
-// TAB BUTTON COMPONENT (matching client details style)
-// ============================================================================
-
-type TabId = 'all' | 'active' | 'folders';
-
-function TabButton({
-  label,
-  icon: Icon,
-  isActive,
-  onClick,
-}: {
-  label: string;
-  icon: typeof Globe;
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium transition-colors ${
-        isActive
-          ? 'bg-zinc-900 text-white'
-          : 'border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50'
-      }`}
-    >
-      <Icon weight={isActive ? 'fill' : 'regular'} className="h-4 w-4" />
-      {label}
-    </button>
   );
 }
 
@@ -160,22 +120,22 @@ type ClientType = 'individual' | 'business';
 interface AddClientModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onClientCreated?: () => void;
 }
 
-function AddClientModal({ isOpen, onClose }: AddClientModalProps) {
+function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProps) {
   const [clientType, setClientType] = useState<ClientType>('individual');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     businessName: '',
-    businessType: '',
-    city: '',
-    state: '',
+    address: '',
   });
 
-  // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -187,7 +147,6 @@ function AddClientModal({ isOpen, onClose }: AddClientModalProps) {
     };
   }, [isOpen]);
 
-  // Handle escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -200,36 +159,60 @@ function AddClientModal({ isOpen, onClose }: AddClientModalProps) {
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Handle client creation
-    console.log('Creating client:', { clientType, ...formData });
-    onClose();
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      // Create client via API
+      await createClient({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone || undefined,
+        address: formData.address || undefined,
+        businessName: formData.businessName || undefined,
+        clientType,
+      });
+
+      // Reset form
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        businessName: '',
+        address: '',
+      });
+
+      onClientCreated?.();
+      onClose();
+    } catch (err) {
+      console.error('Failed to create client:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create client. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="flex h-full w-full items-center justify-center bg-white">
-        <div className="absolute pl-2 top-0 left-0 flex h-14 w-full items-center gap-2 border-b border-zinc-200">
-          {/* Close Button */}
+        <div className="absolute top-0 left-0 flex h-14 w-full items-center gap-2 border-b border-zinc-200 pl-2">
           <button
             onClick={onClose}
             className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
           >
             <X weight="bold" className="h-4.5 w-4.5" />
           </button>
-
           <div className="h-4 w-0.5 bg-zinc-200" />
-
-          <h1 className="bg-zinc-100 px-2 py-1 rounded-lg text-center text-sm font-semibold text-zinc-900">New Client</h1>
+          <h1 className="rounded-lg bg-zinc-100 px-2 py-1 text-center text-sm font-semibold text-zinc-900">
+            New Client
+          </h1>
         </div>
 
-        {/* Modal Content */}
         <div className="w-full max-w-md px-6">
-          {/* Title */}
-          {/* <h2 className="mb-8 text-center text-xl font-semibold text-zinc-900">New Client</h2> */}
-
-          {/* Service Info Card - like the image */}
           <div className="mb-6 rounded-xl border border-zinc-200 bg-white p-4">
             <div className="flex items-start gap-3">
               <div className="h-full w-1 rounded-full bg-emerald-500" />
@@ -245,10 +228,8 @@ function AddClientModal({ isOpen, onClose }: AddClientModalProps) {
             </div>
           </div>
 
-          {/* Details Form Card */}
           <form onSubmit={handleSubmit}>
             <div className="mb-6 overflow-hidden rounded-xl border border-zinc-200 bg-white">
-              {/* Client Type Tabs */}
               <div className="border-b border-zinc-100 p-1">
                 <div className="flex rounded-lg bg-zinc-100 p-1">
                   <button
@@ -284,9 +265,7 @@ function AddClientModal({ isOpen, onClose }: AddClientModalProps) {
                 </div>
               </div>
 
-              {/* Form Fields */}
               <div className="divide-y divide-zinc-100">
-                {/* Name Row */}
                 <div className="flex items-center justify-between px-4 py-3">
                   <label className="text-sm font-medium text-zinc-500">Name</label>
                   <div className="flex gap-2">
@@ -296,6 +275,7 @@ function AddClientModal({ isOpen, onClose }: AddClientModalProps) {
                       value={formData.firstName}
                       onChange={e => setFormData({ ...formData, firstName: e.target.value })}
                       className="w-24 rounded-lg border border-zinc-200 px-3 py-1.5 text-right text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                      required
                     />
                     <input
                       type="text"
@@ -303,25 +283,23 @@ function AddClientModal({ isOpen, onClose }: AddClientModalProps) {
                       value={formData.lastName}
                       onChange={e => setFormData({ ...formData, lastName: e.target.value })}
                       className="w-24 rounded-lg border border-zinc-200 px-3 py-1.5 text-right text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                      required
                     />
                   </div>
                 </div>
 
-                {/* Email Row */}
                 <div className="flex items-center justify-between px-4 py-3">
                   <label className="text-sm font-medium text-zinc-500">Email</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="email"
-                      placeholder="client@email.com"
-                      value={formData.email}
-                      onChange={e => setFormData({ ...formData, email: e.target.value })}
-                      className="w-48 rounded-lg border border-zinc-200 px-3 py-1.5 text-right text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
-                    />
-                  </div>
+                  <input
+                    type="email"
+                    placeholder="client@email.com"
+                    value={formData.email}
+                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                    className="w-48 rounded-lg border border-zinc-200 px-3 py-1.5 text-right text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                    required
+                  />
                 </div>
 
-                {/* Phone Row */}
                 <div className="flex items-center justify-between px-4 py-3">
                   <label className="text-sm font-medium text-zinc-500">Phone</label>
                   <input
@@ -333,7 +311,6 @@ function AddClientModal({ isOpen, onClose }: AddClientModalProps) {
                   />
                 </div>
 
-                {/* Business Name Row (only for business type) */}
                 {clientType === 'business' && (
                   <div className="flex items-center justify-between px-4 py-3">
                     <label className="text-sm font-medium text-zinc-500">Business</label>
@@ -347,45 +324,30 @@ function AddClientModal({ isOpen, onClose }: AddClientModalProps) {
                   </div>
                 )}
 
-                {/* Location Row */}
                 <div className="flex items-center justify-between px-4 py-3">
-                  <label className="text-sm font-medium text-zinc-500">Location</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="City"
-                      value={formData.city}
-                      onChange={e => setFormData({ ...formData, city: e.target.value })}
-                      className="w-24 rounded-lg border border-zinc-200 px-3 py-1.5 text-right text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
-                    />
-                    <input
-                      type="text"
-                      placeholder="State"
-                      value={formData.state}
-                      onChange={e => setFormData({ ...formData, state: e.target.value })}
-                      className="w-20 rounded-lg border border-zinc-200 px-3 py-1.5 text-right text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
-                    />
-                  </div>
+                  <label className="text-sm font-medium text-zinc-500">Address</label>
+                  <input
+                    type="text"
+                    placeholder="City, State"
+                    value={formData.address}
+                    onChange={e => setFormData({ ...formData, address: e.target.value })}
+                    className="w-48 rounded-lg border border-zinc-200 px-3 py-1.5 text-right text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Plan Selection Card */}
             <div className="mb-6 overflow-hidden rounded-xl border border-zinc-200 bg-white">
-              {/* Card Header with gradient */}
               <div className="relative h-16 bg-linear-to-br from-emerald-100 via-teal-50 to-cyan-100">
                 <div className="absolute top-3 left-3 flex h-6 w-6 items-center justify-center rounded-full border-2 border-emerald-500 bg-white">
                   <div className="h-2 w-2 rounded-full bg-emerald-500" />
                 </div>
               </div>
-
-              {/* Card Content */}
               <div className="p-4">
                 <h3 className="font-medium text-zinc-900">Tax Strategy Plan</h3>
                 <p className="mt-0.5 text-sm text-zinc-500">
                   <span className="font-semibold text-zinc-900">$2,500</span> one-time setup
                 </p>
-
                 <div className="mt-4 space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="flex items-center gap-2 text-zinc-500">
@@ -405,15 +367,20 @@ function AddClientModal({ isOpen, onClose }: AddClientModalProps) {
               </div>
             </div>
 
-            {/* Submit Button */}
+            {error && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
             <button
               type="submit"
-              className="w-full rounded-xl bg-zinc-900 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+              disabled={isSubmitting}
+              className="w-full rounded-xl bg-zinc-900 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:opacity-50"
             >
-              Create Client
+              {isSubmitting ? 'Creating...' : 'Create Client'}
             </button>
 
-            {/* Security Note */}
             <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-zinc-400">
               <Lock weight="fill" className="h-3 w-3" />
               Client data is secure and encrypted
@@ -426,72 +393,84 @@ function AddClientModal({ isOpen, onClose }: AddClientModalProps) {
 }
 
 // ============================================================================
+// LOADING & EMPTY STATES
+// ============================================================================
+
+function LoadingState() {
+  return (
+    <div className="flex flex-col items-center justify-center py-16">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
+      <p className="mt-4 text-sm text-zinc-500">Loading clients...</p>
+    </div>
+  );
+}
+
+function EmptyState({ onAddClient }: { onAddClient: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <p className="mb-1 text-lg font-semibold text-zinc-800">No clients yet</p>
+      <p className="mb-4 text-sm text-zinc-400">Add your first client to get started</p>
+      <button
+        onClick={onAddClient}
+        className="flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-600"
+      >
+        <Plus weight="bold" className="h-4 w-4" />
+        Add Client
+      </button>
+    </div>
+  );
+}
+
+// ============================================================================
 // MAIN PAGE COMPONENT
 // ============================================================================
 
 export default function StrategistClientsPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabId>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [clients, setClients] = useState<ApiClient[]>([]);
 
-  // Filter clients based on search and tab
-  const filteredClients = clients.filter(client => {
-    const matchesSearch =
-      !searchQuery ||
-      client.user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.profile.businessName?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    if (activeTab === 'active') {
-      const status = getClientStatus(client);
-      return matchesSearch && status.key === 'active';
+  const loadClients = async () => {
+    try {
+      const data = await listClients();
+      setClients(data || []); // Ensure we always set an array
+    } catch (error) {
+      console.error('Failed to load clients:', error);
+      setClients([]); // Reset to empty array on error
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    return matchesSearch;
+  useEffect(() => {
+    loadClients();
+  }, []);
+
+  const filteredClients = clients.filter(client => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return client.name?.toLowerCase().includes(q) || client.email?.toLowerCase().includes(q);
   });
 
   return (
     <div className="flex min-h-full flex-col">
       <div className="flex-1">
-        {/* Header Section - matching home page zinc-50 style */}
         <div className="shrink-0 bg-white pt-6 pb-6">
           <div className="mx-auto w-full max-w-[642px]">
-            {/* Title Row */}
             <div className="mb-6 flex items-start justify-between">
               <div>
-                <h1 className="mb-2 text-2xl font-medium tracking-tight"> Clients</h1>
+                <h1 className="mb-2 text-2xl font-medium tracking-tight">Clients</h1>
                 <p className="mt-1 text-sm text-zinc-500">
-                  Manage and view all your tax strategy clients
+                  {clients.length > 0
+                    ? `${clients.length} client${clients.length !== 1 ? 's' : ''}`
+                    : 'Manage and view all your tax strategy clients'}
                 </p>
               </div>
             </div>
 
-            {/* Tabs & Search Row */}
             <div className="flex flex-wrap items-center justify-between gap-4">
-              {/* Tabs */}
-              {/* <div className="flex items-center gap-2">
-                <TabButton
-                  label="All Clients"
-                  icon={Globe}
-                  isActive={activeTab === 'all'}
-                  onClick={() => setActiveTab('all')}
-                />
-                <TabButton
-                  label="Active"
-                  icon={CheckCircle}
-                  isActive={activeTab === 'active'}
-                  onClick={() => setActiveTab('active')}
-                />
-                <TabButton
-                  label="Folders"
-                  icon={Folder}
-                  isActive={activeTab === 'folders'}
-                  onClick={() => setActiveTab('folders')}
-                />
-              </div> */}
-
-              {/* Search Input */}
               <div className="relative">
                 <MagnifyingGlassIcon
                   weight="bold"
@@ -502,22 +481,18 @@ export default function StrategistClientsPage() {
                   placeholder="Search..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="h-[30px] w-64 rounded-lg bg-white border border-zinc-200 shadow pr-3 pl-7 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 hover:bg-zinc-100 focus:border-zinc-300 focus:outline-none"
+                  className="h-[30px] w-64 rounded-lg border border-zinc-200 bg-white pr-3 pl-7 text-sm font-medium text-zinc-900 shadow placeholder:text-zinc-400 hover:bg-zinc-100 focus:border-zinc-300 focus:outline-none"
                 />
               </div>
-              {/* Filter Button */}
               <div className="flex items-center gap-2">
-                {/* Add to Folder Button */}
                 <button className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50">
                   <span>Folder</span>
                   <ChevronDown className="h-4 w-4" />
                 </button>
-                <button className="flex items-center gap-1.5 rounded-lg bg-white border border-zinc-200 px-3 py-1 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50">
+                <button className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50">
                   <span>Filter</span>
-
                   <ChevronDownIcon className="h-4 w-4" />
                 </button>
-                {/* Add Client Button - matching client details primary button style */}
                 <button
                   onClick={() => setIsAddClientModalOpen(true)}
                   className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-500 bg-emerald-500 px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-emerald-600"
@@ -530,35 +505,32 @@ export default function StrategistClientsPage() {
           </div>
         </div>
 
-        {/* Cards Grid Section - white background matching home page */}
         <div className="bg-white pb-42">
           <div className="mx-auto w-full max-w-[642px] py-6">
-            {/* Cards Grid */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {filteredClients.map(client => (
-                <ClientCard key={client.user.id} client={client} />
-              ))}
-            </div>
-
-            {/* Empty State */}
-            {filteredClients.length === 0 && (
+            {isLoading ? (
+              <LoadingState />
+            ) : clients.length === 0 ? (
+              <EmptyState onAddClient={() => setIsAddClientModalOpen(true)} />
+            ) : filteredClients.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <p className="mb-1 text-lg font-semibold text-zinc-800">No clients found</p>
-                <p className="text-sm text-zinc-400">
-                  {searchQuery
-                    ? 'Try adjusting your search'
-                    : 'Add your first client to get started'}
-                </p>
+                <p className="text-sm text-zinc-400">Try adjusting your search</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {filteredClients.map(client => (
+                  <ClientCard key={client.id} client={client} />
+                ))}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Add Client Modal */}
       <AddClientModal
         isOpen={isAddClientModalOpen}
         onClose={() => setIsAddClientModalOpen(false)}
+        onClientCreated={loadClients}
       />
     </div>
   );
