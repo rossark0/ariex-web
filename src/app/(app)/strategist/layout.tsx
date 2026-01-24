@@ -17,12 +17,10 @@ import {
 const navItems = [
   { href: '/strategist/home', label: 'Home', icon: House },
   { href: '/strategist/clients', label: 'Clients', icon: AddressBook },
-  { href: '/strategist/documents', label: 'Documents', icon: Upload },
   { href: '/strategist/agreements', label: 'Agreements', icon: FileText },
-  { href: '/strategist/payments', label: 'Payments', icon: CreditCard },
-  // { href: '/strategist/tasks', label: 'Tasks', icon: ListChecks },
-  // { href: '/strategist/reports', label: 'Reports', icon: ChartLineUp },
-  { href: 'https://support.ariex.com', label: 'Support', icon: Lifebuoy },
+  // { href: '/strategist/documents', label: 'Documents', icon: Upload },
+  // { href: '/strategist/payments', label: 'Payments', icon: CreditCard },
+  // { href: 'https://support.ariex.com', label: 'Support', icon: Lifebuoy },
 ];
 
 export default function StrategistLayout({ children }: { children: React.ReactNode }) {

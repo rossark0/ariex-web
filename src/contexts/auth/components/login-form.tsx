@@ -17,22 +17,22 @@ export function LoginForm() {
     e.preventDefault();
     setError('');
 
-    console.log('[LoginForm] Starting login for:', email);
+    // console.log('[LoginForm] Starting login for:', email);
     const result = await login(email, password);
-    console.log('[LoginForm] Login result:', JSON.stringify(result));
+    // console.log('[LoginForm] Login result:', JSON.stringify(result));
 
     if (result.success && result.redirectTo) {
-      console.log('[LoginForm] Redirecting to:', result.redirectTo);
+      // console.log('[LoginForm] Redirecting to:', result.redirectTo);
       window.location.href = result.redirectTo;
     } else if (result.needsPasswordChange) {
       // Redirect to complete password page for invited users
-      console.log('[LoginForm] Needs password change, redirecting to /complete-password');
+      // console.log('[LoginForm] Needs password change, redirecting to /complete-password');
       window.location.href = '/complete-password';
     } else if (result.needsConfirmation) {
       // Redirect to email confirmation page
       window.location.href = '/confirm-email';
     } else {
-      console.log('[LoginForm] Login failed, error:', storeError);
+      // console.log('[LoginForm] Login failed, error:', storeError);
       setError(storeError || 'Failed to sign in');
     }
   };

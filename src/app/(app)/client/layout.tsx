@@ -43,7 +43,7 @@ function needsOnboarding(clientData: FullClientMock | null): boolean {
 }
 
 export default function ClientAppLayout({ children }: { children: React.ReactNode }) {
-  useRoleRedirect('CLIENT');
+  useRoleRedirect(['CLIENT', 'ADMIN']);
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
@@ -51,6 +51,13 @@ export default function ClientAppLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (!user) {
+      setIsChecking(false);
+      return;
+    }
+
+    // Only check onboarding for CLIENT role users
+    // ADMIN users viewing client pages should not be redirected to onboarding
+    if (user.role !== 'CLIENT') {
       setIsChecking(false);
       return;
     }

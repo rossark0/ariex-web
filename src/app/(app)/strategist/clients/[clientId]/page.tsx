@@ -5,7 +5,14 @@ import { useUiStore } from '@/contexts/ui/UiStore';
 import { StrategySheet } from '@/components/strategy/strategy-sheet';
 import { Button } from '@/components/ui/button';
 import { getFullClientById, FullClientMock } from '@/lib/mocks/client-full';
-import { getClientById, type ApiClient } from '@/lib/api/strategist.api';
+import {
+  getClientById,
+  type ApiClient,
+  type ApiAgreement,
+  listClientAgreements,
+} from '@/lib/api/strategist.api';
+import { sendAgreementToClient } from '@/lib/api/agreements.actions';
+import { AgreementModal, type AgreementFormData } from '@/components/agreements/agreement-modal';
 import {
   getClientTimelineAndStatus,
   CLIENT_STATUS_CONFIG,
@@ -16,6 +23,7 @@ import {
   BuildingsIcon,
   EnvelopeIcon,
   FileIcon,
+  FileArrowDown as FileArrowDownIcon,
   FolderPlusIcon,
   PhoneIcon,
   Check as CheckIcon,
@@ -179,8 +187,12 @@ function apiClientToMockFormat(apiClient: ApiClient): FullClientMock {
       dependents: apiClient.clientProfile?.dependents || null,
       estimatedIncome: apiClient.clientProfile?.estimatedIncome || null,
       businessType: apiClient.clientProfile?.businessType || null,
-      createdAt: apiClient.clientProfile?.createdAt ? new Date(apiClient.clientProfile.createdAt) : now,
-      updatedAt: apiClient.clientProfile?.updatedAt ? new Date(apiClient.clientProfile.updatedAt) : now,
+      createdAt: apiClient.clientProfile?.createdAt
+        ? new Date(apiClient.clientProfile.createdAt)
+        : now,
+      updatedAt: apiClient.clientProfile?.updatedAt
+        ? new Date(apiClient.clientProfile.updatedAt)
+        : now,
     },
     strategistId: apiClient.strategists?.[0] || '',
     isOnboardingComplete: apiClient.clientProfile?.onboardingComplete || false,
@@ -201,6 +213,16 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [isStrategySheetOpen, setIsStrategySheetOpen] = useState(false);
   const { setSelection } = useUiStore();
+
+  // Agreement state
+  const [agreements, setAgreements] = useState<ApiAgreement[]>([]);
+  const [isSendingAgreement, setIsSendingAgreement] = useState(false);
+  const [agreementError, setAgreementError] = useState<string | null>(null);
+  const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
+
+  // Payment state
+  const [isSendingPayment, setIsSendingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Load client data from API
   useEffect(() => {
@@ -248,6 +270,161 @@ export default function StrategistClientDetailPage({ params }: Props) {
   useEffect(() => {
     setSelection(selectedDocs.size, () => setSelectedDocs(new Set()));
   }, [selectedDocs.size, setSelection]);
+
+  // Load agreements from backend
+  useEffect(() => {
+    async function loadAgreements() {
+      try {
+        const data = await listClientAgreements(params.clientId);
+        console.log('[Page] Loaded agreements:', data);
+        console.log(
+          '[Page] TodoLists:',
+          data.flatMap(a => a.todoLists || [])
+        );
+        console.log(
+          '[Page] Todos:',
+          data.flatMap(a => a.todoLists?.flatMap(tl => tl.todos || []) || [])
+        );
+        setAgreements(data);
+      } catch (error) {
+        console.error('[Page] Failed to load agreements:', error);
+      }
+    }
+    if (params.clientId) loadAgreements();
+  }, [params.clientId]);
+
+  // Handler for sending agreement from modal
+  const handleSendAgreement = async (formData: AgreementFormData) => {
+    setIsSendingAgreement(true);
+    setAgreementError(null);
+
+    try {
+      const result = await sendAgreementToClient({
+        clientId: params.clientId,
+        customTitle: formData.title,
+        description: formData.description,
+        price: formData.price,
+        todos: formData.todos,
+      });
+
+      if (result.success) {
+        // Store ceremony URL in localStorage for client to retrieve
+        // (Backend doesn't store this field yet)
+        if (result.agreementId && result.ceremonyUrl) {
+          const ceremonyUrls = JSON.parse(localStorage.getItem('ariex_ceremony_urls') || '{}');
+          ceremonyUrls[result.agreementId] = result.ceremonyUrl;
+          localStorage.setItem('ariex_ceremony_urls', JSON.stringify(ceremonyUrls));
+        }
+
+        // Reload agreements from backend to get the real data
+        try {
+          const data = await listClientAgreements(params.clientId);
+          // Enrich with stored ceremony URLs
+          const enrichedData = data.map(a => {
+            const storedUrls = JSON.parse(localStorage.getItem('ariex_ceremony_urls') || '{}');
+            return {
+              ...a,
+              signatureCeremonyUrl: a.signatureCeremonyUrl || storedUrls[a.id],
+            };
+          });
+          setAgreements(enrichedData);
+        } catch {
+          // Fallback: add temp agreement with new status
+          setAgreements([
+            {
+              id: result.agreementId || 'temp',
+              name: formData.title,
+              description: formData.description,
+              price: formData.price,
+              status: 'DRAFT',
+              clientId: params.clientId,
+              strategistId: '',
+              signatureCeremonyUrl: result.ceremonyUrl,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              todoLists: [],
+            },
+          ]);
+        }
+        setIsAgreementModalOpen(false);
+      } else {
+        setAgreementError(result.error || 'Failed to send agreement');
+      }
+    } catch (error) {
+      console.error('Failed to send agreement:', error);
+      setAgreementError('An unexpected error occurred');
+    } finally {
+      setIsSendingAgreement(false);
+    }
+  };
+
+  // Get the active agreement (most recent)
+  const activeAgreement = agreements[0];
+
+  // Compute agreement status from real data
+  // Status: DRAFT (created) -> ACTIVE (signed) -> COMPLETED
+  const hasAgreementSent = agreements.some(
+    a => a.status === 'DRAFT' || a.status === 'ACTIVE' || a.status === 'COMPLETED'
+  );
+  const hasAgreementSigned = agreements.some(
+    a => a.status === 'ACTIVE' || a.status === 'COMPLETED'
+  );
+
+  // Get the signed agreement for payment
+  const signedAgreement = agreements.find(
+    a => a.status === 'ACTIVE' || a.status === 'COMPLETED'
+  );
+  const hasPaymentSent =
+    signedAgreement?.paymentStatus === 'pending' || signedAgreement?.paymentLink;
+  const hasPaymentReceived = signedAgreement?.paymentStatus === 'paid';
+
+  // Compute document todos from agreement (excluding the signing todo)
+  const allTodos =
+    activeAgreement?.todoLists?.flatMap(list => list.todos || []) || [];
+  const documentTodos = allTodos.filter(
+    todo => !todo.title.toLowerCase().includes('sign')
+  );
+  const completedDocTodos = documentTodos.filter(
+    todo =>
+      todo.status === 'completed' ||
+      todo.document?.uploadStatus === 'FILE_UPLOADED'
+  );
+  const totalDocTodos = documentTodos.length;
+  const completedDocCount = completedDocTodos.length;
+  const hasDocumentsRequested = totalDocTodos > 0;
+  const hasAllDocumentsUploaded = totalDocTodos > 0 && completedDocCount >= totalDocTodos;
+
+  // Handler for sending payment link
+  const handleSendPaymentLink = async () => {
+    if (isSendingPayment || !signedAgreement) return;
+
+    setIsSendingPayment(true);
+    setPaymentError(null);
+
+    try {
+      // For now, we'll attach a payment amount to the agreement
+      // In production, this would create a Stripe payment link
+      const { attachPayment } = await import('@/lib/api/strategist.api');
+
+      const success = await attachPayment(signedAgreement.id, {
+        amount: 499, // Default onboarding fee
+        paymentLink: `https://buy.stripe.com/test_example?client=${params.clientId}`, // Placeholder
+      });
+
+      if (success) {
+        // Reload agreements
+        const data = await listClientAgreements(params.clientId);
+        setAgreements(data);
+      } else {
+        setPaymentError('Failed to send payment link');
+      }
+    } catch (error) {
+      console.error('Failed to send payment link:', error);
+      setPaymentError('An unexpected error occurred');
+    } finally {
+      setIsSendingPayment(false);
+    }
+  };
 
   // Show loading state
   if (isLoading) {
@@ -482,25 +659,25 @@ export default function StrategistClientDetailPage({ params }: Props) {
                       <div className="relative flex gap-4 pb-6">
                         <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
                           <div
-                            className={`h-2 w-2 rounded-full ${step2Sent || step2Complete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                            className={`h-2 w-2 rounded-full ${hasAgreementSent || hasAgreementSigned ? 'bg-emerald-500' : 'bg-zinc-300'}`}
                           />
                         </div>
                         {/* Line to next step - emerald only if step 2 complete */}
                         <div
-                          className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${step2Complete ? 'bg-emerald-200' : 'bg-zinc-200'}`}
+                          className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${hasAgreementSigned ? 'bg-emerald-200' : 'bg-zinc-200'}`}
                         />
                         <div className="flex flex-1 flex-col">
                           <span className="font-medium text-zinc-900">
-                            {step2Complete
+                            {hasAgreementSigned
                               ? 'Service agreement signed'
-                              : step2Sent
+                              : hasAgreementSent
                                 ? 'Agreement sent for signature'
                                 : 'Agreement pending'}
                           </span>
                           <span className="text-sm text-zinc-500">
-                            {step2Complete
+                            {hasAgreementSigned
                               ? 'Ariex Service Agreement 2024 was signed '
-                              : step2Sent
+                              : hasAgreementSent
                                 ? 'Waiting for client to review and sign'
                                 : 'Send service agreement to client'}
                           </span>
@@ -508,16 +685,20 @@ export default function StrategistClientDetailPage({ params }: Props) {
                             {formatDate(agreementTask?.updatedAt || client.user.createdAt)}
                           </span>
                           {/* Button: emerald if strategist needs to act, zinc if already acted (resend) */}
-                          {step1Complete && !step2Complete && (
+                          {step1Complete && !hasAgreementSigned && (
                             <button
-                              className={`mt-2 w-fit rounded px-2 py-1 text-xs font-semibold ${
-                                step2Sent
+                              onClick={() => setIsAgreementModalOpen(true)}
+                              className={`mt-2 flex w-fit items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${
+                                hasAgreementSent
                                   ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
                                   : 'bg-emerald-600 text-white hover:bg-emerald-700'
                               }`}
                             >
-                              {step2Sent ? 'Resend agreement' : 'Send agreement'}
+                              {hasAgreementSent ? 'Resend agreement' : 'Send agreement'}
                             </button>
+                          )}
+                          {agreementError && (
+                            <span className="mt-1 text-xs text-red-500">{agreementError}</span>
                           )}
                         </div>
                       </div>
@@ -570,45 +751,99 @@ export default function StrategistClientDetailPage({ params }: Props) {
                         </div>
                       </div>
 
-                      {/* Step 4: Documents Phase */}
+                      {/* Step 4: Documents Phase (driven by agreement todos) */}
                       <div className="relative flex gap-4 pb-6">
                         <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
                           <div
-                            className={`h-2 w-2 rounded-full ${step4Sent || step4Complete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                            className={`h-2 w-2 rounded-full ${hasDocumentsRequested || hasAllDocumentsUploaded ? 'bg-emerald-500' : 'bg-zinc-300'}`}
                           />
                         </div>
-                        {/* Line to next step - emerald only if step 4 complete */}
+                        {/* Line to next step - emerald only if all docs uploaded */}
                         <div
-                          className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${step4Complete ? 'bg-emerald-200' : 'bg-zinc-200'}`}
+                          className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${hasAllDocumentsUploaded ? 'bg-emerald-200' : 'bg-zinc-200'}`}
                         />
                         <div className="flex flex-1 flex-col">
                           <span className="font-medium text-zinc-900">
-                            {step4Complete
-                              ? `Initial documents uploaded · ${uploadedCount} files`
-                              : step4Sent
-                                ? 'Waiting for document upload'
+                            {hasAllDocumentsUploaded
+                              ? `Documents uploaded · ${completedDocCount}/${totalDocTodos} complete`
+                              : hasDocumentsRequested
+                                ? `Documents pending · ${completedDocCount}/${totalDocTodos} uploaded`
                                 : 'Documents'}
                           </span>
                           <span className="text-sm text-zinc-500">
-                            {step4Complete
-                              ? 'W-2s, 1099s, and tax documents received'
-                              : step4Sent
-                                ? 'Client needs to upload W-2s, 1099s, and relevant tax documents'
+                            {hasAllDocumentsUploaded
+                              ? 'All requested documents have been received'
+                              : hasDocumentsRequested
+                                ? 'Waiting for client to upload requested documents'
                                 : 'Request documents from client'}
                           </span>
-                          <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                          {/* Show individual todo items */}
+                          {hasDocumentsRequested && documentTodos.length > 0 && (
+                            <div className="mt-2 flex flex-col gap-1.5">
+                              {documentTodos.map(todo => {
+                                const isCompleted =
+                                  todo.status === 'completed' ||
+                                  todo.document?.uploadStatus === 'FILE_UPLOADED';
+                                const uploadedFile = todo.document?.files?.[0];
+
+                                return (
+                                  <div
+                                    key={todo.id}
+                                    className="flex items-center gap-2 text-xs"
+                                  >
+                                    {isCompleted ? (
+                                      <CheckIcon
+                                        weight="bold"
+                                        className="h-3.5 w-3.5 shrink-0 text-emerald-500"
+                                      />
+                                    ) : (
+                                      <div className="h-3.5 w-3.5 shrink-0 rounded-full border border-zinc-300" />
+                                    )}
+                                    <div className="flex flex-1 flex-col">
+                                      <span
+                                        className={
+                                          isCompleted
+                                            ? 'text-zinc-600 line-through'
+                                            : 'text-zinc-600'
+                                        }
+                                      >
+                                        {todo.title}
+                                      </span>
+                                      {uploadedFile && (
+                                        <a
+                                          href={uploadedFile.downloadUrl || '#'}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="mt-0.5 flex items-center gap-1 text-emerald-600 hover:text-emerald-700 hover:underline"
+                                        >
+                                          <FileArrowDownIcon
+                                            weight="fill"
+                                            className="h-3 w-3"
+                                          />
+                                          <span className="truncate max-w-[180px]">
+                                            {uploadedFile.originalName}
+                                          </span>
+                                        </a>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          <span className="mt-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                             {formatDate(docsTask?.updatedAt || client.user.createdAt)}
                           </span>
-                          {/* Button: emerald if strategist needs to act, zinc if already acted (reminder) */}
-                          {step3Complete && !step4Complete && (
+                          {/* Button only shows if agreement is signed (step3 complete) */}
+                          {hasAgreementSigned && !hasAllDocumentsUploaded && (
                             <button
                               className={`mt-2 w-fit rounded px-2 py-1 text-xs font-semibold ${
-                                step4Sent
+                                hasDocumentsRequested
                                   ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
                                   : 'bg-emerald-600 text-white hover:bg-emerald-700'
                               }`}
                             >
-                              {step4Sent ? 'Send reminder' : 'Request documents'}
+                              {hasDocumentsRequested ? 'Send reminder' : 'Request documents'}
                             </button>
                           )}
                         </div>
@@ -799,6 +1034,16 @@ export default function StrategistClientDetailPage({ params }: Props) {
         client={client}
         isOpen={isStrategySheetOpen}
         onClose={() => setIsStrategySheetOpen(false)}
+      />
+
+      {/* Agreement Modal */}
+      <AgreementModal
+        isOpen={isAgreementModalOpen}
+        onClose={() => setIsAgreementModalOpen(false)}
+        onSubmit={handleSendAgreement}
+        clientName={client.user.name || client.user.email || 'Client'}
+        isLoading={isSendingAgreement}
+        error={agreementError}
       />
     </div>
   );

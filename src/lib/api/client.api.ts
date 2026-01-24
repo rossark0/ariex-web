@@ -2,6 +2,7 @@
 
 import { API_URL } from '@/lib/cognito-config';
 import { cookies } from 'next/headers';
+import { getEnvelopeDetails, createEmbeddedCeremonyUrl } from '@/lib/signature/signatureapi';
 
 // ============================================================================
 // Types
@@ -55,11 +56,52 @@ export interface ClientDashboardData {
 
 export interface ClientAgreement {
   id: string;
-  type: string;
-  status: 'pending' | 'sent' | 'signed' | 'completed' | 'cancelled';
-  contractEnvelopeId?: string;
+  title: string;
+  name?: string;
+  description?: string;
+  type?: string;
+  status:
+    | 'draft'
+    | 'pending'
+    | 'sent'
+    | 'signed'
+    | 'completed'
+    | 'declined'
+    | 'expired'
+    | 'cancelled';
+  price?: string | number;
+  signatureEnvelopeId?: string;
+  signatureRecipientId?: string;
+  signatureCeremonyUrl?: string;
+  contractFileId?: string;
+  contractDocumentId?: string;
   paymentReference?: string;
+  paymentRef?: string;
   paymentAmount?: number;
+  paymentStatus?: 'pending' | 'paid' | 'failed';
+  paymentLink?: string;
+  signedAt?: string;
+  paidAt?: string;
+  todoLists?: Array<{
+    id: string;
+    name: string;
+    todos: Array<{
+      id: string;
+      title: string;
+      description?: string;
+      status: string;
+      document?: {
+        id: string;
+        signedStatus: string;
+        uploadStatus: string;
+        files?: Array<{
+          id: string;
+          originalName: string;
+          downloadUrl?: string;
+        }>;
+      };
+    }>;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -135,12 +177,12 @@ export async function getCurrentClientUser(): Promise<ClientUser | null> {
   try {
     const userId = await getCurrentUserId();
     if (!userId || userId === 'unknown') {
-      console.log('[ClientAPI] No user ID found');
+      // console.log('[ClientAPI] No user ID found');
       return null;
     }
 
     const user = await apiRequest<ClientUser>(`/users/${userId}`);
-    console.log('[ClientAPI] getCurrentClientUser:', user);
+    // console.log('[ClientAPI] getCurrentClientUser:', user);
     return user;
   } catch (error) {
     console.error('[ClientAPI] Failed to get current user:', error);
@@ -155,15 +197,15 @@ export async function getClientProfile(): Promise<ClientProfile | null> {
   try {
     const userId = await getCurrentUserId();
     if (!userId || userId === 'unknown') {
-      console.log('[ClientAPI] No user ID found for profile');
+      // console.log('[ClientAPI] No user ID found for profile');
       return null;
     }
 
     const profile = await apiRequest<ClientProfile>(`/users/${userId}/client-profile`);
-    console.log('[ClientAPI] getClientProfile:', profile);
+    // console.log('[ClientAPI] getClientProfile:', profile);
     return profile;
   } catch (error) {
-    console.error('[ClientAPI] Failed to get client profile:', error);
+    // console.error('[ClientAPI] Failed to get client profile:', error);
     return null;
   }
 }
@@ -171,7 +213,9 @@ export async function getClientProfile(): Promise<ClientProfile | null> {
 /**
  * Update client profile
  */
-export async function updateClientProfile(data: Partial<ClientProfile>): Promise<ClientProfile | null> {
+export async function updateClientProfile(
+  data: Partial<ClientProfile>
+): Promise<ClientProfile | null> {
   try {
     const userId = await getCurrentUserId();
     if (!userId || userId === 'unknown') {
@@ -194,13 +238,139 @@ export async function updateClientProfile(data: Partial<ClientProfile>): Promise
 // ============================================================================
 
 /**
+ * Parse signature metadata from agreement description
+ * The strategist API stores signature data as JSON in the description field
+ */
+function parseSignatureMetadata(description: string | undefined): {
+  envelopeId?: string;
+  recipientId?: string;
+  ceremonyUrl?: string;
+  cleanDescription: string;
+} {
+  if (!description) {
+    return { cleanDescription: '' };
+  }
+
+  // Match __SIGNATURE_METADATA__ to the end of string ([\s\S]+ matches any char including newlines)
+  const metadataMatch = description.match(/\n\n__SIGNATURE_METADATA__:([\s\S]+)$/);
+  if (!metadataMatch) {
+    return { cleanDescription: description };
+  }
+
+  try {
+    const metadata = JSON.parse(metadataMatch[1]);
+    const cleanDescription = description.replace(/\n\n__SIGNATURE_METADATA__:[\s\S]+$/, '');
+    return {
+      envelopeId: metadata.envelopeId,
+      recipientId: metadata.recipientId,
+      ceremonyUrl: metadata.ceremonyUrl,
+      cleanDescription,
+    };
+  } catch (e) {
+    return { cleanDescription: description };
+  }
+}
+
+/**
  * Get all agreements for current client
+ * Maps backend status (DRAFT, ACTIVE, COMPLETED) to client-friendly status
+ * Parses signature metadata from description field
  */
 export async function getClientAgreements(): Promise<ClientAgreement[]> {
   try {
-    const agreements = await apiRequest<ClientAgreement[]>('/agreements');
-    console.log('[ClientAPI] getClientAgreements:', agreements);
-    return Array.isArray(agreements) ? agreements : [];
+    const rawAgreements = await apiRequest<any[]>('/agreements');
+    // console.log('[ClientAPI] Raw agreements from backend:', JSON.stringify(rawAgreements, null, 2));
+
+    if (!Array.isArray(rawAgreements)) {
+      return [];
+    }
+
+    // Map backend agreement format to client format
+    const agreements: ClientAgreement[] = await Promise.all(
+      rawAgreements.map(async a => {
+        console.log('[ClientAPI] Processing agreement:', a.id, 'raw data:', JSON.stringify(a, null, 2));
+        // Map backend status to client-friendly status
+        let status: ClientAgreement['status'] = 'draft';
+        const backendStatus = a.status?.toUpperCase();
+
+        if (backendStatus === 'DRAFT') {
+          // DRAFT = sent but not signed yet = pending
+          status = 'pending';
+        } else if (backendStatus === 'ACTIVE') {
+          // ACTIVE = signed
+          status = 'signed';
+        } else if (backendStatus === 'COMPLETED') {
+          status = 'completed';
+        } else if (backendStatus === 'CANCELLED') {
+          status = 'cancelled';
+        } else if (backendStatus === 'ARCHIVED') {
+          status = 'cancelled';
+        }
+
+        // Parse signature metadata from description (workaround until backend has proper fields)
+        const signatureData = parseSignatureMetadata(a.description);
+        console.log('[ClientAPI] Parsed signature data for agreement', a.id, ':', signatureData);
+
+        // Get ceremony URL - try multiple sources
+        let ceremonyUrl = a.signatureCeremonyUrl || signatureData.ceremonyUrl;
+        let envelopeId = a.signatureEnvelopeId || signatureData.envelopeId;
+        let recipientId = a.signatureRecipientId || signatureData.recipientId;
+
+        console.log('[ClientAPI] Initial ceremony data:', { ceremonyUrl, envelopeId, recipientId });
+
+        // If we have an envelope ID but no ceremony URL, try to get or create one
+        if (!ceremonyUrl && envelopeId && recipientId && status === 'pending') {
+          console.log('[ClientAPI] Fetching ceremony URL from SignatureAPI for envelope:', envelopeId);
+          try {
+            // First try to get existing ceremony URL from envelope
+            const envelopeDetails = await getEnvelopeDetails(envelopeId);
+            const recipient = envelopeDetails?.recipients?.find(r => r.id === recipientId);
+            
+            if (recipient?.ceremony?.url) {
+              ceremonyUrl = recipient.ceremony.url;
+              console.log('[ClientAPI] Got ceremony URL from envelope:', ceremonyUrl);
+            } else {
+              // If no URL exists, create a new ceremony for the recipient
+              console.log('[ClientAPI] No ceremony URL found, creating ceremony...');
+              const embeddedUrl = await createEmbeddedCeremonyUrl(envelopeId, recipientId);
+              if (embeddedUrl) {
+                ceremonyUrl = embeddedUrl;
+                console.log('[ClientAPI] Created ceremony URL:', ceremonyUrl);
+              }
+            }
+          } catch (error) {
+            console.error('[ClientAPI] Failed to get/create ceremony URL from SignatureAPI:', error);
+          }
+        }
+
+        console.log('[ClientAPI] Final ceremony URL for agreement', a.id, ':', ceremonyUrl);
+
+        return {
+          id: a.id,
+          title: a.name || a.title || 'Service Agreement',
+          name: a.name,
+          description: signatureData.cleanDescription, // Use clean description without metadata
+          status,
+          price: a.price,
+          signatureEnvelopeId: envelopeId,
+          signatureRecipientId: recipientId,
+          signatureCeremonyUrl: ceremonyUrl,
+          contractDocumentId: a.contractDocumentId,
+          paymentRef: a.paymentRef,
+          paymentAmount: a.paymentAmount,
+          paymentStatus: a.paymentStatus,
+          paymentLink: a.paymentLink,
+          signedAt: a.signedAt,
+          paidAt: a.paidAt,
+          todoLists: a.todoLists || [],
+          createdAt: a.createdAt,
+          updatedAt: a.updatedAt,
+        };
+      })
+    );
+
+    // console.log('[ClientAPI] Mapped agreements:', agreements);
+    return agreements;
   } catch (error) {
     console.error('[ClientAPI] Failed to get agreements:', error);
     return [];
@@ -243,7 +413,7 @@ export async function getAgreementStatus(agreementId: string): Promise<{ status:
 export async function getClientDocuments(): Promise<ClientDocument[]> {
   try {
     const documents = await apiRequest<ClientDocument[]>('/documents');
-    console.log('[ClientAPI] getClientDocuments:', documents);
+    // console.log('[ClientAPI] getClientDocuments:', documents);
     return Array.isArray(documents) ? documents : [];
   } catch (error) {
     console.error('[ClientAPI] Failed to get documents:', error);
@@ -330,10 +500,10 @@ export async function getDocumentDownloadUrl(fileId: string): Promise<string | n
 export async function getClientTodos(): Promise<ClientTodo[]> {
   try {
     const todos = await apiRequest<ClientTodo[]>('/todos');
-    console.log('[ClientAPI] getClientTodos:', todos);
+    // console.log('[ClientAPI] getClientTodos:', todos);
     return Array.isArray(todos) ? todos : [];
   } catch (error) {
-    console.error('[ClientAPI] Failed to get todos:', error);
+    // console.error('[ClientAPI] Failed to get todos:', error);
     return [];
   }
 }
@@ -369,7 +539,7 @@ export async function getClientDashboardData(): Promise<ClientDashboardData | nu
   try {
     const userId = await getCurrentUserId();
     if (!userId || userId === 'unknown') {
-      console.log('[ClientAPI] No user ID for dashboard data');
+      // console.log('[ClientAPI] No user ID for dashboard data');
       return null;
     }
 
@@ -383,7 +553,7 @@ export async function getClientDashboardData(): Promise<ClientDashboardData | nu
     ]);
 
     if (!user) {
-      console.log('[ClientAPI] No user found for dashboard');
+      // console.log('[ClientAPI] No user found for dashboard');
       return null;
     }
 
@@ -396,14 +566,14 @@ export async function getClientDashboardData(): Promise<ClientDashboardData | nu
           fullName?: string;
           email: string;
         }>(`/users/${user.strategists[0]}`);
-        
+
         strategist = {
           id: strategistUser.id,
           name: strategistUser.fullName || 'Your Strategist',
           email: strategistUser.email,
         };
       } catch (e) {
-        console.log('[ClientAPI] Could not fetch strategist info');
+        // console.log('[ClientAPI] Could not fetch strategist info');
       }
     }
 
@@ -447,33 +617,34 @@ function calculateOnboardingStatus(data: ClientDashboardData): OnboardingStatus 
   const { agreements, documents, profile } = data;
 
   // Find service agreement
-  const serviceAgreement = agreements.find(a => 
-    a.type === 'service_agreement' || a.type === 'onboarding'
+  const serviceAgreement = agreements.find(
+    a => a.type === 'service_agreement' || a.type === 'onboarding'
   );
 
   // Find strategy document
-  const strategyDoc = documents.find(d => 
-    d.type === 'strategy' || d.category === 'strategy'
-  );
+  const strategyDoc = documents.find(d => d.type === 'strategy' || d.category === 'strategy');
 
   // Check uploaded documents (excluding agreements/strategies)
-  const uploadedDocs = documents.filter(d => 
-    d.type !== 'agreement' && d.type !== 'strategy' && d.category !== 'contract'
+  const uploadedDocs = documents.filter(
+    d => d.type !== 'agreement' && d.type !== 'strategy' && d.category !== 'contract'
   );
 
   // Calculate payment received first
-  const paymentReceived = serviceAgreement?.status === 'completed' || 
-                          (!!serviceAgreement?.paymentReference && serviceAgreement?.status !== 'pending');
+  const paymentReceived =
+    serviceAgreement?.status === 'completed' ||
+    (!!serviceAgreement?.paymentReference && serviceAgreement?.status !== 'pending');
 
   const status: OnboardingStatus = {
     accountCreated: true, // Always true if we have data
     agreementSent: serviceAgreement?.status === 'sent' || serviceAgreement?.status === 'signed',
-    agreementSigned: serviceAgreement?.status === 'signed' || serviceAgreement?.status === 'completed',
+    agreementSigned:
+      serviceAgreement?.status === 'signed' || serviceAgreement?.status === 'completed',
     paymentSent: !!serviceAgreement?.paymentReference,
     paymentReceived,
     documentsRequested: paymentReceived, // Docs requested after payment
     documentsUploaded: uploadedDocs.length > 0,
-    strategySent: strategyDoc?.signatureStatus === 'SENT' || strategyDoc?.signatureStatus === 'SIGNED',
+    strategySent:
+      strategyDoc?.signatureStatus === 'SENT' || strategyDoc?.signatureStatus === 'SIGNED',
     strategySigned: strategyDoc?.signatureStatus === 'SIGNED',
     isOnboardingComplete: profile?.onboardingComplete || false,
     currentStep: 'agreement',

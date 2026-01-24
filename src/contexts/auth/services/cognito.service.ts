@@ -55,14 +55,14 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
   const url = `${API_URL}${endpoint}`;
 
   // DEBUG: Log request details
-  console.log(`[Auth DEBUG] Request: ${options.method || 'GET'} ${url}`);
+  // console.log(`[Auth DEBUG] Request: ${options.method || 'GET'} ${url}`);
   if (options.body) {
     // Don't log passwords
     const bodyData = JSON.parse(options.body as string);
     const safeBody = { ...bodyData };
     if (safeBody.password) safeBody.password = '***HIDDEN***';
     if (safeBody.newPassword) safeBody.newPassword = '***HIDDEN***';
-    console.log('[Auth DEBUG] Body:', JSON.stringify(safeBody, null, 2));
+    // console.log('[Auth DEBUG] Body:', JSON.stringify(safeBody, null, 2));
   }
 
   const response = await fetch(url, {
@@ -76,8 +76,8 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
   const data = await response.json();
 
   // DEBUG: Log response
-  console.log(`[Auth DEBUG] Response status: ${response.status}`);
-  console.log('[Auth DEBUG] Response data:', JSON.stringify(data, null, 2));
+  // console.log(`[Auth DEBUG] Response status: ${response.status}`);
+  // console.log('[Auth DEBUG] Response data:', JSON.stringify(data, null, 2));
 
   if (!response.ok) {
     throw new Error(data.message || data.error || 'Request failed');
@@ -178,7 +178,7 @@ export async function signUp(data: SignUpData): Promise<AuthResponse> {
       }),
     });
 
-    console.log('[Auth] Signup result:', signupResult);
+    // console.log('[Auth] Signup result:', signupResult);
 
     return {
       success: true,
@@ -220,11 +220,11 @@ export async function signIn(
       }),
     });
 
-    console.log('[Auth] SignIn response:', JSON.stringify(authResult, null, 2));
+    // console.log('[Auth] SignIn response:', JSON.stringify(authResult, null, 2));
 
     // Check if password change is required (for invited users)
     if (authResult.challenge === 'NEW_PASSWORD_REQUIRED' && authResult.session) {
-      console.log('[Auth] Password change required for user');
+      // console.log('[Auth] Password change required for user');
       return {
         success: false,
         error: 'Password change required',
@@ -250,14 +250,31 @@ export async function signIn(
     });
 
     // Step 2: Get user data from response
-    // The API returns user object directly in the response
+    // The API returns user object directly in the response (including role)
     const responseUser = (
-      authResult as { user?: { id: string; email: string; name?: string; cognitoSub?: string } }
+      authResult as {
+        user?: {
+          id: string;
+          email: string;
+          name?: string;
+          cognitoSub?: string;
+          role?: string;
+          roles?: { roleType: string }[];
+        };
+      }
     ).user;
     const cognitoSub = responseUser?.cognitoSub || authResult.sub || authResult.cognitoSub;
 
     // console.log('[Auth] Response user:', responseUser);
     // console.log('[Auth] CognitoSub:', cognitoSub);
+
+    // Extract role from response user (if available)
+    // API returns lowercase roles, so we need to convert to uppercase
+    const responseRole = responseUser?.roles?.[0]?.roleType || responseUser?.role;
+    const initialRole: AuthUser['role'] = responseRole
+      ? (responseRole.toUpperCase() as AuthUser['role'])
+      : 'CLIENT';
+    // console.log('[Auth] Initial role from response:', initialRole);
 
     // Build user from response data first
     let user: AuthUser | undefined;
@@ -268,7 +285,7 @@ export async function signIn(
         id: responseUser.id,
         email: responseUser.email,
         name: responseUser.name || data.email.split('@')[0], // Use email prefix as fallback name
-        role: 'STRATEGIST', // Default, will be updated if we can fetch roles
+        role: initialRole, // Use role from response, default to CLIENT if not present
         cognitoSub: responseUser.cognitoSub || cognitoSub,
       };
     }
@@ -280,25 +297,57 @@ export async function signIn(
           id: string;
           email: string;
           name?: string;
+          fullName?: string;
           cognitoSub?: string;
           roles?: { roleType: string }[];
+          role?: string; // Backend returns role in lowercase (client, strategist, compliance, admin)
         }>(`/users/cognito/${cognitoSub}`, authResult.accessToken);
 
         // console.log('[Auth] User data from API:', JSON.stringify(userData, null, 2));
 
-        // Extract role from roles array
-        const roleType = userData.roles?.[0]?.roleType || 'STRATEGIST';
+        // Extract role from roles array, or direct role field, default to initial role from response
+        // API returns lowercase roles, so we need to convert to uppercase
+        const roleFromApi = userData.roles?.[0]?.roleType || userData.role;
+        const roleType = roleFromApi
+          ? (roleFromApi.toUpperCase() as AuthUser['role'])
+          : initialRole;
+        // console.log('[Auth] Extracted role from API:', roleType);
 
         user = {
           id: userData.id,
           email: userData.email,
-          name: userData.name || user?.name || data.email.split('@')[0],
-          role: roleType as AuthUser['role'],
+          name: userData.name || userData.fullName || user?.name || data.email.split('@')[0],
+          role: roleType,
           cognitoSub: userData.cognitoSub || cognitoSub,
         };
       } catch (userError) {
-        // console.error('[Auth] Failed to fetch user data:', userError);
+        console.error('[Auth] Failed to fetch user data via cognitoSub:', userError);
         // Keep the user from response if API call fails
+      }
+    }
+
+    // Step 4: If we have a user ID but role is still CLIENT (default), try fetching via userId
+    // This is a fallback to ensure we always get the correct role from the backend
+    if (user && user.id && user.id !== 'unknown' && user.role === 'CLIENT') {
+      try {
+        console.log('[Auth] Fetching role from /users/' + user.id + ' to confirm role...');
+        const userById = await authenticatedRequest<{
+          id: string;
+          email: string;
+          name?: string;
+          fullName?: string;
+          role?: string;
+          roles?: { roleType: string }[];
+        }>(`/users/${user.id}`, authResult.accessToken);
+
+        const freshRole = userById.roles?.[0]?.roleType || userById.role;
+        if (freshRole) {
+          const freshRoleUpper = freshRole.toUpperCase() as AuthUser['role'];
+          console.log('[Auth] Got fresh role from /users/' + user.id + ':', freshRoleUpper);
+          user.role = freshRoleUpper;
+        }
+      } catch (err) {
+        console.error('[Auth] Failed to fetch role via userId:', err);
       }
     }
 
@@ -308,7 +357,7 @@ export async function signIn(
         id: responseUser?.id || 'unknown',
         email: data.email,
         name: data.email.split('@')[0], // Use email prefix as name
-        role: 'STRATEGIST',
+        role: initialRole, // Use role from response if available, otherwise defaults to CLIENT
         cognitoSub: cognitoSub,
       };
     }
@@ -469,17 +518,20 @@ export async function completePassword(
           name?: string;
           cognitoSub?: string;
           roles?: { roleType: string }[];
+          role?: string; // Backend returns role in lowercase
         }>(`/users/cognito/${cognitoSub}`, authResult.accessToken);
 
         // console.log('[Auth] User data from API:', JSON.stringify(userData, null, 2));
 
-        const roleType = userData.roles?.[0]?.roleType || 'CLIENT';
+        // API returns lowercase roles, so we need to convert to uppercase
+        const roleFromApi = userData.roles?.[0]?.roleType || userData.role || 'client';
+        const roleType = roleFromApi.toUpperCase() as AuthUser['role'];
 
         user = {
           id: userData.id,
           email: userData.email,
           name: userData.name || user?.name || username.split('@')[0],
-          role: roleType as AuthUser['role'],
+          role: roleType,
           cognitoSub: userData.cognitoSub || cognitoSub,
         };
       } catch (userError) {
@@ -727,15 +779,18 @@ export async function getUserByCognitoSub(cognitoSub: string): Promise<AuthUser 
       email: string;
       name?: string;
       roles?: { roleType: string }[];
+      role?: string; // Backend returns role in lowercase
     }>(`/users/cognito/${cognitoSub}`, accessToken);
 
-    const roleType = userData.roles?.[0]?.roleType || 'STRATEGIST';
+    // API returns lowercase roles, so we need to convert to uppercase
+    const roleFromApi = userData.roles?.[0]?.roleType || userData.role || 'client';
+    const roleType = roleFromApi.toUpperCase() as AuthUser['role'];
 
     return {
       id: userData.id,
       email: userData.email,
       name: userData.name || null,
-      role: roleType as AuthUser['role'],
+      role: roleType,
       cognitoSub,
     };
   } catch {
@@ -770,15 +825,18 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
           name?: string;
           cognitoSub?: string;
           roles?: { roleType: string }[];
+          role?: string; // Backend returns role in lowercase
         }>(`/users/${userId}`, accessToken);
 
-        const roleType = userData.roles?.[0]?.roleType || userRole || 'STRATEGIST';
+        // API returns lowercase roles, so we need to convert to uppercase
+        const roleFromApi = userData.roles?.[0]?.roleType || userData.role || userRole || 'client';
+        const roleType = roleFromApi.toUpperCase() as AuthUser['role'];
 
         return {
           id: userData.id,
           email: userData.email,
           name: userData.name || null,
-          role: roleType as AuthUser['role'],
+          role: roleType,
           cognitoSub: userData.cognitoSub,
         };
       } catch (error) {

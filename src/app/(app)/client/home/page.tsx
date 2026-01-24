@@ -194,9 +194,17 @@ export default function ClientDashboardPage() {
   const businessName = profile?.businessName;
   const createdAt = new Date(clientUser.createdAt);
 
-  // Find service agreement
-  const serviceAgreement = agreements.find(
-    a => a.type === 'service_agreement' || a.type === 'onboarding'
+  // Find the most recent service agreement (agreements are already mapped by client.api.ts)
+  // Status mapping: DRAFT→pending, ACTIVE→signed, COMPLETED→completed
+  const serviceAgreement = agreements.length > 0 ? agreements[0] : null;
+
+  // Extract document todos from agreement (excluding signing todos)
+  const agreementTodos = serviceAgreement?.todoLists?.flatMap(list => list.todos || []) || [];
+  const documentTodos = agreementTodos.filter(
+    todo => !todo.title.toLowerCase().includes('sign')
+  );
+  const completedDocTodos = documentTodos.filter(
+    todo => todo.status === 'completed' || todo.document?.uploadStatus === 'FILE_UPLOADED'
   );
 
   // Find strategy document
@@ -207,18 +215,24 @@ export default function ClientDashboardPage() {
     d => d.type !== 'agreement' && d.type !== 'strategy' && d.category !== 'contract'
   );
 
-  // Calculate step completion states
+  // Calculate step completion states based on agreement status
+  // Mapped statuses: 'pending' = DRAFT (sent), 'signed' = ACTIVE, 'completed' = COMPLETED
   const step1Complete = true; // Account always created
-  const step2Sent = serviceAgreement?.status === 'sent' || serviceAgreement?.status === 'signed';
+  const step2Sent = serviceAgreement?.status === 'pending' || serviceAgreement?.status === 'signed' || serviceAgreement?.status === 'completed';
   const step2Complete = serviceAgreement?.status === 'signed' || serviceAgreement?.status === 'completed';
-  const step3Sent = !!serviceAgreement?.paymentReference || serviceAgreement?.paymentAmount !== undefined;
-  const step3Complete = serviceAgreement?.status === 'completed';
-  const step4Sent = step3Complete; // Docs requested after payment
-  const step4Complete = uploadedDocs.length > 0;
+  const step3Sent = step2Complete && (!!serviceAgreement?.paymentRef || !!serviceAgreement?.paymentAmount);
+  const step3Complete = serviceAgreement?.paymentStatus === 'paid';
+  // Documents: show if agreement is signed OR if there are document todos
+  const hasDocTodos = documentTodos.length > 0;
+  const step4Sent = step2Complete || hasDocTodos;
+  const step4Complete = hasDocTodos ? completedDocTodos.length >= documentTodos.length : uploadedDocs.length > 0;
   const step5Sent = strategyDoc?.signatureStatus === 'SENT';
   const step5Complete = strategyDoc?.signatureStatus === 'SIGNED';
 
-  const paymentAmount = serviceAgreement?.paymentAmount || 499;
+  const paymentAmount = serviceAgreement?.paymentAmount || serviceAgreement?.price || 499;
+
+  // Check if there's a pending action
+  const hasPendingAgreement = step2Sent && !step2Complete && !!serviceAgreement?.signatureCeremonyUrl;
 
   function formatDate(date: Date | string): string {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
@@ -232,6 +246,29 @@ export default function ClientDashboardPage() {
   return (
     <div className="flex min-h-full flex-col">
       <div className="flex-1">
+        {/* Action Banner - Shows when there's a pending agreement to sign */}
+        {hasPendingAgreement && (
+          <div className="bg-amber-50 border-b border-amber-200">
+            <div className="mx-auto max-w-[642px] px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100">
+                  <FileIcon className="h-4 w-4 text-amber-600" weight="fill" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-amber-900">Action Required</p>
+                  <p className="text-xs text-amber-700">Please sign your service agreement to continue</p>
+                </div>
+              </div>
+              <button
+                onClick={() => window.open(serviceAgreement?.signatureCeremonyUrl, '_blank')}
+                className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 transition-colors"
+              >
+                Sign Now
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Top Section - Onboarding Activity Timeline */}
         <div className="shrink-0 bg-zinc-50/90 pt-8 pb-6">
           <div className="mx-auto w-full max-w-[642px]">
@@ -310,9 +347,19 @@ export default function ClientDashboardPage() {
                       </Badge>
                     )}
                     {/* Show button only if previous step complete AND current step not complete */}
-                    {step1Complete && step2Sent && !step2Complete && (
-                      <button className="mt-2 w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700">
-                        Sign agreement
+                    {step1Complete && step2Sent && !step2Complete && serviceAgreement && (
+                      <button 
+                        onClick={() => {
+                          if (serviceAgreement.signatureCeremonyUrl) {
+                            window.open(serviceAgreement.signatureCeremonyUrl, '_blank');
+                          } else {
+                            // Navigate to agreements page if no direct URL
+                            window.location.href = '/client/agreements';
+                          }
+                        }}
+                        className="mt-2 w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                      >
+                        {serviceAgreement.signatureCeremonyUrl ? 'Sign agreement' : 'View agreements'}
                       </button>
                     )}
                   </div>
@@ -369,8 +416,17 @@ export default function ClientDashboardPage() {
                       </Badge>
                     )}
                     {/* Show button only if step 2 complete AND current step not complete */}
-                    {step2Complete && step3Sent && !step3Complete && (
-                      <button className="mt-2 w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700">
+                    {step2Complete && step3Sent && !step3Complete && serviceAgreement && (
+                      <button 
+                        onClick={() => {
+                          if (serviceAgreement.paymentLink) {
+                            window.open(serviceAgreement.paymentLink, '_blank');
+                          } else {
+                            alert('Payment link not available yet. Your strategist will send it shortly.');
+                          }
+                        }}
+                        className="mt-2 w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                      >
                         Complete payment
                       </button>
                     )}
@@ -396,24 +452,53 @@ export default function ClientDashboardPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-zinc-900">
                         {step4Complete
-                          ? `Initial documents uploaded · ${uploadedDocs.length} files`
-                          : step4Sent
-                            ? 'Waiting for document upload'
-                            : 'Documents'}
+                          ? `Documents uploaded · ${hasDocTodos ? `${completedDocTodos.length}/${documentTodos.length}` : `${uploadedDocs.length} files`}`
+                          : hasDocTodos
+                            ? `Documents pending · ${completedDocTodos.length}/${documentTodos.length} uploaded`
+                            : step4Sent
+                              ? 'Waiting for document upload'
+                              : 'Documents'}
                       </span>
                     </div>
                     <span className="text-sm text-zinc-500">
                       {step4Complete
-                        ? 'W-2s, 1099s, and tax documents received'
-                        : step4Sent
-                          ? 'Please upload W-2s, 1099s, and relevant tax documents'
-                          : 'You will be notified when documents are needed'}
+                        ? 'All requested documents have been received'
+                        : hasDocTodos
+                          ? 'Please upload the requested documents'
+                          : step4Sent
+                            ? 'Please upload W-2s, 1099s, and relevant tax documents'
+                            : 'You will be notified when documents are needed'}
                     </span>
-                    <span className="mt-1 mb-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                    {/* Show individual todo items */}
+                    {hasDocTodos && documentTodos.length > 0 && (
+                      <div className="mt-2 flex flex-col gap-1.5">
+                        {documentTodos.map(todo => {
+                          const isCompleted = todo.status === 'completed' || todo.document?.uploadStatus === 'FILE_UPLOADED';
+                          return (
+                            <div key={todo.id} className="flex items-center gap-2 text-xs">
+                              {isCompleted ? (
+                                <Check weight="bold" className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                              ) : (
+                                <div className="h-3.5 w-3.5 shrink-0 rounded-full border border-zinc-300" />
+                              )}
+                              <span className={isCompleted ? 'text-zinc-600 line-through' : 'text-zinc-600'}>
+                                {todo.title}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <span className="mt-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                       {formatDate(createdAt)}
                     </span>
-                    {step3Complete && !step4Complete && (
-                      <Badge variant={step4Sent ? 'warning' : 'warning'} className="w-fit">
+                    {step2Complete && !step4Complete && hasDocTodos && (
+                      <Badge variant="warning" className="mt-2 w-fit">
+                        Action required
+                      </Badge>
+                    )}
+                    {step3Complete && !step4Complete && !hasDocTodos && (
+                      <Badge variant="warning" className="w-fit">
                         {step4Sent ? (
                           'Action required'
                         ) : (
@@ -427,9 +512,12 @@ export default function ClientDashboardPage() {
                         )}
                       </Badge>
                     )}
-                    {/* Show button only if step 3 complete AND current step not complete */}
-                    {step3Complete && step4Sent && !step4Complete && (
-                      <button className="mt-2 w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700">
+                    {/* Show button only if agreement signed AND docs not complete */}
+                    {step2Complete && !step4Complete && (
+                      <button 
+                        onClick={() => window.location.href = '/client/documents'}
+                        className="mt-2 w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                      >
                         Upload documents
                       </button>
                     )}

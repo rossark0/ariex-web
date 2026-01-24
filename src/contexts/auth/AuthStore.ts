@@ -170,8 +170,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Real Cognito authentication
       const result = await cognitoSignIn({ email, password });
 
+      // console.log('[AuthStore] Cognito signIn result:', JSON.stringify(result, null, 2));
+
       if (result.success && result.user) {
         const user = authUserToUser(result.user);
+        // console.log('[AuthStore] User after conversion:', JSON.stringify(user, null, 2));
+        // console.log('[AuthStore] User role:', user.role);
+        // console.log('[AuthStore] Redirect path:', getRoleHomePath(user.role));
+
         set({
           user,
           isAuthenticated: true,
@@ -190,21 +196,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const maxAge = 60 * 60 * 24; // 24 hours
           document.cookie = `ariex_user_role=${user.role}; path=/; max-age=${maxAge}; SameSite=Lax`;
           document.cookie = `ariex_user_id=${user.id}; path=/; max-age=${maxAge}; SameSite=Lax`;
-          // console.log('[Auth] Set client-side cookies: role=', user.role, 'id=', user.id);
+          // console.log('[AuthStore] Set client-side cookies: role=', user.role, 'id=', user.id);
         }
 
         return { success: true, redirectTo: getRoleHomePath(user.role) };
       } else if (result.passwordChallenge) {
         // Password change required for invited users
-        console.log('[Auth] Password change required, storing challenge:', result.passwordChallenge);
-        
+        console.log(
+          '[Auth] Password change required, storing challenge:',
+          result.passwordChallenge
+        );
+
         // Store in sessionStorage so it survives page redirect
         // Also set a cookie for middleware to check
         if (typeof window !== 'undefined') {
-          sessionStorage.setItem('ariex_password_challenge', JSON.stringify(result.passwordChallenge));
+          sessionStorage.setItem(
+            'ariex_password_challenge',
+            JSON.stringify(result.passwordChallenge)
+          );
           document.cookie = 'ariex_password_challenge=true; path=/; max-age=3600; SameSite=Lax';
         }
-        
+
         set({
           user: null,
           isAuthenticated: false,
@@ -381,13 +393,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (result.success && result.user) {
         const user = authUserToUser(result.user);
-        
+
         // Clear sessionStorage and password challenge cookie
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('ariex_password_challenge');
           document.cookie = 'ariex_password_challenge=; path=/; max-age=0';
         }
-        
+
         set({
           user,
           isAuthenticated: true,
@@ -450,19 +462,49 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   hydrate: async () => {
     // Simply restore user from localStorage
-    // Don't verify tokens or call APIs during hydration - that causes issues
-    // The middleware already checks cookies for route protection
+    // The authenticatedApiRequest will handle token refresh automatically when needed
     const storedUser = getStoredUser();
 
     if (storedUser) {
-      // console.log('[Auth] Hydrating from localStorage:', storedUser.email, storedUser.role);
+      // Check if cookies already have role info (set during login)
+      // If cookies are set, they are more recent and accurate than localStorage
+      let userToUse = storedUser;
+
+      if (typeof window !== 'undefined') {
+        const cookieRole = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('ariex_user_role='))
+          ?.split('=')[1];
+
+        if (cookieRole && cookieRole !== storedUser.role) {
+          console.log(
+            '[AuthStore hydrate] Cookie role differs from localStorage, using cookie role:',
+            cookieRole
+          );
+          // Update the user with the role from cookie (more recent)
+          userToUse = { ...storedUser, role: cookieRole.toUpperCase() as typeof storedUser.role };
+          // Also update localStorage with the correct role
+          storeUser(userToUse);
+        }
+      }
+
       set({
-        user: storedUser,
+        user: userToUse,
         isAuthenticated: true,
         isHydrated: true,
       });
+
+      // DO NOT overwrite cookies here - they are the source of truth from login
+      // Only set cookies if they don't exist
+      if (typeof window !== 'undefined') {
+        const existingRoleCookie = document.cookie.includes('ariex_user_role=');
+        if (!existingRoleCookie) {
+          const maxAge = 60 * 60 * 24; // 24 hours
+          document.cookie = `ariex_user_role=${userToUse.role}; path=/; max-age=${maxAge}; SameSite=Lax`;
+          document.cookie = `ariex_user_id=${userToUse.id}; path=/; max-age=${maxAge}; SameSite=Lax`;
+        }
+      }
     } else {
-      // console.log('[Auth] No stored user, setting hydrated');
       set({ isHydrated: true });
     }
   },

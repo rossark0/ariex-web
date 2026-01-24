@@ -1,23 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth/AuthStore';
-import { getFullUserProfile } from '@/contexts/auth/data/mock-users';
-import type { FullClientMock } from '@/lib/mocks/client-full';
-import { Check } from '@phosphor-icons/react';
+import { Check, SpinnerGap } from '@phosphor-icons/react';
+import {
+  getClientDashboardData,
+  type ClientDashboardData,
+  type ClientAgreement,
+} from '@/lib/api/client.api';
 
 // ============================================================================
 // ONBOARDING STEPS
 // ============================================================================
 
-type OnboardingStep = 'profile' | 'agreement' | 'payment';
+type OnboardingStep = 'profile' | 'agreement' | 'complete';
 
 const STEPS: { id: OnboardingStep; title: string; description: string }[] = [
   {
     id: 'profile',
-    title: 'Set up your account',
-    description: 'Tell us about yourself and your business',
+    title: 'Review your profile',
+    description: 'Make sure your information is correct',
   },
   {
     id: 'agreement',
@@ -25,9 +28,9 @@ const STEPS: { id: OnboardingStep; title: string; description: string }[] = [
     description: 'Review and sign the service agreement',
   },
   {
-    id: 'payment',
-    title: 'Complete payment',
-    description: 'Pay the onboarding fee to get started',
+    id: 'complete',
+    title: "You're all set!",
+    description: 'Your onboarding is complete',
   },
 ];
 
@@ -38,29 +41,30 @@ const STEPS: { id: OnboardingStep; title: string; description: string }[] = [
 interface StepProps {
   onContinue: () => void;
   onBack: () => void;
-  clientData: FullClientMock | null;
+  dashboardData: ClientDashboardData | null;
   isFirst: boolean;
   isLast: boolean;
 }
 
-function ProfileStep({ onContinue, onBack, clientData, isFirst }: StepProps) {
-  const profile = clientData?.profile;
-  const user = clientData?.user;
+function ProfileStep({ onContinue, onBack, dashboardData, isFirst }: StepProps) {
+  const profile = dashboardData?.profile;
+  const user = dashboardData?.user;
+  const strategist = dashboardData?.strategist;
 
   return (
     <div className="flex flex-col gap-6">
       {/* Account Summary Card */}
       <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-6">
         <h3 className="mb-4 text-sm font-medium text-zinc-500">Account Information</h3>
-        
+
         <div className="space-y-4">
           {/* Name & Email */}
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-200 text-lg font-semibold text-zinc-600">
-              {user?.name?.charAt(0) || 'U'}
+              {(user?.fullName || user?.name || user?.email)?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div>
-              <p className="font-medium text-zinc-900">{user?.name || 'N/A'}</p>
+              <p className="font-medium text-zinc-900">{user?.fullName || user?.name || 'N/A'}</p>
               <p className="text-sm text-zinc-500">{user?.email || 'N/A'}</p>
             </div>
           </div>
@@ -70,30 +74,54 @@ function ProfileStep({ onContinue, onBack, clientData, isFirst }: StepProps) {
           {/* Contact */}
           <div className="flex justify-between">
             <span className="text-sm text-zinc-500">Phone</span>
-            <span className="text-sm font-medium text-zinc-900">{profile?.phoneNumber || 'Not provided'}</span>
+            <span className="text-sm font-medium text-zinc-900">
+              {profile?.phoneNumber || profile?.phone || 'Not provided'}
+            </span>
           </div>
+
+          {/* Strategist */}
+          {strategist && (
+            <div className="flex justify-between">
+              <span className="text-sm text-zinc-500">Your Strategist</span>
+              <span className="text-sm font-medium text-zinc-900">{strategist.name}</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Business Summary Card */}
       <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-6">
         <h3 className="mb-4 text-sm font-medium text-zinc-500">Business Information</h3>
-        
+
         <div className="space-y-3">
           <div className="flex justify-between">
             <span className="text-sm text-zinc-500">Business name</span>
-            <span className="text-sm font-medium text-zinc-900">{profile?.businessName || 'Not provided'}</span>
+            <span className="text-sm font-medium text-zinc-900">
+              {profile?.businessName || 'Not provided'}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-zinc-500">Business type</span>
-            <span className="text-sm font-medium text-zinc-900">{profile?.businessType || 'Not provided'}</span>
+            <span className="text-sm font-medium text-zinc-900">
+              {profile?.businessType || 'Not provided'}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-zinc-500">Location</span>
             <span className="text-sm font-medium text-zinc-900">
-              {profile?.city && profile?.state ? `${profile.city}, ${profile.state}` : 'Not provided'}
+              {profile?.city && profile?.state
+                ? `${profile.city}, ${profile.state}`
+                : profile?.address || 'Not provided'}
             </span>
           </div>
+          {profile?.filingStatus && (
+            <div className="flex justify-between">
+              <span className="text-sm text-zinc-500">Filing status</span>
+              <span className="text-sm font-medium text-zinc-900">
+                {profile.filingStatus.replace('_', ' ')}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -122,66 +150,84 @@ function ProfileStep({ onContinue, onBack, clientData, isFirst }: StepProps) {
 // AGREEMENT STEP COMPONENT
 // ============================================================================
 
-function AgreementStep({ onContinue, onBack, isFirst }: StepProps) {
-  const [agreed, setAgreed] = useState(false);
+interface AgreementStepProps extends StepProps {
+  pendingAgreement: ClientAgreement | null;
+}
+
+function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement }: AgreementStepProps) {
+  const [signingInProgress, setSigningInProgress] = useState(false);
+
+  const handleSignAgreement = () => {
+    if (pendingAgreement?.signatureCeremonyUrl) {
+      setSigningInProgress(true);
+      // Open the SignatureAPI ceremony in a new tab
+      window.open(pendingAgreement.signatureCeremonyUrl, '_blank');
+    }
+  };
+
+  const agreementTitle = pendingAgreement?.title || pendingAgreement?.name || 'Service Agreement';
+  const agreementPrice = pendingAgreement?.price
+    ? `$${typeof pendingAgreement.price === 'string' ? parseFloat(pendingAgreement.price).toLocaleString() : pendingAgreement.price.toLocaleString()}`
+    : '$499';
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Agreement Info */}
+      {pendingAgreement ? (
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-6">
+          <h3 className="mb-2 text-lg font-semibold text-zinc-900">{agreementTitle}</h3>
+          {pendingAgreement.description && (
+            <p className="mb-4 text-sm text-zinc-600">{pendingAgreement.description}</p>
+          )}
+          <div className="flex items-center justify-between border-t border-zinc-200 pt-4">
+            <span className="text-sm text-zinc-500">Service Fee</span>
+            <span className="text-lg font-semibold text-zinc-900">{agreementPrice}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-center">
+          <p className="text-sm text-amber-800">
+            No agreement has been sent yet. Your strategist will send you an agreement to sign
+            shortly.
+          </p>
+        </div>
+      )}
+
       {/* Agreement Preview */}
-      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-6">
-        <h3 className="mb-4 text-lg font-semibold text-zinc-900">Ariex Service Agreement</h3>
-        <div className="max-h-64 overflow-y-auto text-sm text-zinc-600">
-          <p className="mb-4">
-            This Service Agreement (&quot;Agreement&quot;) is entered into between Ariex Tax
-            Services (&quot;Company&quot;) and the undersigned client (&quot;Client&quot;).
-          </p>
-          <p className="mb-4">
-            <strong>1. Services</strong>
-            <br />
-            Company agrees to provide tax strategy and planning services to Client, including but
-            not limited to tax optimization recommendations, document preparation assistance, and
-            ongoing tax advisory support.
-          </p>
-          <p className="mb-4">
-            <strong>2. Client Responsibilities</strong>
-            <br />
-            Client agrees to provide accurate and complete information, respond to requests in a
-            timely manner, and upload all required tax documents.
-          </p>
-          <p className="mb-4">
-            <strong>3. Fees</strong>
-            <br />
-            Client agrees to pay an onboarding fee of $499 and any additional fees for services
-            rendered as outlined in the fee schedule.
-          </p>
-          <p className="mb-4">
-            <strong>4. Confidentiality</strong>
-            <br />
-            Both parties agree to maintain the confidentiality of all information shared during the
-            course of this engagement.
-          </p>
-          <p>
-            <strong>5. Term</strong>
-            <br />
-            This Agreement shall remain in effect until terminated by either party with 30 days
-            written notice.
-          </p>
+      <div className="rounded-lg border border-zinc-200 bg-white p-6">
+        <h4 className="mb-4 text-sm font-medium text-zinc-700">Agreement Summary</h4>
+        <div className="max-h-48 overflow-y-auto text-sm text-zinc-600">
+          <p className="mb-3">By signing this agreement, you agree to:</p>
+          <ul className="list-disc space-y-2 pl-5">
+            <li>Receive tax strategy and planning services from Ariex Tax Advisory</li>
+            <li>Provide accurate and complete tax information</li>
+            <li>Upload all required tax documents in a timely manner</li>
+            <li>Pay the agreed service fee</li>
+            <li>Maintain confidentiality of strategy recommendations</li>
+          </ul>
         </div>
       </div>
 
-      {/* Checkbox */}
-      <label className="flex cursor-pointer items-start gap-3">
-        <input
-          type="checkbox"
-          checked={agreed}
-          onChange={e => setAgreed(e.target.checked)}
-          className="mt-1 h-4 w-4 rounded border-zinc-300"
-        />
-        <span className="text-sm text-zinc-600">
-          I have read and agree to the Ariex Service Agreement. I understand the terms and
-          conditions outlined above.
-        </span>
-      </label>
+      {/* Sign Button */}
+      {pendingAgreement?.signatureCeremonyUrl ? (
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={handleSignAgreement}
+            className="w-full rounded-lg bg-emerald-600 py-3 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+          >
+            Sign Agreement Electronically
+          </button>
+          {signingInProgress && (
+            <p className="text-center text-xs text-zinc-500">
+              A new tab has opened for signing. Once complete, click &quot;Continue&quot; below.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-zinc-200 bg-zinc-100 py-3 text-center text-sm text-zinc-500">
+          Waiting for agreement link from your strategist...
+        </div>
+      )}
 
       {/* Navigation Buttons */}
       <div className="mt-4 flex gap-3">
@@ -195,9 +241,10 @@ function AgreementStep({ onContinue, onBack, isFirst }: StepProps) {
         )}
         <button
           onClick={onContinue}
-          className="flex-1 cursor-pointer rounded-lg bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+          disabled={!signingInProgress && !pendingAgreement?.signatureCeremonyUrl}
+          className="flex-1 cursor-pointer rounded-lg bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Sign Agreement
+          {signingInProgress ? 'Continue' : 'Skip for now'}
         </button>
       </div>
     </div>
@@ -205,97 +252,55 @@ function AgreementStep({ onContinue, onBack, isFirst }: StepProps) {
 }
 
 // ============================================================================
-// PAYMENT STEP COMPONENT
+// COMPLETE STEP COMPONENT
 // ============================================================================
 
-function PaymentStep({ onContinue, onBack, clientData, isFirst, isLast }: StepProps) {
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'crypto' | null>(null);
-  const [processing, setProcessing] = useState(false);
-
-  const handlePayment = () => {
-    setProcessing(true);
-    // Simulate payment processing
-    setTimeout(() => {
-      setProcessing(false);
-      onContinue();
-    }, 1000);
-  };
-
-  const amount = clientData?.payments[0]?.amount || 499;
+function CompleteStep({ dashboardData }: { dashboardData: ClientDashboardData | null }) {
+  const router = useRouter();
+  const strategist = dashboardData?.strategist;
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Payment Summary */}
-      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-zinc-500">Onboarding Fee</p>
-            <p className="text-2xl font-semibold text-zinc-900">${amount}</p>
-          </div>
-          <div className="rounded-lg bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">
-            One-time payment
-          </div>
-        </div>
-        <p className="mt-4 text-sm text-zinc-500">
-          This fee covers your initial tax strategy consultation and personalized tax optimization
-          plan.
+    <div className="flex flex-col items-center gap-6 text-center">
+      {/* Success Icon */}
+      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
+        <Check weight="bold" className="h-10 w-10 text-emerald-600" />
+      </div>
+
+      {/* Message */}
+      <div>
+        <h2 className="mb-2 text-xl font-semibold text-zinc-900">Welcome to Ariex!</h2>
+        <p className="text-sm text-zinc-600">
+          Your account is set up and ready to go.
+          {strategist && ` ${strategist.name} will be your dedicated tax strategist.`}
         </p>
       </div>
 
-      {/* Payment Method Selection */}
-      <div className="flex flex-col gap-3">
-        <label className="text-sm font-medium text-zinc-700">Select payment method</label>
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => setPaymentMethod('card')}
-            className={`flex flex-col items-center gap-2 rounded-lg border p-4 transition-colors ${
-              paymentMethod === 'card'
-                ? 'border-zinc-900 bg-zinc-50'
-                : 'border-zinc-200 hover:border-zinc-300'
-            }`}
-          >
-            <span className="text-2xl">💳</span>
-            <span className="text-sm font-medium text-zinc-700">Credit/Debit Card</span>
-            <span className="text-xs text-zinc-500">Via Stripe</span>
-          </button>
-          <button
-            onClick={() => setPaymentMethod('crypto')}
-            className={`flex flex-col items-center gap-2 rounded-lg border p-4 transition-colors ${
-              paymentMethod === 'crypto'
-                ? 'border-zinc-900 bg-zinc-50'
-                : 'border-zinc-200 hover:border-zinc-300'
-            }`}
-          >
-            <span className="text-2xl">₿</span>
-            <span className="text-sm font-medium text-zinc-700">Cryptocurrency</span>
-            <span className="text-xs text-zinc-500">Via Coinbase</span>
-          </button>
-        </div>
+      {/* Next Steps */}
+      <div className="w-full rounded-lg border border-zinc-200 bg-zinc-50 p-6 text-left">
+        <h3 className="mb-3 text-sm font-medium text-zinc-700">What happens next?</h3>
+        <ul className="space-y-2 text-sm text-zinc-600">
+          <li className="flex items-start gap-2">
+            <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span>Check your email for the agreement signing link</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-1 h-1.5 w-1.5 rounded-full bg-zinc-300" />
+            <span>Upload your tax documents when requested</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-1 h-1.5 w-1.5 rounded-full bg-zinc-300" />
+            <span>Receive your personalized tax strategy</span>
+          </li>
+        </ul>
       </div>
 
-      {/* Navigation Buttons */}
-      <div className="mt-4 flex gap-3">
-        {!isFirst && (
-          <button
-            onClick={onBack}
-            disabled={processing}
-            className="flex-1 rounded-lg border border-zinc-200 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
-          >
-            Back
-          </button>
-        )}
-        <button
-          onClick={handlePayment}
-          disabled={processing}
-          className="flex-1 cursor-pointer rounded-lg bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:opacity-50"
-        >
-          {processing ? 'Processing...' : `Pay $${amount}`}
-        </button>
-      </div>
-
-      <p className="text-center text-xs text-zinc-400">
-        Your payment is secure and encrypted. By proceeding, you agree to our payment terms.
-      </p>
+      {/* Go to Dashboard Button */}
+      <button
+        onClick={() => router.push('/client/home')}
+        className="w-full rounded-lg bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+      >
+        Go to Dashboard
+      </button>
     </div>
   );
 }
@@ -326,9 +331,7 @@ function StepIndicator({ currentStep, steps }: StepIndicatorProps) {
             {index < currentStep ? <Check weight="bold" className="h-4 w-4" /> : index + 1}
           </div>
           {index < steps.length - 1 && (
-            <div
-              className={`h-px w-8 ${index < currentStep ? 'bg-emerald-500' : 'bg-zinc-200'}`}
-            />
+            <div className={`h-px w-8 ${index < currentStep ? 'bg-emerald-500' : 'bg-zinc-200'}`} />
           )}
         </div>
       ))}
@@ -342,18 +345,51 @@ function StepIndicator({ currentStep, steps }: StepIndicatorProps) {
 
 export default function ClientOnboardingPage() {
   const router = useRouter();
-  const { user } = useAuth();
-  const [currentStep, setCurrentStep] = useState(0);
+  const { user, logout } = useAuth();
 
-  // Get client data
-  const clientData = user ? (getFullUserProfile(user) as FullClientMock | null) : null;
+  const handleLogout = async () => {
+    await logout();
+    window.location.href = '/login';
+  };
+
+  const [currentStep, setCurrentStep] = useState(0);
+  const [dashboardData, setDashboardData] = useState<ClientDashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch dashboard data from API
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setIsLoading(true);
+        const data = await getClientDashboardData();
+        setDashboardData(data);
+
+        // If user already has a signed agreement, skip to complete
+        if (data?.agreements.some(a => a.status === 'signed' || a.status === 'completed')) {
+          setCurrentStep(2); // Go to complete step
+        }
+      } catch (err) {
+        console.error('[Onboarding] Failed to fetch data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
+
+  // Find pending agreement (needs signing)
+  const pendingAgreement =
+    dashboardData?.agreements.find(
+      a => a.status === 'pending' || a.status === 'sent' || a.status === 'draft'
+    ) || null;
 
   const handleNext = () => {
     if (currentStep < STEPS.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
-      // Mark onboarding as complete in localStorage (for mock purposes)
-      localStorage.setItem('ariex_onboarding_complete', 'true');
       // All steps complete - redirect to home
       router.push('/client/home');
     }
@@ -367,6 +403,16 @@ export default function ClientOnboardingPage() {
 
   const currentStepData = STEPS[currentStep];
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-white">
+        <SpinnerGap className="h-8 w-8 animate-spin text-zinc-400" />
+        <p className="mt-4 text-sm text-zinc-500">Loading your information...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-white">
       {/* Header */}
@@ -374,6 +420,12 @@ export default function ClientOnboardingPage() {
         <div className="mx-auto flex max-w-lg items-center justify-between">
           <div className="text-xl font-semibold tracking-tight">Ariex</div>
           <StepIndicator currentStep={currentStep} steps={STEPS} />
+          <button
+            onClick={handleLogout}
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+          >
+            Sign out
+          </button>
         </div>
       </header>
 
@@ -391,7 +443,7 @@ export default function ClientOnboardingPage() {
             <ProfileStep
               onContinue={handleNext}
               onBack={handleBack}
-              clientData={clientData}
+              dashboardData={dashboardData}
               isFirst={currentStep === 0}
               isLast={currentStep === STEPS.length - 1}
             />
@@ -400,20 +452,13 @@ export default function ClientOnboardingPage() {
             <AgreementStep
               onContinue={handleNext}
               onBack={handleBack}
-              clientData={clientData}
+              dashboardData={dashboardData}
               isFirst={currentStep === 0}
               isLast={currentStep === STEPS.length - 1}
+              pendingAgreement={pendingAgreement}
             />
           )}
-          {currentStepData.id === 'payment' && (
-            <PaymentStep
-              onContinue={handleNext}
-              onBack={handleBack}
-              clientData={clientData}
-              isFirst={currentStep === 0}
-              isLast={currentStep === STEPS.length - 1}
-            />
-          )}
+          {currentStepData.id === 'complete' && <CompleteStep dashboardData={dashboardData} />}
         </div>
       </main>
 

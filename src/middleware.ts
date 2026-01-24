@@ -14,7 +14,7 @@ const roleHomeMap: Record<Role, string> = {
 const roleRouteAccess: Record<string, Role[]> = {
   '/admin': ['ADMIN'],
   '/compliance': ['COMPLIANCE', 'ADMIN'],
-  '/strategist': ['STRATEGIST', 'ADMIN'],
+  '/strategist': ['STRATEGIST', 'COMPLIANCE', 'ADMIN'],
   '/client': ['CLIENT', 'ADMIN'],
 };
 
@@ -44,12 +44,14 @@ export function middleware(request: NextRequest) {
   // For Cognito: we check for access token
   // For both: we check for role cookie (set after successful login)
   const accessToken = request.cookies.get('ariex_access_token')?.value;
-  const userRole = request.cookies.get('ariex_user_role')?.value as Role | undefined;
+  const rawRole = request.cookies.get('ariex_user_role')?.value;
+  // Normalize role to uppercase (API returns lowercase, frontend expects uppercase)
+  const userRole = rawRole ? (rawRole.toUpperCase() as Role) : undefined;
   const userId = request.cookies.get('ariex_user_id')?.value;
   const hasPasswordChallenge = request.cookies.get('ariex_password_challenge')?.value === 'true';
 
-  // Debug logging
-  console.log(`[Middleware] path=${pathname} accessToken=${!!accessToken} role=${userRole} userId=${userId} passwordChallenge=${hasPasswordChallenge}`);
+  // Debug logging (commented out for production)
+  // console.log(`[Middleware] path=${pathname} role=${userRole} userId=${userId}`);
 
   // User is authenticated if they have either:
   // 1. A valid access token (Cognito)
@@ -58,14 +60,17 @@ export function middleware(request: NextRequest) {
   const hasCookieAuth = !!userRole && !!userId;
   const isAuthenticated = hasTokenAuth || hasCookieAuth;
 
-  console.log(`[Middleware] isAuthenticated=${isAuthenticated} hasTokenAuth=${hasTokenAuth} hasCookieAuth=${hasCookieAuth}`);
+  // Log current user info
+  if (isAuthenticated && userRole && userId) {
+    console.log(`[Logged User] role=${userRole} userId=${userId}`);
+  }
 
   // Check if current route is public
   const isPublicRoute = publicRoutes.some(route => pathname === route);
 
   // Check if current route is an auth route (login, register, etc.)
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
-  
+
   // Check if trying to access password challenge route
   const isPasswordChallengeRoute = pathname.startsWith(passwordChallengeRoute);
 
@@ -92,9 +97,10 @@ export function middleware(request: NextRequest) {
     if (userRole) {
       return NextResponse.redirect(new URL(roleHomeMap[userRole], request.url));
     }
-    // If authenticated but no role yet, redirect to a default dashboard
-    // The client will handle fetching the role
-    return NextResponse.redirect(new URL('/client/home', request.url));
+    // If authenticated but no role cookie yet, let the request continue
+    // The login page will handle the redirect properly using the user state
+    // DO NOT redirect to a hardcoded route - this causes role mismatch issues
+    return NextResponse.next();
   }
 
   // Allow access to public routes
