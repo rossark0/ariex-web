@@ -14,6 +14,7 @@ import {
   type ClientAgreement,
   type ClientDocument,
 } from '@/lib/api/client.api';
+import { AgreementStatus, isAgreementSigned, isAgreementPaid } from '@/types/agreement';
 
 // ============================================================================
 // ANIMATED DOTS COMPONENT
@@ -155,6 +156,8 @@ export default function ClientDashboardPage() {
 
         // Sync signature status from SignatureAPI for ALL agreements
         // This is needed because the webhook may fail to update the backend
+        let syncedStatuses: Record<string, string> = {};
+        
         if (hasAgreements && !hasSyncedRef.current) {
           hasSyncedRef.current = true;
           
@@ -182,15 +185,48 @@ export default function ClientDashboardPage() {
           
           if (Object.keys(statuses).length > 0) {
             setEnvelopeStatuses(statuses);
+            syncedStatuses = statuses;
           }
           
           // Refresh data if any agreement was synced as signed
           if (needsRefresh) {
             console.log('[ClientDashboard] Agreement synced as signed - refreshing data');
             const refreshedData = await getClientDashboardData();
-            setDashboardData(refreshedData);
+            if (refreshedData) {
+              setDashboardData(refreshedData);
+              // Use refreshed data for access check below
+              data.agreements = refreshedData.agreements;
+            }
           }
         }
+
+        // ============================================================================
+        // ACCESS CONTROL: Client must have signed agreement AND paid to access /home
+        // ============================================================================
+        const serviceAgreement = data.agreements.length > 0 
+          ? data.agreements.find(a => 
+              isAgreementSigned(a.status) || 
+              syncedStatuses[a.id] === 'completed'
+            ) || data.agreements[0]
+          : null;
+
+        // Check if agreement is signed (using helper)
+        const envelopeIsCompleted = serviceAgreement && syncedStatuses[serviceAgreement.id] === 'completed';
+        const backendSaysSignedOrComplete = serviceAgreement && isAgreementSigned(serviceAgreement.status);
+        const agreementSigned = envelopeIsCompleted || backendSaysSignedOrComplete || !!serviceAgreement?.signedAt;
+
+        // Check if payment is completed (using helper)
+        const paymentCompleted = serviceAgreement && isAgreementPaid(serviceAgreement.status);
+
+        // Redirect to onboarding if agreement not signed OR payment not completed
+        if (!agreementSigned || !paymentCompleted) {
+          console.log('[ClientDashboard] Access denied - Agreement signed:', agreementSigned, 'Payment completed:', paymentCompleted);
+          console.log('[ClientDashboard] Redirecting to onboarding');
+          router.replace('/client/onboarding');
+          return;
+        }
+
+        console.log('[ClientDashboard] Access granted - Agreement signed and payment completed');
         
         setError(null);
       } catch (err) {
@@ -255,8 +291,7 @@ export default function ClientDashboardPage() {
   // Check both backend status AND envelope status from SignatureAPI
   const serviceAgreement = agreements.length > 0 
     ? agreements.find(a => 
-        a.status === 'signed' || 
-        a.status === 'completed' || 
+        isAgreementSigned(a.status) || 
         envelopeStatuses[a.id] === 'completed'
       ) || agreements[0]
     : null;
@@ -284,7 +319,7 @@ export default function ClientDashboardPage() {
   );
 
   // Calculate step completion states based on agreement status
-  // Mapped statuses: 'pending' = DRAFT (sent), 'signed' = ACTIVE, 'completed' = COMPLETED
+  // Using AgreementStatus enum for proper status checks
   // 
   // SOURCE OF TRUTH: SignatureAPI envelope status
   // The backend may not be updated if the webhook failed, so we check SignatureAPI directly
@@ -294,11 +329,11 @@ export default function ClientDashboardPage() {
   const envelopeIsCompleted = serviceAgreement && envelopeStatuses[serviceAgreement.id] === 'completed';
   
   // Also check backend signals as backup
-  const backendSaysSignedOrComplete = serviceAgreement?.status === 'signed' || serviceAgreement?.status === 'completed';
+  const backendSaysSignedOrComplete = serviceAgreement ? isAgreementSigned(serviceAgreement.status) : false;
   const documentSaysSigned = signingTodos.some(todo => todo.status === 'completed');
   
   const step1Complete = true; // Account always created
-  const step2Sent = serviceAgreement?.status === 'pending' || backendSaysSignedOrComplete;
+  const step2Sent = serviceAgreement?.status === AgreementStatus.PENDING_SIGNATURE || backendSaysSignedOrComplete;
   
   // Agreement is signed if SignatureAPI says so OR backend says so
   const step2Complete = envelopeIsCompleted || backendSaysSignedOrComplete || documentSaysSigned;

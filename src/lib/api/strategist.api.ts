@@ -2,6 +2,7 @@
 
 import { API_URL } from '@/lib/cognito-config';
 import { cookies } from 'next/headers';
+import { AgreementStatus } from '@/types/agreement';
 
 // ============================================================================
 // Types
@@ -100,7 +101,7 @@ export interface ApiAgreement {
   name: string;
   description?: string;
   price: string | number;
-  status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'ARCHIVED';
+  status: AgreementStatus;
   clientId: string;
   strategistId: string;
   paymentRef?: string;
@@ -602,6 +603,7 @@ export interface CreateClientData {
   phone?: string;
   address?: string;
   businessName?: string;
+  strategistId: string;
   clientType: 'individual' | 'business';
 }
 
@@ -619,6 +621,8 @@ export interface CreateClientData {
 export async function createClient(data: CreateClientData): Promise<ApiClient | null> {
   const fullName = `${data.firstName} ${data.lastName}`.trim();
 
+  console.log("Creating client with data:", data);
+
   try {
     // Use the dedicated invite endpoint
     // This handles Cognito user creation, role assignment, and sends email
@@ -627,9 +631,11 @@ export async function createClient(data: CreateClientData): Promise<ApiClient | 
       email: string;
       fullName?: string;
       status?: string;
+      strategistId: string
     }>('/users/clients/invite', {
       method: 'POST',
       body: JSON.stringify({
+        strategistId: data.strategistId, // Assigned automatically from token
         email: data.email,
         fullName: fullName,
         phone: data.phone || undefined,
@@ -804,6 +810,28 @@ export async function attachPayment(
     return true;
   } catch (error) {
     console.error('[API] Failed to attach payment:', error);
+    return false;
+  }
+}
+
+/**
+ * Update agreement status
+ * Used for status transitions in the agreement lifecycle
+ */
+export async function updateAgreementStatus(
+  agreementId: string,
+  status: AgreementStatus
+): Promise<boolean> {
+  try {
+    console.log('[API] Updating agreement status:', agreementId, '→', status);
+    await apiRequest(`/agreements/${agreementId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    console.log('[API] Agreement status updated successfully');
+    return true;
+  } catch (error) {
+    console.error('[API] Failed to update agreement status:', error);
     return false;
   }
 }
@@ -1098,11 +1126,36 @@ export async function getCharge(chargeId: string): Promise<Charge | null> {
 
 /**
  * Generate payment link for a charge (Stripe checkout URL)
+ * @param chargeId - The charge ID
+ * @param options - Optional success/cancel URLs and customer email
  */
-export async function generatePaymentLink(chargeId: string): Promise<string | null> {
+export async function generatePaymentLink(
+  chargeId: string,
+  options?: {
+    successUrl?: string;
+    cancelUrl?: string;
+    customerEmail?: string;
+  }
+): Promise<string | null> {
   try {
+    // Build the base URL
+    const baseUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : process.env.NEXT_PUBLIC_APP_URL || 'https://ariex-web-nine.vercel.app';
+    
+    const body: Record<string, string> = {
+      url: baseUrl,
+      successUrl: options?.successUrl || `${baseUrl}/client/onboarding?payment=success`,
+      cancelUrl: options?.cancelUrl || `${baseUrl}/client/onboarding?payment=cancel`,
+    };
+    
+    if (options?.customerEmail) {
+      body.customerEmail = options.customerEmail;
+    }
+
     const result = await apiRequest<{ paymentLink: string; url?: string }>(`/charges/${chargeId}/payment-link`, {
       method: 'POST',
+      body: JSON.stringify(body),
     });
     console.log('[API] Payment link generated');
     return result.paymentLink || result.url || null;

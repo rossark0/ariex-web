@@ -11,6 +11,10 @@ import {
   type ApiAgreement,
   listClientAgreements,
   getAgreementEnvelopeStatus,
+  createCharge,
+  generatePaymentLink,
+  attachPayment,
+  getChargesForAgreement,
 } from '@/lib/api/strategist.api';
 import { sendAgreementToClient } from '@/lib/api/agreements.actions';
 import { AgreementSheet, type AgreementSendData } from '@/components/agreements/agreement-sheet';
@@ -18,6 +22,12 @@ import {
   CLIENT_STATUS_CONFIG,
   type ClientStatusKey,
 } from '@/lib/client-status';
+import { 
+  AgreementStatus, 
+  isAgreementSigned, 
+  isAgreementPaid, 
+  areTodosCompleted,
+} from '@/types/agreement';
 import {
   ArrowLeftIcon,
   BuildingsIcon,
@@ -29,6 +39,9 @@ import {
   Check as CheckIcon,
   StarFourIcon,
   SpinnerGap,
+  X as XIcon,
+  CreditCard,
+  CurrencyDollar,
 } from '@phosphor-icons/react';
 import {
   Check,
@@ -221,8 +234,10 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
 
   // Payment state
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isSendingPayment, setIsSendingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState(499);
 
   // SignatureAPI sync state - tracks actual envelope status from SignatureAPI
   const [envelopeStatuses, setEnvelopeStatuses] = useState<Record<string, string>>({});
@@ -356,6 +371,9 @@ export default function StrategistClientDetailPage({ params }: Props) {
         price: data.price,
         todos: data.todos,
         markdownContent: data.markdownContent,
+        pages: data.pages, // Legacy: editor pages with content
+        pdfBase64: data.pdfBase64, // New: client-side generated PDF as base64
+        totalPages: data.totalPages, // New: total page count for signature positioning
       });
 
       if (result.success) {
@@ -387,7 +405,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
               name: data.title,
               description: data.description,
               price: data.price,
-              status: 'DRAFT',
+              status: AgreementStatus.PENDING_SIGNATURE,
               clientId: params.clientId,
               strategistId: '',
               signatureCeremonyUrl: result.ceremonyUrl,
@@ -416,45 +434,32 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const allTodos =
     activeAgreement?.todoLists?.flatMap(list => list.todos || []) || [];
 
-  // Compute agreement status from real data
-  // Status: DRAFT (created) -> ACTIVE (signed) -> COMPLETED
+  // Compute agreement status from real data using new AgreementStatus enum
   // 
-  // SOURCE OF TRUTH: SignatureAPI envelope status
-  // The backend may not be updated if the webhook failed, so we check SignatureAPI directly
+  // Status Flow:
+  // DRAFT -> PENDING_SIGNATURE -> PENDING_PAYMENT -> PENDING_TODOS_COMPLETION -> PENDING_STRATEGY -> COMPLETED
   //
   const hasAgreementSent = agreements.some(
-    a => a.status === 'DRAFT' || a.status === 'ACTIVE' || a.status === 'COMPLETED'
+    a => a.status !== AgreementStatus.DRAFT && a.status !== AgreementStatus.CANCELLED
   );
   
-  // Check SignatureAPI envelope status (the REAL source of truth)
+  // Check SignatureAPI envelope status (the REAL source of truth for signature)
   const envelopeIsCompleted = activeAgreement && envelopeStatuses[activeAgreement.id] === 'completed';
   
-  // Also check backend signals as backup
-  const backendSaysSignedOrComplete = agreements.some(
-    a => a.status === 'ACTIVE' || a.status === 'COMPLETED'
-  );
-  const documentSaysSigned = agreements.some(
-    a => a.contractDocument?.signedStatus === 'SIGNED'
-  );
-  const signTodoCompleted = allTodos.some(
-    t => t.title.toLowerCase().includes('sign') && 
-         t.title.toLowerCase().includes('agreement') && 
-         t.status === 'completed'
-  );
-  
-  // Agreement is signed if SignatureAPI says so OR backend says so
-  const hasAgreementSigned = envelopeIsCompleted || backendSaysSignedOrComplete || documentSaysSigned || signTodoCompleted;
+  // Agreement is signed if status is beyond PENDING_SIGNATURE
+  const hasAgreementSigned = agreements.some(a => isAgreementSigned(a.status)) || envelopeIsCompleted;
 
-  // Get the active agreement for payment (either signed or most recent with signing complete)
+  // Get the active agreement for payment (signed or in payment flow)
   const signedAgreement = agreements.find(
-    a => a.status === 'ACTIVE' || a.status === 'COMPLETED'
+    a => isAgreementSigned(a.status)
   ) || (hasAgreementSigned ? activeAgreement : null);
   
+  // Payment status based on new enum
   const hasPaymentSent = signedAgreement && (
-    signedAgreement.paymentStatus === 'pending' || 
+    signedAgreement.status === AgreementStatus.PENDING_PAYMENT || 
     !!signedAgreement.paymentLink
   );
-  const hasPaymentReceived = signedAgreement?.paymentStatus === 'paid';
+  const hasPaymentReceived = signedAgreement && isAgreementPaid(signedAgreement.status);
 
   // Document todos from agreement (excluding the signing and payment todos)
   const documentTodos = allTodos.filter(
@@ -470,7 +475,28 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const hasDocumentsRequested = totalDocTodos > 0;
   const hasAllDocumentsUploaded = totalDocTodos > 0 && completedDocCount >= totalDocTodos;
 
-  // Handler for sending payment link
+  // Initialize payment amount from agreement metadata when modal opens
+  const handleOpenPaymentModal = () => {
+    if (!signedAgreement) return;
+    
+    // Get agreement price from description metadata or use default
+    let agreementAmount = 499;
+    const metadataMatch = signedAgreement.description?.match(/__SIGNATURE_METADATA__:([\s\S]+)$/);
+    if (metadataMatch) {
+      try {
+        const metadata = JSON.parse(metadataMatch[1]);
+        if (metadata.price) agreementAmount = metadata.price;
+      } catch {
+        // Use default
+      }
+    }
+    
+    setPaymentAmount(agreementAmount);
+    setPaymentError(null);
+    setIsPaymentModalOpen(true);
+  };
+
+  // Handler for sending payment link (called from modal)
   const handleSendPaymentLink = async () => {
     if (isSendingPayment || !signedAgreement) return;
 
@@ -478,25 +504,64 @@ export default function StrategistClientDetailPage({ params }: Props) {
     setPaymentError(null);
 
     try {
-      // For now, we'll attach a payment amount to the agreement
-      // In production, this would create a Stripe payment link
-      const { attachPayment } = await import('@/lib/api/strategist.api');
+      // Check if a charge already exists for this agreement
+      const existingCharges = await getChargesForAgreement(signedAgreement.id);
+      let charge: typeof existingCharges[number] | null = existingCharges.find(c => c.status === 'pending') || null;
 
+      // Step 1: Create charge if none exists (use paymentAmount from modal)
+      if (!charge) {
+        console.log('[Payment] Creating charge for agreement:', signedAgreement.id);
+        const newCharge = await createCharge({
+          agreementId: signedAgreement.id,
+          amount: paymentAmount,
+          currency: 'usd',
+          description: `Onboarding Fee - ${signedAgreement.name}`,
+        });
+
+        if (!newCharge) {
+          setPaymentError('Failed to create payment charge');
+          return;
+        }
+        charge = newCharge;
+        console.log('[Payment] Charge created:', charge.id);
+      }
+
+      // Step 2: Generate Stripe checkout URL
+      console.log('[Payment] Generating payment link for charge:', charge.id);
+      let generatedPaymentLink: string | null = null;
+      try {
+        generatedPaymentLink = await generatePaymentLink(charge.id);
+      } catch (linkError) {
+        console.error('[Payment] Error generating payment link:', linkError);
+        setPaymentError(`Failed to generate payment link: ${linkError instanceof Error ? linkError.message : 'Unknown error'}`);
+        return;
+      }
+
+      if (!generatedPaymentLink) {
+        console.error('[Payment] Payment link is null');
+        setPaymentError('Failed to generate payment link - no URL returned');
+        return;
+      }
+      console.log('[Payment] Payment link generated:', generatedPaymentLink);
+
+      // Step 3: Attach payment info to agreement
       const success = await attachPayment(signedAgreement.id, {
-        amount: 499, // Default onboarding fee
-        paymentLink: `https://buy.stripe.com/test_example?client=${params.clientId}`, // Placeholder
+        amount: paymentAmount,
+        paymentLink: generatedPaymentLink,
       });
 
       if (success) {
-        // Reload agreements
+        console.log('[Payment] Payment link attached to agreement');
+        // Close modal and reload agreements
+        setIsPaymentModalOpen(false);
         const data = await listClientAgreements(params.clientId);
         setAgreements(data);
       } else {
-        setPaymentError('Failed to send payment link');
+        setPaymentError('Failed to attach payment link to agreement');
       }
     } catch (error) {
       console.error('Failed to send payment link:', error);
-      setPaymentError('An unexpected error occurred');
+      setPaymentError(error instanceof Error ? error.message : 'An unexpected error occurred');
     } finally {
       setIsSendingPayment(false);
     }
@@ -833,7 +898,8 @@ export default function StrategistClientDetailPage({ params }: Props) {
                           {/* Button: emerald if strategist needs to act, zinc if already acted (reminder) */}
                           {step2Complete && !step3Complete && (
                             <button
-                              className={`mt-2 w-fit rounded px-2 py-1 text-xs font-semibold ${
+                              onClick={handleOpenPaymentModal}
+                              className={`mt-2 flex w-fit items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${
                                 step3Sent
                                   ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
                                   : 'bg-emerald-600 text-white hover:bg-emerald-700'
@@ -841,6 +907,9 @@ export default function StrategistClientDetailPage({ params }: Props) {
                             >
                               {step3Sent ? 'Send reminder' : 'Send payment link'}
                             </button>
+                          )}
+                          {paymentError && (
+                            <span className="mt-1 text-xs text-red-500">{paymentError}</span>
                           )}
                         </div>
                       </div>
@@ -1139,6 +1208,102 @@ export default function StrategistClientDetailPage({ params }: Props) {
         onClose={() => setIsAgreementModalOpen(false)}
         onSend={handleSendAgreement}
       />
+
+      {/* Payment Link Modal */}
+      {isPaymentModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setIsPaymentModalOpen(false)}
+          />
+          
+          {/* Modal */}
+          <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            {/* Header */}
+            <div className="mb-6 flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100">
+                  <CreditCard className="h-5 w-5 text-zinc-600" weight="duotone" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-zinc-900">Send Payment Link</h2>
+                  <p className="text-sm text-zinc-500">Create a Stripe checkout for {client.user.name || 'client'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsPaymentModalOpen(false)}
+                className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+              >
+                <XIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Agreement Info */}
+            <div className="mb-4 rounded-lg bg-zinc-50 p-4">
+              <p className="text-sm font-medium text-zinc-700">Agreement</p>
+              <p className="text-sm text-zinc-600">{signedAgreement?.name || 'Service Agreement'}</p>
+            </div>
+
+            {/* Amount Input */}
+            <div className="mb-6">
+              <label className="mb-2 block text-sm font-medium text-zinc-700">
+                Payment Amount
+              </label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <CurrencyDollar className="h-5 w-5 text-zinc-400" />
+                </div>
+                <input
+                  type="number"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                  className="w-full rounded-lg border border-zinc-300 py-2.5 pl-10 pr-4 text-zinc-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                  placeholder="499"
+                  min={1}
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-zinc-500">
+                The client will receive a Stripe checkout link via email
+              </p>
+            </div>
+
+            {/* Error Message */}
+            {paymentError && (
+              <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+                {paymentError}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsPaymentModalOpen(false)}
+                className="flex-1 rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendPaymentLink}
+                disabled={isSendingPayment || paymentAmount <= 0}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {isSendingPayment ? (
+                  <>
+                    <SpinnerGap className="h-4 w-4 animate-spin" />
+                    Creating link...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="h-4 w-4" />
+                    Send Payment Link
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

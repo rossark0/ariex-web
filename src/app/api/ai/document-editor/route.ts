@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { ChatCompletionMessageParam, ChatCompletionContentPart } from 'openai/resources/chat/completions';
+import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 // ============================================================================
 // Types
@@ -25,17 +25,13 @@ interface PdfOcrResult {
 // OpenAI Client
 // ============================================================================
 
-let openaiClient: OpenAI | null = null;
-
 function getOpenAI(): OpenAI {
-  if (!openaiClient) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY environment variable is not set');
-    }
-    openaiClient = new OpenAI({ apiKey });
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY environment variable is not set');
   }
-  return openaiClient;
+  // Create a new client each time to pick up env changes
+  return new OpenAI({ apiKey });
 }
 
 // ============================================================================
@@ -52,35 +48,55 @@ You have full control over the document content and can make any edits requested
 - Horizontal rules: <hr>
 - Blockquotes: <blockquote>
 
-You also have PAGE MANAGEMENT capabilities:
-- You can CREATE new pages when the user asks (e.g., "add a new page", "create page 2", "add another page for terms")
-- You can suggest navigating to different pages
+CRITICAL BEHAVIOR RULES:
+1. DEFAULT ACTION: Edit the CURRENT page content. Most requests should update the current page.
+2. ONLY create a new page when the user EXPLICITLY asks with phrases like:
+   - "create a new page"
+   - "add a new page"
+   - "make a new page"
+   - "add another page"
+   - "new page for..."
+3. IMPORTANT: You can only create ONE page at a time. If the user asks for multiple pages (e.g., "create 5 pages"), create the FIRST page only and tell them: "I've created the first page. I can only create one page at a time - please ask me to create the next page when you're ready."
+4. ONLY delete a page when the user EXPLICITLY asks with phrases like:
+   - "delete this page"
+   - "remove this page"
+   - "delete page"
+   - "remove current page"
+   NOTE: Cannot delete if only 1 page remains.
+5. Requests like "add a section", "create a signature section", "add legal language", "improve this", "enhance", "update" should ALL edit the CURRENT page - NOT create a new page.
+6. After creating a page, subsequent messages should edit that page unless explicitly asked for another new page.
 
 When the user asks for edits, you should:
 1. Understand the current document content
-2. Make precise, targeted edits
+2. Make precise, targeted edits TO THE CURRENT PAGE
 3. Preserve the document structure and formatting
 4. Explain what changes you made
 
 IMPORTANT RESPONSE FORMAT:
 You MUST respond with a valid JSON object. Include these fields as needed:
 - "message": A friendly explanation of what you did or are suggesting (REQUIRED)
-- "fullContent": The complete updated HTML content (when making edits to current page)
-- "action": Use "addPage" to create a new page, "goToPage" to navigate
+- "fullContent": The complete updated HTML content (when making edits to current page - THIS IS THE DEFAULT)
+- "action": Use "addPage" when user EXPLICITLY requests a new page, "deletePage" to delete current page, "goToPage" to navigate
 - "newPageContent": HTML content for the new page (when action is "addPage")
 - "pageIndex": Page number to navigate to (when action is "goToPage", 1-indexed)
 
-Example - editing current page:
+Example - editing current page (MOST COMMON):
 {
-  "message": "I've updated the executive summary with the tax savings estimate.",
-  "fullContent": "<h2>Executive Summary</h2><p>Based on our analysis...</p>"
+  "message": "I've added a signature section to this page.",
+  "fullContent": "<h2>Agreement</h2><p>Terms here...</p><h3>Signature</h3><p>Sign below:</p>"
 }
 
-Example - creating a new page:
+Example - creating a new page (ONLY when explicitly asked):
 {
   "message": "I've created a new page with the Terms and Conditions section.",
   "action": "addPage",
   "newPageContent": "<h2>Terms and Conditions</h2><p>1. Service Agreement...</p>"
+}
+
+Example - deleting current page (ONLY when explicitly asked):
+{
+  "message": "I've deleted the current page.",
+  "action": "deletePage"
 }
 
 Example - just answering a question:
@@ -112,8 +128,33 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[AI Document Editor] Error:', error);
+    
+    // Handle OpenAI API errors by checking error properties
+    const err = error as { status?: number; code?: string; message?: string };
+    
+    if (err.code === 'invalid_api_key' || err.status === 401) {
+      return NextResponse.json(
+        { error: 'Invalid OpenAI API key. Please check your OPENAI_API_KEY in .env.local and restart the server.' },
+        { status: 401 }
+      );
+    }
+    
+    if (err.status === 429) {
+      return NextResponse.json(
+        { error: 'OpenAI rate limit exceeded. Please try again in a moment.' },
+        { status: 429 }
+      );
+    }
+    
+    if (err.status && err.status >= 400) {
+      return NextResponse.json(
+        { error: `OpenAI API error: ${err.message || 'Unknown error'}` },
+        { status: err.status }
+      );
+    }
+    
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
@@ -189,80 +230,26 @@ async function handleDocumentChat(
 }
 
 // ============================================================================
-// PDF OCR Handler using OpenAI Vision (GPT-4o can read PDFs directly)
+// PDF Text Extraction Handler
+// NOTE: PDF parsing libraries (pdf-parse, pdfjs-dist, unpdf) have compatibility
+// issues with Next.js Turbo bundler. For now, return a helpful error message.
+// TODO: Consider using an external API service for PDF parsing.
 // ============================================================================
 
 async function handlePdfOcr(
-  openai: OpenAI,
-  pdfBase64: string, // Base64 encoded PDF file
-  clientName?: string
+  _openai: OpenAI,
+  pdfBase64: string,
+  _clientName?: string
 ): Promise<NextResponse> {
   if (!pdfBase64) {
     return NextResponse.json({ error: 'No PDF data provided' }, { status: 400 });
   }
 
-  // GPT-4o can read PDFs directly via vision API
-  const contentParts: ChatCompletionContentPart[] = [
-    {
-      type: 'text',
-      text: `Please read this PDF document and convert it to well-structured HTML.${clientName ? ` This document is for client: ${clientName}.` : ''}\n\nExtract ALL text, preserve formatting, and organize by pages.`,
-    },
-    {
-      type: 'image_url',
-      image_url: {
-        url: `data:application/pdf;base64,${pdfBase64}`,
-        detail: 'high',
-      },
-    },
-  ];
-
-  const messages: ChatCompletionMessageParam[] = [
-    {
-      role: 'system',
-      content: `You are an expert document OCR and interpreter. Your job is to:
-1. Read and extract ALL text from the PDF document
-2. Convert to well-structured HTML for a rich text editor
-3. Preserve structure, formatting, and page breaks
-4. Identify and format headings, paragraphs, lists, tables
-
-Use HTML elements: <h1>, <h2>, <h3> for headings, <p> for paragraphs, <ul>/<ol>/<li> for lists, <strong>/<em> for emphasis, <hr> for section breaks.
-
-RESPONSE FORMAT (JSON):
-{
-  "pages": [
-    { "pageNumber": 1, "content": "<h2>Title</h2><p>Content...</p>" }
-  ],
-  "title": "Document title",
-  "summary": "Brief summary"
-}`,
-    },
-    {
-      role: 'user',
-      content: contentParts,
-    },
-  ];
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      max_tokens: 8192,
-      temperature: 0.1,
-      messages,
-      response_format: { type: 'json_object' },
-    });
-
-    const content = response.choices[0].message.content;
-    if (!content) {
-      return NextResponse.json({ error: 'No response from AI' }, { status: 500 });
-    }
-
-    const parsed = JSON.parse(content);
-    return NextResponse.json(parsed);
-  } catch (error) {
-    console.error('[PDF OCR] Error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to process PDF' },
-      { status: 500 }
-    );
-  }
+  // PDF parsing is currently disabled due to Next.js Turbo compatibility issues
+  // Libraries tried: pdf-parse (test file bug), pdfjs-dist (worker issues), unpdf (serverless bundle issues)
+  // Return a helpful message instead
+  return NextResponse.json({
+    error: 'PDF upload is temporarily unavailable. Please copy and paste your document content directly into the chat, or manually type the content into the editor.',
+    suggestion: 'You can describe what content you want and the AI will help create it for you.',
+  }, { status: 503 });
 }

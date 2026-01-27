@@ -155,15 +155,15 @@ export async function generateAndUploadAgreement(
           }),
 
           // Signature Section
-          new Paragraph({
-            text: 'SIGNATURES',
-            heading: HeadingLevel.HEADING_3,
-            spacing: { before: 400, after: 200 },
-          }),
-          new Paragraph({
-            text: 'By signing below, both parties agree to the terms and conditions outlined in this agreement.',
-            spacing: { after: 400 },
-          }),
+          // new Paragraph({
+          //   text: 'SIGNATURES',
+          //   heading: HeadingLevel.HEADING_3,
+          //   spacing: { before: 400, after: 200 },
+          // }),
+          // new Paragraph({
+          //   text: 'By signing below, both parties agree to the terms and conditions outlined in this agreement.',
+          //   spacing: { after: 400 },
+          // }),
 
           // Client Signature - SignatureAPI placeholder
           new Paragraph({

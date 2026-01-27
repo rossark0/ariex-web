@@ -30,7 +30,6 @@
     "@tiptap/pm": "^3.17.1",
     "@tiptap/react": "^3.17.1",
     "@tiptap/starter-kit": "^3.17.1",
-    "@types/pdf-parse": "^1.1.5",
     "axios": "^1.6.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -43,7 +42,6 @@
     "next-themes": "^0.2.1",
     "openai": "^6.8.1",
     "pdf-lib": "^1.17.1",
-    "pdf-parse": "1.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "resend": "^3.2.0",
@@ -52,6 +50,7 @@
     "stripe": "^20.2.0",
     "svix": "^1.21.0",
     "tailwind-merge": "^2.6.0",
+    "unpdf": "^1.4.0",
     "zod": "^3.22.4",
     "zustand": "^4.5.0"
   },

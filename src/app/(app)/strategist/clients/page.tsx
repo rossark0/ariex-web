@@ -14,6 +14,7 @@ import { ChevronDown, ChevronDownIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { listClients, createClient, type ApiClient } from '@/lib/api/strategist.api';
+import { useAuth } from '@/contexts/auth/AuthStore';
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -124,6 +125,7 @@ interface AddClientModalProps {
 }
 
 function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProps) {
+  const {user} = useAuth()
   const [clientType, setClientType] = useState<ClientType>('individual');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -167,6 +169,7 @@ function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProp
     try {
       // Create client via API
       await createClient({
+        strategistId: user?.id || '',
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
@@ -333,36 +336,6 @@ function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProp
                     onChange={e => setFormData({ ...formData, address: e.target.value })}
                     className="w-48 rounded-lg border border-zinc-200 px-3 py-1.5 text-right text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
                   />
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-6 overflow-hidden rounded-xl border border-zinc-200 bg-white">
-              <div className="relative h-16 bg-linear-to-br from-emerald-100 via-teal-50 to-cyan-100">
-                <div className="absolute top-3 left-3 flex h-6 w-6 items-center justify-center rounded-full border-2 border-emerald-500 bg-white">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                </div>
-              </div>
-              <div className="p-4">
-                <h3 className="font-medium text-zinc-900">Tax Strategy Plan</h3>
-                <p className="mt-0.5 text-sm text-zinc-500">
-                  <span className="font-semibold text-zinc-900">$2,500</span> one-time setup
-                </p>
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2 text-zinc-500">
-                      <Briefcase weight="fill" className="h-4 w-4 text-zinc-400" />
-                      Includes
-                    </span>
-                    <span className="text-zinc-700">Full Strategy Review</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2 text-zinc-500">
-                      <Calendar weight="fill" className="h-4 w-4 text-zinc-400" />
-                      Timeline
-                    </span>
-                    <span className="text-zinc-700">2-4 weeks</span>
-                  </div>
                 </div>
               </div>
             </div>

@@ -13,10 +13,16 @@ import {
   generatePaymentLink,
   getDocumentDownloadUrl,
   getSignedDocumentDownloadUrl,
+  syncAgreementSignatureStatus,
   type ClientDashboardData,
   type ClientAgreement,
   type ClientCharge,
 } from '@/lib/api/client.api';
+import { 
+  AgreementStatus, 
+  isAgreementSigned, 
+  isAgreementPaid,
+} from '@/types/agreement';
 
 // ============================================================================
 // ONBOARDING STEPS
@@ -261,17 +267,21 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
 
 interface AgreementStepProps extends StepProps {
   pendingAgreement: ClientAgreement | null;
+  onAgreementSigned?: () => void;
 }
 
-function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardData }: AgreementStepProps) {
+function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardData, onAgreementSigned }: AgreementStepProps) {
   const [signingInProgress, setSigningInProgress] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [signatureVerified, setSignatureVerified] = useState(false);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [signedDocumentUrl, setSignedDocumentUrl] = useState<string | null>(null);
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  // Check if agreement is already signed
-  const isAgreementSigned = pendingAgreement?.status === 'signed' || 
-    pendingAgreement?.status === 'completed' ||
+  // Check if agreement is already signed (using helper function)
+  const isAgreementAlreadySigned = signatureVerified || 
+    (pendingAgreement?.status && isAgreementSigned(pendingAgreement.status)) ||
     !!pendingAgreement?.signedAt;
 
   // Fetch document URL - try contractFileId first, then find AGREEMENT type document
@@ -282,13 +292,13 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
       
       console.log('[AgreementStep] Starting document fetch...');
       console.log('[AgreementStep] pendingAgreement:', pendingAgreement);
-      console.log('[AgreementStep] isAgreementSigned:', isAgreementSigned);
+      console.log('[AgreementStep] isAgreementAlreadySigned:', isAgreementAlreadySigned);
       console.log('[AgreementStep] dashboardData.documents:', dashboardData?.documents);
       
       try {
         // If agreement is signed, try to get the signed document URL
         // Uses S3 first (if stored by webhook), then falls back to SignatureAPI
-        if (isAgreementSigned) {
+        if (isAgreementAlreadySigned) {
           console.log('[AgreementStep] Fetching signed document URL...');
           const signedUrl = await getSignedDocumentDownloadUrl(
             pendingAgreement?.signedDocumentFileId,
@@ -341,13 +351,48 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
     }
 
     fetchDocumentUrl();
-  }, [pendingAgreement, isAgreementSigned, dashboardData?.documents]);
+  }, [pendingAgreement, isAgreementAlreadySigned, dashboardData?.documents]);
 
   const handleSignAgreement = () => {
     if (pendingAgreement?.signatureCeremonyUrl) {
       setSigningInProgress(true);
+      setStatusMessage(null);
       // Open the SignatureAPI ceremony in a new tab
       window.open(pendingAgreement.signatureCeremonyUrl, '_blank');
+    }
+  };
+
+  // Check signature status with the API
+  const handleCheckSignatureStatus = async () => {
+    if (!pendingAgreement?.id) return;
+    
+    setIsCheckingStatus(true);
+    setStatusMessage(null);
+    
+    try {
+      const result = await syncAgreementSignatureStatus(pendingAgreement.id);
+      console.log('[AgreementStep] Signature status check result:', result);
+      
+      if (result.status === 'signed' || result.status === 'completed') {
+        setSignatureVerified(true);
+        setStatusMessage('Agreement signed successfully! Click Continue to proceed.');
+        // Notify parent to refresh data
+        onAgreementSigned?.();
+      } else if (result.status === 'in_progress') {
+        // Envelope is in progress - signing may still be happening
+        setStatusMessage('Signing in progress. If you completed signing, please wait a moment and try again.');
+      } else if (result.status === 'pending' || result.status === 'sent' || result.status === 'processing') {
+        setStatusMessage('Signature not yet complete. Please finish signing the agreement in the other tab.');
+      } else if (result.error) {
+        setStatusMessage(`Error: ${result.error}`);
+      } else {
+        setStatusMessage(`Status: ${result.status || 'Unknown'}. Please complete signing.`);
+      }
+    } catch (error) {
+      console.error('[AgreementStep] Failed to check signature status:', error);
+      setStatusMessage('Failed to check status. Please try again.');
+    } finally {
+      setIsCheckingStatus(false);
     }
   };
 
@@ -357,7 +402,7 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
     : '$499';
 
   // If agreement is already signed, show success state
-  if (isAgreementSigned) {
+  if (isAgreementAlreadySigned) {
     return (
       <div className="flex flex-col gap-6">
         {/* Success Message */}
@@ -374,9 +419,6 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
         {/* Agreement Info */}
         <div className="py-4">
           <h3 className="mb-2 text-sm font-medium text-zinc-900">{agreementTitle}</h3>
-          {pendingAgreement?.description && (
-            <p className="mb-4 text-xs text-zinc-500">{pendingAgreement.description}</p>
-          )}
           <div className="flex items-center justify-between border-t border-zinc-200 pt-4">
             <span className="text-xs text-zinc-500">Service Fee</span>
             <span className="text-sm font-medium text-zinc-900">{agreementPrice}</span>
@@ -465,9 +507,6 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
       {pendingAgreement ? (
         <div className="border-b border-zinc-200 pb-6">
           <h3 className="mb-2 text-sm font-medium text-zinc-900">{agreementTitle}</h3>
-          {pendingAgreement.description && (
-            <p className="mb-4 text-xs text-zinc-500">{pendingAgreement.description}</p>
-          )}
           <div className="flex items-center justify-between pt-2">
             <span className="text-xs text-zinc-500">Service Fee</span>
             <span className="text-sm font-medium text-zinc-900">{agreementPrice}</span>
@@ -483,7 +522,7 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
       )}
 
       {/* Document Preview */}
-      {/* <div className="py-4">
+      <div className="py-4">
         <h4 className="mb-3 text-xs font-medium text-zinc-400 uppercase">Document Preview</h4>
         {isLoadingDocument ? (
           <div className="flex h-64 w-full items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
@@ -516,43 +555,76 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
             <p className="mt-1 text-xs text-zinc-400">Click below to view and sign</p>
           </div>
         )}
-      </div> */}
+      </div>
 
       {signingInProgress && (
-        <p className="text-center text-xs text-zinc-400">
-          A new tab has opened for signing. Once complete, click Continue below.
-        </p>
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-center text-xs text-amber-700">
+            A new tab has opened for signing. After signing, click &ldquo;Check Status&rdquo; below to verify.
+          </p>
+        </div>
+      )}
+
+      {/* Status Message */}
+      {statusMessage && (
+        <div className={`rounded-md px-4 py-3 text-center text-xs ${
+          signatureVerified 
+            ? 'border border-emerald-200 bg-emerald-50 text-emerald-700' 
+            : 'border border-zinc-200 bg-zinc-50 text-zinc-600'
+        }`}>
+          {statusMessage}
+        </div>
       )}
 
       {/* Navigation Buttons */}
-      <div className="mt-8 flex gap-3">
-        {!isFirst && (
+      <div className="mt-8 flex flex-col gap-3">
+        {/* Check Status button - shown after signing started but not verified */}
+        {signingInProgress && !signatureVerified && (
           <button
-            onClick={onBack}
-            className="flex-1 rounded-md border border-zinc-200 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            onClick={handleCheckSignatureStatus}
+            disabled={isCheckingStatus}
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:opacity-40"
           >
-            Back
+            {isCheckingStatus ? (
+              <>
+                <SpinnerGap weight="bold" className="h-4 w-4 animate-spin" />
+                Checking...
+              </>
+            ) : (
+              'Check Signature Status'
+            )}
           </button>
         )}
-        {signingInProgress ? (
-          <button
-            onClick={onContinue}
-            className="flex-1 cursor-pointer rounded-md bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
-          >
-            Continue
-          </button>
-        ) : pendingAgreement?.signatureCeremonyUrl ? (
-          <button
-            onClick={handleSignAgreement}
-            className="flex-1 rounded-md bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
-          >
-            Sign Agreement
-          </button>
-        ) : (
-          <div className="flex-1 py-3 text-center text-xs text-zinc-400">
-            Waiting for agreement link...
-          </div>
-        )}
+
+        <div className="flex gap-3">
+          {!isFirst && (
+            <button
+              onClick={onBack}
+              className="flex-1 rounded-md border border-zinc-200 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            >
+              Back
+            </button>
+          )}
+          {signatureVerified ? (
+            <button
+              onClick={onContinue}
+              className="flex-1 cursor-pointer rounded-md bg-emerald-600 py-3 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+            >
+              Continue
+            </button>
+          ) : !signingInProgress && pendingAgreement?.signatureCeremonyUrl ? (
+            <button
+              onClick={handleSignAgreement}
+              className="flex-1 rounded-md bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+            >
+              Sign Agreement
+            </button>
+          ) : !signingInProgress ? (
+            <div className="flex-1 py-3 text-center text-xs text-zinc-400">
+              Waiting for agreement link...
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -589,40 +661,64 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
   useEffect(() => {
     async function fetchCharges() {
       if (!pendingAgreement?.id) {
+        console.log('[PaymentStep] No pending agreement ID');
         setIsLoading(false);
         return;
       }
 
       try {
+        console.log('[PaymentStep] Fetching charges for agreement:', pendingAgreement.id, 'paymentLink:', pendingAgreement.paymentLink);
         const charges = await getChargesForAgreement(pendingAgreement.id);
+        console.log('[PaymentStep] Found charges:', charges.length, charges);
         // Get the first pending charge (or the most recent one)
         const pendingCharge = charges.find(c => c.status === 'pending') || charges[0];
         setCharge(pendingCharge || null);
+        return pendingCharge;
       } catch (err) {
         console.error('Failed to fetch charges:', err);
         setError('Failed to load payment information');
+        return null;
       } finally {
         setIsLoading(false);
       }
     }
 
     fetchCharges();
-  }, [pendingAgreement?.id]);
+
+    // Poll for charge updates if no charge or paymentLink exists yet
+    // This handles the case where the strategist creates the payment link after the client loaded the page
+    const hasPaymentReady = charge || pendingAgreement?.paymentLink;
+    if (!hasPaymentReady && pendingAgreement?.id) {
+      const pollInterval = setInterval(async () => {
+        console.log('[PaymentStep] Polling for charge updates...');
+        const foundCharge = await fetchCharges();
+        if (foundCharge) {
+          console.log('[PaymentStep] Found charge, stopping poll');
+          clearInterval(pollInterval);
+        }
+      }, 5000); // Poll every 5 seconds
+
+      return () => clearInterval(pollInterval);
+    }
+  }, [pendingAgreement?.id, pendingAgreement?.paymentLink, charge]);
 
   const handlePayNow = async () => {
-    if (!charge) {
-      setError('No payment charge found. Please contact support.');
-      return;
-    }
-
     setIsGeneratingLink(true);
     setError(null);
 
     try {
-      // Generate Stripe payment link with client email pre-filled
-      const paymentUrl = await generatePaymentLink(charge.id, {
-        customerEmail: clientEmail,
-      });
+      let paymentUrl: string | null = null;
+
+      // If we have a charge, generate a fresh payment link
+      if (charge) {
+        paymentUrl = await generatePaymentLink(charge.id, {
+          customerEmail: clientEmail,
+        });
+      } 
+      // Otherwise, use the payment link from the agreement if available
+      else if (pendingAgreement?.paymentLink) {
+        paymentUrl = pendingAgreement.paymentLink;
+      }
       
       if (paymentUrl) {
         // Mark onboarding progress in localStorage before redirect
@@ -630,7 +726,7 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
         // Open Stripe checkout in new tab
         window.open(paymentUrl, '_blank');
       } else {
-        setError('Failed to generate payment link. Please try again.');
+        setError('No payment link available. Please contact your strategist.');
       }
     } catch (err) {
       console.error('Failed to generate payment link:', err);
@@ -685,8 +781,8 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
             Thank you for your payment. Click continue to finish onboarding.
           </p>
         </div>
-      ) : charge ? (
-        // Has charge - show pay button
+      ) : charge || pendingAgreement?.paymentLink ? (
+        // Has charge or payment link - show pay button
         <>
           <div className="py-4">
             <div className="flex items-center gap-3 mb-4">
@@ -726,10 +822,14 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
           </button>
         </>
       ) : (
-        // No charge found
+        // No charge or payment link found - waiting for strategist
         <div className="py-6 text-center">
-          <p className="text-xs text-zinc-500">
-            Payment information is being set up. Please check back shortly or contact your strategist.
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+            <Warning weight="duotone" className="h-5 w-5 text-amber-600" />
+          </div>
+          <p className="text-sm font-medium text-zinc-900">Waiting for payment link</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            Your strategist is setting up the payment. You&apos;ll receive an email when it&apos;s ready.
           </p>
         </div>
       )}
@@ -737,7 +837,7 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
       {/* Navigation Buttons */}
       <div className="mt-8 flex flex-col gap-3">
         {/* Skip button for testing (marks todo as complete) */}
-        {!isPaymentComplete && charge && (
+        {!isPaymentComplete && (charge || pendingAgreement?.paymentLink) && (
           <button
             onClick={async () => {
               setIsSkipping(true);
@@ -900,14 +1000,39 @@ function OnboardingContent() {
   const cameFromPayment = useRef(false);
 
   // Handle ?signed=true redirect from SignatureAPI - go to payment step
+  // This also syncs the signature status with the backend (since webhook may fail due to auth)
   useEffect(() => {
     if (searchParams.get('signed') === 'true') {
-      console.log('[Onboarding] Detected signed=true, going to payment step');
+      console.log('[Onboarding] Detected signed=true, syncing signature status...');
       cameFromSigning.current = true;
       setCurrentStep(2); // Go to payment step (index 2)
       setIsLoading(false); // Stop loading immediately
       // Remove the query param from URL (use shallow to avoid re-render)
       window.history.replaceState({}, '', '/client/onboarding');
+      
+      // Sync signature status with backend (since webhook requires auth and may fail)
+      // This ensures document, todo, and agreement are updated
+      (async () => {
+        try {
+          // Get agreements to find the one that was just signed
+          const data = await getClientDashboardData();
+          const pendingAgreement = data?.agreements?.find(
+            a => a.status === AgreementStatus.DRAFT && a.signatureCeremonyUrl
+          );
+          
+          if (pendingAgreement) {
+            console.log('[Onboarding] Syncing signature for agreement:', pendingAgreement.id);
+            const result = await syncAgreementSignatureStatus(pendingAgreement.id);
+            console.log('[Onboarding] Signature sync result:', result);
+            
+            // Refresh dashboard data after sync
+            const refreshedData = await getClientDashboardData();
+            setDashboardData(refreshedData);
+          }
+        } catch (error) {
+          console.error('[Onboarding] Failed to sync signature status:', error);
+        }
+      })();
     }
   }, [searchParams]);
 
@@ -951,9 +1076,20 @@ function OnboardingContent() {
 
         // Only auto-navigate if not coming from signing or payment redirect
         if (!cameFromSigning.current && !cameFromPayment.current) {
-          // If user already has a signed agreement, skip to payment or complete
-          if (data?.agreements.some(a => a.status === 'signed' || a.status === 'completed')) {
-            setCurrentStep(3); // Go to complete step (index 3)
+          // Check if agreement is signed (using new status enum)
+          const signedAgreement = data?.agreements.find(
+            a => isAgreementSigned(a.status)
+          );
+          
+          if (signedAgreement) {
+            // Check if payment is complete using helper
+            const isPaid = isAgreementPaid(signedAgreement.status);
+            
+            if (isPaid) {
+              setCurrentStep(3); // Go to complete step
+            } else {
+              setCurrentStep(2); // Go to payment step
+            }
           }
         }
       } catch (err) {
@@ -968,13 +1104,22 @@ function OnboardingContent() {
     }
   }, [user]);
 
-  // Find pending agreement (needs signing) or signed agreement (for display)
+  // Find the most relevant agreement for onboarding:
+  // 1. First, look for agreement awaiting payment (PENDING_PAYMENT)
+  // 2. Then, look for agreement awaiting signature (PENDING_SIGNATURE)
+  // 3. Finally, fallback to any signed agreement
   const pendingAgreement =
+    // Priority 1: Agreement awaiting payment
     dashboardData?.agreements.find(
-      a => a.status === 'pending' || a.status === 'sent' || a.status === 'draft'
+      a => a.status === AgreementStatus.PENDING_PAYMENT
+    ) ||
+    // Priority 2: Agreement awaiting signature
+    dashboardData?.agreements.find(
+      a => a.status === AgreementStatus.PENDING_SIGNATURE
     ) || 
+    // Priority 3: Any agreement that's been signed (beyond PENDING_SIGNATURE)
     dashboardData?.agreements.find(
-      a => a.status === 'signed' || a.status === 'completed'
+      a => isAgreementSigned(a.status)
     ) || null;
 
   const handleNext = () => {
@@ -1052,6 +1197,15 @@ function OnboardingContent() {
               isFirst={currentStep === 0}
               isLast={currentStep === STEPS.length - 1}
               pendingAgreement={pendingAgreement}
+              onAgreementSigned={async () => {
+                // Refresh dashboard data after signature is verified
+                try {
+                  const data = await getClientDashboardData();
+                  setDashboardData(data);
+                } catch (err) {
+                  console.error('[Onboarding] Failed to refresh data after signing:', err);
+                }
+              }}
             />
           )}
           {currentStepData.id === 'payment' && (

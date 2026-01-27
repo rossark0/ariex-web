@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useUiStore } from '@/contexts/ui/UiStore';
 import { useState, useEffect } from 'react';
 import { getClientAgreements, type ClientAgreement } from '@/lib/api/client.api';
+import { AgreementStatus, isAgreementSigned } from '@/types/agreement';
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -124,9 +125,9 @@ export default function ClientAgreementsPage() {
   }
 
   // Group agreements by status for display
-  const pendingAgreements = agreements.filter(a => a.status === 'pending' || a.status === 'sent');
-  const signedAgreements = agreements.filter(a => a.status === 'signed' || a.status === 'completed');
-  const otherAgreements = agreements.filter(a => !['pending', 'sent', 'signed', 'completed'].includes(a.status));
+  const pendingAgreements = agreements.filter(a => a.status === AgreementStatus.PENDING_SIGNATURE);
+  const signedAgreements = agreements.filter(a => isAgreementSigned(a.status));
+  const otherAgreements = agreements.filter(a => a.status === AgreementStatus.DRAFT || a.status === AgreementStatus.CANCELLED);
 
   return (
     <div className="bg-white pb-24">
@@ -239,7 +240,7 @@ function AgreementItem({ agreement }: { agreement: ClientAgreement }) {
   };
 
   // Check if this agreement needs signing
-  const needsSignature = agreement.status === 'pending' || agreement.status === 'sent';
+  const needsSignature = agreement.status === AgreementStatus.PENDING_SIGNATURE;
   const hasCeremonyUrl = !!agreement.signatureCeremonyUrl;
 
   return (
@@ -286,7 +287,7 @@ function AgreementItem({ agreement }: { agreement: ClientAgreement }) {
       )}
 
       {/* View signed document */}
-      {(agreement.status === 'signed' || agreement.status === 'completed') && (
+      {isAgreementSigned(agreement.status) && (
         <button className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
           <FileIcon className="h-4 w-4" weight="bold" />
           View

@@ -13,8 +13,15 @@ import {
   createCharge,
   attachContract,
   updateDocumentAgreement,
+  updateAgreementStatus,
 } from '@/lib/api/strategist.api';
-import { generateAgreementPdf, type AgreementPdfData } from '@/lib/agreement/generate-pdf';
+import { 
+  generateAgreementPdf, 
+  generateAgreementPdfFromEditor,
+  type AgreementPdfData,
+  type Page,
+} from '@/lib/agreement/generate-pdf';
+import { AgreementStatus } from '@/types/agreement';
 
 // ============================================================================
 // Types
@@ -60,6 +67,12 @@ export async function sendAgreementToClient(params: {
   redirectUrl?: string;
   /** Optional markdown content from the Agreement Sheet editor */
   markdownContent?: string;
+  /** Optional pages from the Agreement Sheet editor (includes signature fields) */
+  pages?: Page[];
+  /** Optional base64-encoded PDF generated client-side (preferred) */
+  pdfBase64?: string;
+  /** Total number of pages in the PDF (for signature positioning) */
+  totalPages?: number;
 }): Promise<SendAgreementResult> {
   const {
     clientId,
@@ -69,6 +82,9 @@ export async function sendAgreementToClient(params: {
     todos = [],
     redirectUrl,
     markdownContent,
+    pages,
+    pdfBase64,
+    totalPages,
   } = params;
 
   try {
@@ -86,13 +102,17 @@ export async function sendAgreementToClient(params: {
     const clientName = client.name || client.fullName || client.email.split('@')[0];
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-    // Get strategist info
+    // Get strategist info for dual signing
     let strategistName = 'Ariex Tax Strategist';
+    let strategistEmail: string | undefined;
     let currentStrategistId: string | undefined;
     try {
       const currentUser = await getCurrentUser();
       if (currentUser?.name) {
         strategistName = currentUser.name;
+      }
+      if (currentUser?.email) {
+        strategistEmail = currentUser.email;
       }
       if (currentUser?.id) {
         currentStrategistId = currentUser.id;
@@ -102,34 +122,56 @@ export async function sendAgreementToClient(params: {
     }
 
     // ========================================================================
-    // STEP 1: Generate the PDF document FIRST
+    // STEP 1: Get or generate the PDF document
     // ========================================================================
-    console.log('[Agreements] Step 1: Generating PDF document');
+    console.log('[Agreements] Step 1: Preparing PDF document');
     
-    // Prepare PDF data with strategies (placeholder for now - can be enhanced)
-    const pdfData: AgreementPdfData = {
-      agreementTitle,
-      date: new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-      strategistName,
-      clientName,
-      clientEmail: client.email,
-      strategies: [
-        {
-          name: 'Tax Optimization Strategy',
-          description: description,
-          estimatedSavings: price * 3, // Estimated 3x ROI
-        },
-      ],
-      totalSavings: price * 3,
-      serviceFee: price,
-    };
+    let pdfBuffer: Uint8Array;
+    let documentTotalPages = totalPages || 1;
     
-    const pdfBuffer = await generateAgreementPdf(pdfData);
-    console.log('[Agreements] PDF generated, size:', pdfBuffer.length);
+    // PREFERRED: Use client-side generated PDF (exact visual match)
+    if (pdfBase64) {
+      console.log('[Agreements] Using client-side generated PDF');
+      // Convert base64 to Uint8Array
+      const binaryString = Buffer.from(pdfBase64, 'base64');
+      pdfBuffer = new Uint8Array(binaryString);
+    } else if (pages && pages.length > 0) {
+      // FALLBACK: Server-side generation from editor pages
+      console.log('[Agreements] Using server-side PDF generation from pages');
+      pdfBuffer = await generateAgreementPdfFromEditor({
+        title: agreementTitle,
+        pages,
+        clientName,
+        strategistName,
+      });
+      documentTotalPages = pages.length;
+    } else {
+      // LEGACY: Use hardcoded template
+      console.log('[Agreements] Using legacy template for PDF generation');
+      const pdfData: AgreementPdfData = {
+        agreementTitle,
+        date: new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }),
+        strategistName,
+        clientName,
+        clientEmail: client.email,
+        strategies: [
+          {
+            name: 'Tax Optimization Strategy',
+            description: description,
+            estimatedSavings: price * 3,
+          },
+        ],
+        totalSavings: price * 3,
+        serviceFee: price,
+      };
+      pdfBuffer = await generateAgreementPdf(pdfData);
+    }
+    
+    console.log('[Agreements] PDF ready, size:', pdfBuffer.length, 'pages:', documentTotalPages);
 
     // ========================================================================
     // STEP 2: Upload PDF to a temporary location so SignatureAPI can access it
@@ -177,6 +219,9 @@ export async function sendAgreementToClient(params: {
     // STEP 3: Create SignatureAPI envelope FIRST (before agreement)
     // ========================================================================
     console.log('[Agreements] Step 3: Creating SignatureAPI envelope');
+    console.log('[Agreements] Strategist email:', strategistEmail || 'Not available');
+    console.log('[Agreements] Document total pages:', documentTotalPages);
+    
     const signatureResult = await createEnvelopeWithCeremony({
       title: agreementTitle,
       documentUrl: signatureDocumentUrl,
@@ -184,14 +229,25 @@ export async function sendAgreementToClient(params: {
         name: clientName,
         email: client.email,
       },
+      // Include strategist as second signer if we have their email
+      strategist: strategistEmail ? {
+        name: strategistName,
+        email: strategistEmail,
+      } : undefined,
       redirectUrl: redirectUrl || `${baseUrl}/client/onboarding?signed=true`,
       metadata: {
         clientId,
         agreementTitle,
+        strategistId: currentStrategistId || '',
       },
+      // Place signatures on the last page of the document
+      totalPages: documentTotalPages,
     });
     console.log('[Agreements] SignatureAPI envelope created:', signatureResult.envelopeId);
-    console.log('[Agreements] Ceremony URL:', signatureResult.ceremonyUrl);
+    console.log('[Agreements] Client ceremony URL:', signatureResult.ceremonyUrl);
+    if (signatureResult.strategistCeremonyUrl) {
+      console.log('[Agreements] Strategist ceremony URL:', signatureResult.strategistCeremonyUrl);
+    }
 
     // ========================================================================
     // STEP 4: Create agreement with __SIGNATURE_METADATA__ embedded in description
@@ -201,6 +257,8 @@ export async function sendAgreementToClient(params: {
       envelopeId: signatureResult.envelopeId,
       recipientId: signatureResult.recipientId,
       ceremonyUrl: signatureResult.ceremonyUrl,
+      strategistRecipientId: signatureResult.strategistRecipientId,
+      strategistCeremonyUrl: signatureResult.strategistCeremonyUrl,
       createdAt: new Date().toISOString(),
     };
     
@@ -243,25 +301,24 @@ export async function sendAgreementToClient(params: {
 
     // ========================================================================
     // STEP 4b: Create a charge for the agreement (for Stripe payments)
-    // NOTE: Temporarily disabled - waiting for US Stripe account setup
-    // TODO: Re-enable when payment integration is ready
+    // Creates a pending charge that will be used when strategist sends payment link
     // ========================================================================
-    // console.log('[Agreements] Step 4b: Creating charge for agreement');
-    // try {
-    //   const charge = await createCharge({
-    //     agreementId: agreement.id,
-    //     amount: price,
-    //     currency: 'usd',
-    //     description: `Payment for ${agreementTitle}`,
-    //   });
-    //   if (charge) {
-    //     console.log('[Agreements] Charge created:', charge.id);
-    //   }
-    // } catch (chargeError) {
-    //   // Don't fail the whole flow if charge creation fails
-    //   // The strategist might not have payment integration set up yet
-    //   console.error('[Agreements] Failed to create charge (continuing anyway):', chargeError);
-    // }
+    console.log('[Agreements] Step 4b: Creating charge for agreement');
+    try {
+      const charge = await createCharge({
+        agreementId: agreement.id,
+        amount: price,
+        currency: 'usd',
+        description: `Onboarding Fee - ${agreementTitle}`,
+      });
+      if (charge) {
+        console.log('[Agreements] Charge created:', charge.id);
+      }
+    } catch (chargeError) {
+      // Don't fail the whole flow if charge creation fails
+      // The strategist can create a charge later when sending payment link
+      console.error('[Agreements] Failed to create charge (continuing anyway):', chargeError);
+    }
 
     // ========================================================================
     // STEP 5: Create todo list and signing todo
@@ -315,6 +372,17 @@ export async function sendAgreementToClient(params: {
       } catch (e) {
         console.error('[Agreements] Failed to create custom todo:', todo.title, e);
       }
+    }
+
+    // ========================================================================
+    // STEP 8: Update agreement status to PENDING_SIGNATURE
+    // ========================================================================
+    try {
+      await updateAgreementStatus(agreement.id, AgreementStatus.PENDING_SIGNATURE);
+      console.log('[Agreements] Updated status to PENDING_SIGNATURE');
+    } catch (e) {
+      console.error('[Agreements] Failed to update status:', e);
+      // Continue anyway - agreement was created successfully
     }
 
     console.log('[Agreements] ✅ Agreement flow completed successfully');

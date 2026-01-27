@@ -68,7 +68,7 @@ async function api<T = any>(path: string, init?: RequestInit): Promise<T> {
 
 /**
  * Create an envelope with a document from a URL (S3, etc.)
- * The document should already contain [[signer_signs_here]] placeholder for the signature field.
+ * Supports two signers: Client (primary) and Tax Strategist (secondary)
  * 
  * IMPORTANT: This creates the envelope but does NOT automatically generate a ceremony URL.
  * You must call createCeremonyForRecipient() separately to get the ceremony URL.
@@ -80,50 +80,100 @@ export async function createEnvelopeWithDocument(params: {
   title: string;
   documentUrl: string;
   recipient: CreateRecipientParams;
+  strategist?: CreateRecipientParams; // Optional tax strategist signer
   message?: string;
   metadata?: Record<string, string>;
-}): Promise<{ envelopeId: string; recipientId: string }> {
-  // Create envelope WITHOUT specifying ceremony config (will create ceremony separately)
-  // Use fixed position for signature since we're generating the PDF dynamically
+  signaturePage?: number; // Which page has signature fields (1-indexed), defaults to 1
+  totalPages?: number; // Total pages in the document (signatures go on last page)
+}): Promise<{ envelopeId: string; recipientId: string; strategistRecipientId?: string }> {
+  // Place signatures on the last page (use totalPages if provided, otherwise signaturePage or 1)
+  const signaturePage = params.totalPages || params.signaturePage || 1;
+  
+  // Build places and fixed_positions arrays for signature fields
+  const places = [
+    {
+      key: 'client_signs_here',
+      type: 'signature',
+      recipient_key: 'client',
+    },
+  ];
+  
+  // Signature positioning: VERY BOTTOM of the page
+  // A4 page is 595 x 842 pts, Letter is 612 x 792 pts
+  // Signature field height is ~60pts
+  // Position at absolute bottom with minimal margin
+  const signatureTop = 820;   // Very bottom (842 - 60 - 22 margin for A4)
+  const clientLeft = 400;     // RIGHT side for client
+  const strategistLeft = 72;  // LEFT side for strategist (1 inch)
+  
+  const fixedPositions = [
+    {
+      place_key: 'client_signs_here',
+      page: signaturePage,
+      top: signatureTop,
+      left: clientLeft,
+    },
+  ];
+  
+  // Add Tax Strategist signature if provided
+  if (params.strategist) {
+    places.push({
+      key: 'strategist_signs_here',
+      type: 'signature',
+      recipient_key: 'strategist',
+    });
+    
+    // Strategist signature on the LEFT
+    fixedPositions.push({
+      place_key: 'strategist_signs_here',
+      page: signaturePage,
+      top: signatureTop,
+      left: strategistLeft,
+    });
+  }
+  
+  // Build recipients array
+  const recipients: Array<{
+    key: string;
+    type: string;
+    name: string;
+    email: string;
+  }> = [
+    {
+      key: 'client',
+      type: 'signer',
+      name: params.recipient.name,
+      email: params.recipient.email,
+      // No order field = parallel signing (both can sign at the same time)
+    },
+  ];
+  
+  if (params.strategist) {
+    recipients.push({
+      key: 'strategist',
+      type: 'signer',
+      name: params.strategist.name,
+      email: params.strategist.email,
+    });
+  }
+  
   const requestBody = {
     title: params.title,
     message: params.message || `Please review and sign the ${params.title}.`,
     metadata: params.metadata,
+    // Use parallel routing so both signers can sign at the same time
+    routing: params.strategist ? 'parallel' : 'sequential',
     documents: [
       {
         url: params.documentUrl,
-        places: [
-          {
-            key: 'signer_signs_here',
-            type: 'signature',
-            recipient_key: 'signer',
-          },
-        ],
-        // Fixed positions for places (in points: 72 points = 1 inch)
-        // Position signature at bottom of first page
-        fixed_positions: [
-          {
-            place_key: 'signer_signs_here',
-            page: 1,
-            top: 580,  // ~8 inches from top (letter is 11 inches = 792pt)
-            left: 72,  // 1 inch from left
-          },
-        ],
+        places,
+        fixed_positions: fixedPositions,
       },
     ],
-    recipients: [
-      {
-        key: 'signer',
-        type: 'signer',
-        name: params.recipient.name,
-        email: params.recipient.email,
-        // Don't specify delivery_type or ceremony here
-        // We'll create the ceremony separately with custom auth to get the URL
-      },
-    ],
+    recipients,
   };
 
-  console.log('[SignatureAPI] Creating envelope:', params.documentUrl);
+  console.log('[SignatureAPI] Creating envelope with', recipients.length, 'signer(s):', params.documentUrl);
 
   const envelope = await api<SignatureApiEnvelope>('/envelopes', {
     method: 'POST',
@@ -131,11 +181,18 @@ export async function createEnvelopeWithDocument(params: {
   });
 
   const envelopeId = envelope.id;
-  const recipientId = envelope.recipients?.[0]?.id || '';
+  const clientRecipient = envelope.recipients?.find(r => r.key === 'client');
+  const strategistRecipient = envelope.recipients?.find(r => r.key === 'strategist');
+  
+  const recipientId = clientRecipient?.id || envelope.recipients?.[0]?.id || '';
+  const strategistRecipientId = strategistRecipient?.id;
 
-  console.log('[SignatureAPI] Envelope created:', envelopeId, 'recipientId:', recipientId, 'status:', envelope.status);
+  console.log('[SignatureAPI] Envelope created:', envelopeId, 
+    'clientRecipientId:', recipientId, 
+    'strategistRecipientId:', strategistRecipientId || 'N/A',
+    'status:', envelope.status);
 
-  return { envelopeId, recipientId };
+  return { envelopeId, recipientId, strategistRecipientId };
 }
 
 // ============================================================================
@@ -247,38 +304,73 @@ export async function createCeremonyForRecipient(params: {
  * This is the main function to use when sending a document for signing.
  * 
  * Flow:
- * 1. Create envelope with document
+ * 1. Create envelope with document (supports both client and strategist signers)
  * 2. Wait for envelope to finish processing
- * 3. Create ceremony to get the signing URL
+ * 3. Create ceremony to get the signing URL (for client)
  */
 export async function createEnvelopeWithCeremony(params: {
   title: string;
   documentUrl: string;
   recipient: CreateRecipientParams;
+  strategist?: CreateRecipientParams; // Optional tax strategist signer
   message?: string;
   redirectUrl?: string;
   metadata?: Record<string, string>;
-}): Promise<{ envelopeId: string; recipientId: string; ceremonyUrl: string }> {
-  // Step 1: Create the envelope
-  const { envelopeId, recipientId } = await createEnvelopeWithDocument({
+  signaturePage?: number; // Which page has signature fields (1-indexed)
+  totalPages?: number; // Total pages in the document (signatures go on last page)
+}): Promise<{ 
+  envelopeId: string; 
+  recipientId: string; 
+  ceremonyUrl: string;
+  strategistRecipientId?: string;
+  strategistCeremonyUrl?: string;
+}> {
+  // Step 1: Create the envelope with both signers
+  const { envelopeId, recipientId, strategistRecipientId } = await createEnvelopeWithDocument({
     title: params.title,
     documentUrl: params.documentUrl,
     recipient: params.recipient,
+    strategist: params.strategist,
     message: params.message,
     metadata: params.metadata,
+    signaturePage: params.signaturePage,
+    totalPages: params.totalPages,
   });
 
   // Step 2: Wait for envelope to be ready (not "processing")
   console.log('[SignatureAPI] Waiting for envelope to be ready...');
   await waitForEnvelopeReady(envelopeId);
 
-  // Step 3: Create ceremony to get the signing URL
+  // Step 3: Create ceremony for client to get the signing URL
   const { ceremonyUrl } = await createCeremonyForRecipient({
     recipientId,
     redirectUrl: params.redirectUrl,
   });
 
-  return { envelopeId, recipientId, ceremonyUrl };
+  // Step 4: If strategist is included, create ceremony for them too
+  // Use try-catch since strategist signing is optional and shouldn't fail the whole flow
+  let strategistCeremonyUrl: string | undefined;
+  if (strategistRecipientId) {
+    try {
+      const strategistCeremony = await createCeremonyForRecipient({
+        recipientId: strategistRecipientId,
+        redirectUrl: params.redirectUrl,
+      });
+      strategistCeremonyUrl = strategistCeremony.ceremonyUrl;
+      console.log('[SignatureAPI] Strategist ceremony URL:', strategistCeremonyUrl);
+    } catch (error) {
+      // Don't fail the whole flow - strategist can sign later
+      console.warn('[SignatureAPI] Could not create strategist ceremony (will retry later):', error);
+    }
+  }
+
+  return { 
+    envelopeId, 
+    recipientId, 
+    ceremonyUrl,
+    strategistRecipientId,
+    strategistCeremonyUrl,
+  };
 }
 
 /**
@@ -463,13 +555,31 @@ export async function getSignedDocumentUrl(envelopeId: string): Promise<string |
       throw new Error(`Failed to get deliverables: ${res.status}`);
     }
     
-    const deliverables = await res.json();
-    console.log('[SignatureAPI] Deliverables:', deliverables);
+    const response = await res.json();
+    console.log('[SignatureAPI] Deliverables:', response);
     
-    // Find the signed PDF
-    const signedPdf = deliverables.find((d: any) => d.type === 'signed_pdf');
+    // API returns { data: [...], links: {...} }
+    const deliverables = response.data || response;
+    
+    if (!Array.isArray(deliverables) || deliverables.length === 0) {
+      console.log('[SignatureAPI] No deliverables found');
+      return null;
+    }
+    
+    // Find a completed deliverable with a URL
+    // Types can be: 'standard', 'signed_pdf', etc.
+    const signedPdf = deliverables.find((d: any) => 
+      d.status === 'completed' && d.url
+    );
+    
     if (!signedPdf?.url) {
-      console.log('[SignatureAPI] No signed PDF found');
+      // Check if deliverables exist but are still pending
+      const pendingDeliverable = deliverables.find((d: any) => d.status === 'pending');
+      if (pendingDeliverable) {
+        console.log('[SignatureAPI] Signed document is still being generated (pending)');
+      } else {
+        console.log('[SignatureAPI] No signed PDF found in deliverables');
+      }
       return null;
     }
     
