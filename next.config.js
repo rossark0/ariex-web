@@ -5,7 +5,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    domains: ['img.clerk.com'],
+    domains: ['img.clerk.com', 'brandfetch.com'],
   },
 };
 

@@ -14,6 +14,7 @@ interface AgreementWithMetadata {
   name: string;
   description?: string;
   status: string;
+  signatureEnvelopeId?: string; // Direct field if backend supports it
   todoLists?: Array<{
     id: string;
     todos: Array<{
@@ -58,7 +59,9 @@ async function webhookApiRequest<T>(endpoint: string, options: RequestInit = {})
 
 /**
  * Find agreement by SignatureAPI envelope ID
- * The envelope ID is stored in the agreement's description as JSON metadata
+ * Tries multiple lookup strategies:
+ * 1. Direct signatureEnvelopeId field (if backend supports it)
+ * 2. Envelope ID in description metadata (current workaround)
  */
 async function findAgreementByEnvelopeId(envelopeId: string): Promise<AgreementWithMetadata | null> {
   try {
@@ -69,7 +72,15 @@ async function findAgreementByEnvelopeId(envelopeId: string): Promise<AgreementW
       return null;
     }
 
-    // Find agreement with matching envelope ID in description metadata
+    // Strategy 1: Check direct signatureEnvelopeId field
+    for (const agreement of agreements) {
+      if (agreement.signatureEnvelopeId === envelopeId) {
+        console.log('[Webhook] Found agreement by direct envelopeId field:', agreement.id);
+        return agreement;
+      }
+    }
+
+    // Strategy 2: Find agreement with matching envelope ID in description metadata
     for (const agreement of agreements) {
       const metadataMatch = agreement.description?.match(
         /__SIGNATURE_METADATA__:([\s\S]+)$/
@@ -78,7 +89,7 @@ async function findAgreementByEnvelopeId(envelopeId: string): Promise<AgreementW
         try {
           const metadata = JSON.parse(metadataMatch[1]);
           if (metadata.envelopeId === envelopeId) {
-            console.log('[Webhook] Found agreement for envelope:', agreement.id);
+            console.log('[Webhook] Found agreement by description metadata:', agreement.id);
             return agreement;
           }
         } catch {
@@ -148,6 +159,52 @@ async function markTodoCompleted(todoId: string): Promise<boolean> {
   return result !== null;
 }
 
+/**
+ * Update agreement status to ACTIVE (signed but not yet completed)
+ * Try multiple strategies since backend API varies
+ */
+async function markAgreementSigned(agreementId: string): Promise<boolean> {
+  // Strategy 1: Try dedicated sign endpoint
+  let result = await webhookApiRequest(`/agreements/${agreementId}/sign`, {
+    method: 'POST',
+  });
+  if (result !== null) {
+    console.log('[Webhook] Agreement marked signed via /sign endpoint');
+    return true;
+  }
+
+  // Strategy 2: Try PATCH with status
+  result = await webhookApiRequest(`/agreements/${agreementId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ 
+      status: 'ACTIVE',
+      signedAt: new Date().toISOString(),
+    }),
+  });
+  if (result !== null) {
+    console.log('[Webhook] Agreement marked signed via PATCH');
+    return true;
+  }
+
+  // Strategy 3: Try PUT with status (some backends only support PUT)
+  result = await webhookApiRequest(`/agreements/${agreementId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ 
+      status: 'ACTIVE',
+    }),
+  });
+  if (result !== null) {
+    console.log('[Webhook] Agreement marked signed via PUT');
+    return true;
+  }
+
+  console.error('[Webhook] All strategies to mark agreement signed failed');
+  return false;
+}
+
+/**
+ * Mark agreement as fully completed (all tasks done)
+ */
 async function markAgreementCompleted(agreementId: string): Promise<boolean> {
   const result = await webhookApiRequest(`/agreements/${agreementId}/complete`, {
     method: 'POST',
@@ -160,6 +217,104 @@ async function markAgreementDeclined(agreementId: string): Promise<boolean> {
     method: 'POST',
   });
   return result !== null;
+}
+
+// ============================================================================
+// Signed Document Storage
+// ============================================================================
+
+/**
+ * Download signed PDF and upload to S3, then update document record
+ */
+async function storeSignedDocument(
+  signedPdfUrl: string,
+  envelopeId: string,
+  agreementId: string,
+  documentId: string | null
+): Promise<boolean> {
+  try {
+    console.log('[Webhook] Downloading signed PDF from:', signedPdfUrl);
+    
+    // Download the signed PDF
+    const pdfResponse = await fetch(signedPdfUrl);
+    if (!pdfResponse.ok) {
+      console.error('[Webhook] Failed to download signed PDF:', pdfResponse.status);
+      return false;
+    }
+    
+    const pdfBlob = await pdfResponse.blob();
+    const pdfBuffer = await pdfBlob.arrayBuffer();
+    console.log('[Webhook] Downloaded signed PDF, size:', pdfBuffer.byteLength);
+
+    // Get upload URL from backend
+    const fileName = `signed-agreement-${agreementId}-${Date.now()}.pdf`;
+    const uploadUrlResponse = await webhookApiRequest<{ uploadUrl: string; fileId: string }>(
+      '/s3/upload-url',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          fileName,
+          contentType: 'application/pdf',
+        }),
+      }
+    );
+
+    if (!uploadUrlResponse?.uploadUrl) {
+      console.error('[Webhook] Failed to get upload URL for signed PDF');
+      return false;
+    }
+
+    console.log('[Webhook] Got upload URL, uploading signed PDF...');
+
+    // Upload to S3
+    const uploadResponse = await fetch(uploadUrlResponse.uploadUrl, {
+      method: 'PUT',
+      body: pdfBuffer,
+      headers: {
+        'Content-Type': 'application/pdf',
+      },
+    });
+
+    if (!uploadResponse.ok) {
+      console.error('[Webhook] Failed to upload signed PDF to S3:', uploadResponse.status);
+      return false;
+    }
+
+    console.log('[Webhook] Signed PDF uploaded to S3, fileId:', uploadUrlResponse.fileId);
+
+    // If we have a document ID, create a new file version for it
+    if (documentId) {
+      const versionResult = await webhookApiRequest(
+        `/documents/${documentId}/create-file-version`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            fileId: uploadUrlResponse.fileId,
+            fileName,
+            isSigned: true,
+          }),
+        }
+      );
+      
+      if (versionResult) {
+        console.log('[Webhook] Created signed file version for document:', documentId);
+      }
+    }
+
+    // Update agreement with signed document reference
+    await webhookApiRequest(`/agreements/${agreementId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        signedDocumentFileId: uploadUrlResponse.fileId,
+      }),
+    });
+
+    console.log('[Webhook] ✓ Signed document stored successfully');
+    return true;
+  } catch (error) {
+    console.error('[Webhook] Error storing signed document:', error);
+    return false;
+  }
 }
 
 // ============================================================================
@@ -225,17 +380,24 @@ export async function POST(req: NextRequest) {
         const todoSuccess = await markTodoCompleted(todoId);
         console.log('[Webhook] Todo completed:', todoId, todoSuccess ? '✓' : '✗');
       }
+
+      // Mark agreement as ACTIVE (signed) - not COMPLETED yet (needs payment)
+      const signedSuccess = await markAgreementSigned(agreement.id);
+      console.log('[Webhook] Agreement marked as signed (ACTIVE):', agreement.id, signedSuccess ? '✓' : '✗');
+      
       break;
     }
 
     case 'envelope.completed': {
       // All recipients have signed - the envelope is complete
+      // Note: For single-signer flows, this fires after recipient.completed
       console.log('[Webhook] Envelope completed:', event.data.envelope_id);
 
       const agreement = await findAgreementByEnvelopeId(event.data.envelope_id);
       if (agreement) {
-        const success = await markAgreementCompleted(agreement.id);
-        console.log('[Webhook] Agreement completed:', agreement.id, success ? '✓' : '✗');
+        // Don't mark as COMPLETED here - that should only happen after payment
+        // The agreement is already ACTIVE from recipient.completed
+        console.log('[Webhook] Envelope complete for agreement:', agreement.id, '(already ACTIVE)');
       } else {
         console.log('[Webhook] No agreement found for envelope:', event.data.envelope_id);
       }
@@ -263,11 +425,24 @@ export async function POST(req: NextRequest) {
     }
 
     case 'deliverable.generated': {
-      // The signed PDF is ready for download
+      // The signed PDF is ready for download - store it in S3
       console.log('[Webhook] Deliverable generated for envelope:', event.data.envelope_id);
+      
       if (event.data.deliverable_url) {
         console.log('[Webhook] Signed document URL:', event.data.deliverable_url);
-        // TODO: Download and store in S3 if needed
+        
+        const agreement = await findAgreementByEnvelopeId(event.data.envelope_id);
+        if (agreement) {
+          const { documentId } = await getDocumentAndTodoFromAgreement(agreement.id);
+          
+          const stored = await storeSignedDocument(
+            event.data.deliverable_url,
+            event.data.envelope_id,
+            agreement.id,
+            documentId
+          );
+          console.log('[Webhook] Signed document stored:', stored ? '✓' : '✗');
+        }
       }
       break;
     }

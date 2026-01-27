@@ -2,12 +2,14 @@
 
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
+import { useRouter } from 'next/navigation';
 import { FileIcon, Check, SpinnerGap } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { EmptyDocumentsIllustration } from '@/components/ui/empty-documents-illustration';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   getClientDashboardData,
+  syncAgreementSignatureStatus,
   type ClientDashboardData,
   type ClientAgreement,
   type ClientDocument,
@@ -124,10 +126,15 @@ function groupDocumentsByDate(documents: ClientDocument[]) {
 
 export default function ClientDashboardPage() {
   useRoleRedirect('CLIENT');
+  const router = useRouter();
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState<ClientDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // SignatureAPI sync state - holds the REAL envelope statuses
+  const [envelopeStatuses, setEnvelopeStatuses] = useState<Record<string, string>>({});
+  const hasSyncedRef = useRef(false);
 
   // Fetch dashboard data from API
   useEffect(() => {
@@ -136,6 +143,55 @@ export default function ClientDashboardPage() {
         setIsLoading(true);
         const data = await getClientDashboardData();
         setDashboardData(data);
+        
+        // If no agreements exist, redirect to onboarding
+        const hasAgreements = data?.agreements && data.agreements.length > 0;
+        
+        if (!hasAgreements) {
+          console.log('[ClientDashboard] No agreements found, redirecting to onboarding');
+          router.replace('/client/onboarding');
+          return;
+        }
+
+        // Sync signature status from SignatureAPI for ALL agreements
+        // This is needed because the webhook may fail to update the backend
+        if (hasAgreements && !hasSyncedRef.current) {
+          hasSyncedRef.current = true;
+          
+          const statuses: Record<string, string> = {};
+          let needsRefresh = false;
+          
+          // Check ALL agreements, not just the first one
+          for (const agreement of data.agreements) {
+            if (agreement?.signatureEnvelopeId) {
+              console.log('[ClientDashboard] Checking envelope status for agreement:', agreement.id);
+              
+              const syncResult = await syncAgreementSignatureStatus(agreement.id);
+              console.log('[ClientDashboard] Sync result:', syncResult);
+              
+              if (syncResult.status) {
+                // Store status - 'signed' means completed
+                statuses[agreement.id] = syncResult.status === 'signed' ? 'completed' : syncResult.status;
+                
+                if (syncResult.status === 'signed') {
+                  needsRefresh = true;
+                }
+              }
+            }
+          }
+          
+          if (Object.keys(statuses).length > 0) {
+            setEnvelopeStatuses(statuses);
+          }
+          
+          // Refresh data if any agreement was synced as signed
+          if (needsRefresh) {
+            console.log('[ClientDashboard] Agreement synced as signed - refreshing data');
+            const refreshedData = await getClientDashboardData();
+            setDashboardData(refreshedData);
+          }
+        }
+        
         setError(null);
       } catch (err) {
         console.error('[ClientDashboard] Failed to fetch data:', err);
@@ -148,7 +204,7 @@ export default function ClientDashboardPage() {
     if (user) {
       fetchData();
     }
-  }, [user]);
+  }, [user, router]);
 
   // Loading state
   if (isLoading) {
@@ -194,18 +250,30 @@ export default function ClientDashboardPage() {
   const businessName = profile?.businessName;
   const createdAt = new Date(clientUser.createdAt);
 
-  // Find the most recent service agreement (agreements are already mapped by client.api.ts)
-  // Status mapping: DRAFT→pending, ACTIVE→signed, COMPLETED→completed
-  const serviceAgreement = agreements.length > 0 ? agreements[0] : null;
+  // Find the most relevant service agreement
+  // Priority: 1) Signed/completed agreement, 2) Most recent agreement
+  // Check both backend status AND envelope status from SignatureAPI
+  const serviceAgreement = agreements.length > 0 
+    ? agreements.find(a => 
+        a.status === 'signed' || 
+        a.status === 'completed' || 
+        envelopeStatuses[a.id] === 'completed'
+      ) || agreements[0]
+    : null;
 
-  // Extract document todos from agreement (excluding signing todos)
+  // Extract ALL todos from agreement
   const agreementTodos = serviceAgreement?.todoLists?.flatMap(list => list.todos || []) || [];
+  // Separate signing todos from document/other todos
+  const signingTodos = agreementTodos.filter(
+    todo => todo.title.toLowerCase().includes('sign')
+  );
   const documentTodos = agreementTodos.filter(
     todo => !todo.title.toLowerCase().includes('sign')
   );
   const completedDocTodos = documentTodos.filter(
     todo => todo.status === 'completed' || todo.document?.uploadStatus === 'FILE_UPLOADED'
   );
+  const hasAnyTodos = agreementTodos.length > 0;
 
   // Find strategy document
   const strategyDoc = documents.find(d => d.type === 'strategy' || d.category === 'strategy');
@@ -217,11 +285,28 @@ export default function ClientDashboardPage() {
 
   // Calculate step completion states based on agreement status
   // Mapped statuses: 'pending' = DRAFT (sent), 'signed' = ACTIVE, 'completed' = COMPLETED
+  // 
+  // SOURCE OF TRUTH: SignatureAPI envelope status
+  // The backend may not be updated if the webhook failed, so we check SignatureAPI directly
+  //
+  
+  // Check SignatureAPI envelope status (the REAL source of truth)
+  const envelopeIsCompleted = serviceAgreement && envelopeStatuses[serviceAgreement.id] === 'completed';
+  
+  // Also check backend signals as backup
+  const backendSaysSignedOrComplete = serviceAgreement?.status === 'signed' || serviceAgreement?.status === 'completed';
+  const documentSaysSigned = signingTodos.some(todo => todo.status === 'completed');
+  
   const step1Complete = true; // Account always created
-  const step2Sent = serviceAgreement?.status === 'pending' || serviceAgreement?.status === 'signed' || serviceAgreement?.status === 'completed';
-  const step2Complete = serviceAgreement?.status === 'signed' || serviceAgreement?.status === 'completed';
-  const step3Sent = step2Complete && (!!serviceAgreement?.paymentRef || !!serviceAgreement?.paymentAmount);
+  const step2Sent = serviceAgreement?.status === 'pending' || backendSaysSignedOrComplete;
+  
+  // Agreement is signed if SignatureAPI says so OR backend says so
+  const step2Complete = envelopeIsCompleted || backendSaysSignedOrComplete || documentSaysSigned;
+  
+  // Payment: only show as sent/complete if agreement is signed
+  const step3Sent = step2Complete && (!!serviceAgreement?.paymentRef || !!serviceAgreement?.paymentAmount || serviceAgreement?.paymentStatus);
   const step3Complete = serviceAgreement?.paymentStatus === 'paid';
+  
   // Documents: show if agreement is signed OR if there are document todos
   const hasDocTodos = documentTodos.length > 0;
   const step4Sent = step2Complete || hasDocTodos;
@@ -247,7 +332,7 @@ export default function ClientDashboardPage() {
     <div className="flex min-h-full flex-col">
       <div className="flex-1">
         {/* Action Banner - Shows when there's a pending agreement to sign */}
-        {hasPendingAgreement && (
+        {/* {hasPendingAgreement && (
           <div className="bg-amber-50 border-b border-amber-200">
             <div className="mx-auto max-w-[642px] px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -267,7 +352,7 @@ export default function ClientDashboardPage() {
               </button>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Top Section - Onboarding Activity Timeline */}
         <div className="shrink-0 bg-zinc-50/90 pt-8 pb-6">
@@ -449,6 +534,12 @@ export default function ClientDashboardPage() {
                     className={`absolute top-5 bottom-2 -left-[19px] w-0.5 ${step4Complete ? 'bg-emerald-200' : 'bg-zinc-200'}`}
                   />
                   <div className="flex flex-1 flex-col items-start">
+                    {/* Action required badge at top */}
+                    {step3Complete && !step4Complete && (
+                      <Badge variant="warning" className="mb-2 w-fit">
+                        Action required
+                      </Badge>
+                    )}
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-zinc-900">
                         {step4Complete
@@ -469,10 +560,14 @@ export default function ClientDashboardPage() {
                             ? 'Please upload W-2s, 1099s, and relevant tax documents'
                             : 'You will be notified when documents are needed'}
                     </span>
-                    {/* Show individual todo items */}
-                    {hasDocTodos && documentTodos.length > 0 && (
-                      <div className="mt-2 flex flex-col gap-1.5">
-                        {documentTodos.map(todo => {
+                      <span className="mt-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                      {formatDate(createdAt)}
+                    </span>
+                    {/* Show ALL agreement todos */}
+                    {hasAnyTodos && agreementTodos.length > 0 && (
+                      <div className="mt-3 flex flex-col gap-1.5 w-full">
+                        <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-1">Your tasks</span>
+                        {agreementTodos.map(todo => {
                           const isCompleted = todo.status === 'completed' || todo.document?.uploadStatus === 'FILE_UPLOADED';
                           return (
                             <div key={todo.id} className="flex items-center gap-2 text-xs">
@@ -481,7 +576,7 @@ export default function ClientDashboardPage() {
                               ) : (
                                 <div className="h-3.5 w-3.5 shrink-0 rounded-full border border-zinc-300" />
                               )}
-                              <span className={isCompleted ? 'text-zinc-600 line-through' : 'text-zinc-600'}>
+                              <span className={isCompleted ? 'text-zinc-500 line-through' : 'text-zinc-700'}>
                                 {todo.title}
                               </span>
                             </div>
@@ -489,29 +584,7 @@ export default function ClientDashboardPage() {
                         })}
                       </div>
                     )}
-                    <span className="mt-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                      {formatDate(createdAt)}
-                    </span>
-                    {step2Complete && !step4Complete && hasDocTodos && (
-                      <Badge variant="warning" className="mt-2 w-fit">
-                        Action required
-                      </Badge>
-                    )}
-                    {step3Complete && !step4Complete && !hasDocTodos && (
-                      <Badge variant="warning" className="w-fit">
-                        {step4Sent ? (
-                          'Action required'
-                        ) : (
-                          <span className="flex items-center gap-1.5">
-                            <span className="relative flex h-1.5 w-1.5">
-                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
-                              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                            </span>
-                            Tax strategist action required
-                          </span>
-                        )}
-                      </Badge>
-                    )}
+                  
                     {/* Show button only if agreement signed AND docs not complete */}
                     {step2Complete && !step4Complete && (
                       <button 
@@ -625,7 +698,7 @@ export default function ClientDashboardPage() {
                             {/* Document Info */}
                             <div className="flex flex-1 flex-col">
                               <span className="font-medium text-zinc-900">
-                                {doc.name.replace(/\.[^/.]+$/, '')}
+                                {(doc.name || 'Untitled Document').replace(/\.[^/.]+$/, '')}
                               </span>
                               <span className="text-sm text-zinc-500">Me</span>
                             </div>

@@ -7,12 +7,14 @@ import {
   createTodo,
   createDocument,
   confirmDocumentUpload,
-  attachContract,
   getClientById,
   getCurrentUser,
-  updateAgreementSignature,
+  getDownloadUrl,
+  createCharge,
+  attachContract,
+  updateDocumentAgreement,
 } from '@/lib/api/strategist.api';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
+import { generateAgreementPdf, type AgreementPdfData } from '@/lib/agreement/generate-pdf';
 
 // ============================================================================
 // Types
@@ -26,163 +28,10 @@ export interface SendAgreementResult {
 }
 
 // ============================================================================
-// Generate Agreement DOCX
+// Generate Agreement PDF
 // ============================================================================
 
-async function generateAgreementDocx(data: {
-  agreementTitle: string;
-  date: string;
-  strategistName: string;
-  clientName: string;
-  clientEmail: string;
-  serviceDescription: string;
-  price: number;
-}): Promise<Uint8Array> {
-  const doc = new Document({
-    sections: [
-      {
-        properties: {},
-        children: [
-          new Paragraph({
-            text: 'ARIEX TAX ADVISORY',
-            heading: HeadingLevel.HEADING_1,
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 100 },
-          }),
-          new Paragraph({
-            text: 'SERVICE AGREEMENT',
-            heading: HeadingLevel.HEADING_2,
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 400 },
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({ text: 'Agreement Title: ', bold: true }),
-              new TextRun({ text: data.agreementTitle }),
-            ],
-            spacing: { after: 200 },
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({ text: 'Date: ', bold: true }),
-              new TextRun({ text: data.date }),
-            ],
-            spacing: { after: 200 },
-          }),
-          new Paragraph({
-            text: 'PARTIES',
-            heading: HeadingLevel.HEADING_3,
-            spacing: { before: 400, after: 200 },
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({ text: 'Tax Strategist: ', bold: true }),
-              new TextRun({ text: data.strategistName }),
-            ],
-            spacing: { after: 100 },
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({ text: 'Client: ', bold: true }),
-              new TextRun({ text: data.clientName }),
-            ],
-            spacing: { after: 100 },
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({ text: 'Client Email: ', bold: true }),
-              new TextRun({ text: data.clientEmail }),
-            ],
-            spacing: { after: 200 },
-          }),
-          new Paragraph({
-            text: 'SERVICE DESCRIPTION',
-            heading: HeadingLevel.HEADING_3,
-            spacing: { before: 400, after: 200 },
-          }),
-          new Paragraph({
-            text: data.serviceDescription,
-            spacing: { after: 200 },
-          }),
-          new Paragraph({
-            text: 'SERVICE FEE',
-            heading: HeadingLevel.HEADING_3,
-            spacing: { before: 400, after: 200 },
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({ text: 'Total Fee: ', bold: true }),
-              new TextRun({ text: `$${data.price.toLocaleString()} USD`, bold: true }),
-            ],
-            spacing: { after: 200 },
-          }),
-          new Paragraph({
-            text: 'TERMS AND CONDITIONS',
-            heading: HeadingLevel.HEADING_3,
-            spacing: { before: 400, after: 200 },
-          }),
-          new Paragraph({
-            text: '1. The Tax Strategist agrees to provide professional tax advisory services as described above.',
-            spacing: { after: 100 },
-          }),
-          new Paragraph({
-            text: '2. The Client agrees to provide accurate and complete financial information as requested.',
-            spacing: { after: 100 },
-          }),
-          new Paragraph({
-            text: '3. Payment is due upon signing of this agreement.',
-            spacing: { after: 100 },
-          }),
-          new Paragraph({
-            text: '4. This agreement is valid for the current tax year unless otherwise specified.',
-            spacing: { after: 100 },
-          }),
-          new Paragraph({
-            text: '5. Confidentiality: All information shared will be kept strictly confidential.',
-            spacing: { after: 200 },
-          }),
-          new Paragraph({
-            text: 'SIGNATURES',
-            heading: HeadingLevel.HEADING_3,
-            spacing: { before: 400, after: 200 },
-          }),
-          new Paragraph({
-            text: 'By signing below, both parties agree to the terms and conditions outlined in this agreement.',
-            spacing: { after: 400 },
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: 'Client Signature: ', bold: true })],
-            spacing: { after: 100 },
-          }),
-          new Paragraph({
-            text: '[[client_signature]]',
-            spacing: { after: 200 },
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({ text: 'Signed by: ', italics: true }),
-              new TextRun({ text: data.clientName }),
-            ],
-            spacing: { after: 400 },
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({ text: 'Tax Strategist: ', bold: true }),
-              new TextRun({ text: data.strategistName }),
-            ],
-            spacing: { after: 100 },
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: 'Ariex Tax Advisory' })],
-          }),
-        ],
-      },
-    ],
-  });
-
-  const buffer = await Packer.toBuffer(doc);
-  return new Uint8Array(buffer);
-}
+// PDF generation is now handled by @/lib/agreement/generate-pdf
 
 // ============================================================================
 // Send Agreement Action
@@ -236,25 +85,103 @@ export async function sendAgreementToClient(params: {
 
     // Get strategist info
     let strategistName = 'Ariex Tax Strategist';
+    let currentStrategistId: string | undefined;
     try {
       const currentUser = await getCurrentUser();
       if (currentUser?.name) {
         strategistName = currentUser.name;
       }
+      if (currentUser?.id) {
+        currentStrategistId = currentUser.id;
+      }
     } catch {
       // Use default name
     }
 
-    // 2. Create SignatureAPI envelope with ceremony URL
-    console.log('[Agreements] Step 1: Creating SignatureAPI envelope with ceremony');
+    // ========================================================================
+    // STEP 1: Generate the PDF document FIRST
+    // ========================================================================
+    console.log('[Agreements] Step 1: Generating PDF document');
+    
+    // Prepare PDF data with strategies (placeholder for now - can be enhanced)
+    const pdfData: AgreementPdfData = {
+      agreementTitle,
+      date: new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }),
+      strategistName,
+      clientName,
+      clientEmail: client.email,
+      strategies: [
+        {
+          name: 'Tax Optimization Strategy',
+          description: description,
+          estimatedSavings: price * 3, // Estimated 3x ROI
+        },
+      ],
+      totalSavings: price * 3,
+      serviceFee: price,
+    };
+    
+    const pdfBuffer = await generateAgreementPdf(pdfData);
+    console.log('[Agreements] PDF generated, size:', pdfBuffer.length);
+
+    // ========================================================================
+    // STEP 2: Upload PDF to a temporary location so SignatureAPI can access it
+    // We'll use the document creation flow but without an agreementId first
+    // ========================================================================
+    console.log('[Agreements] Step 2: Creating temporary document for SignatureAPI');
+    const tempFileName = `temp-agreement-${clientName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.pdf`;
+    const tempDocumentRecord = await createDocument({
+      type: 'AGREEMENT',
+      fileName: tempFileName,
+      mimeType: 'application/pdf',
+      size: pdfBuffer.length,
+      clientId: clientId,
+      strategistId: currentStrategistId,
+    });
+
+    if (!tempDocumentRecord || !tempDocumentRecord.uploadUrl) {
+      return { success: false, error: 'Failed to create temporary document record' };
+    }
+    console.log('[Agreements] Temp document record created:', tempDocumentRecord.id);
+
+    // Upload to S3
+    const tempUploadResponse = await fetch(tempDocumentRecord.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/pdf' },
+      body: Buffer.from(pdfBuffer),
+    });
+
+    if (!tempUploadResponse.ok) {
+      console.error('[Agreements] Temp S3 upload failed:', tempUploadResponse.status);
+      return { success: false, error: 'Failed to upload temporary document' };
+    }
+    console.log('[Agreements] Temp S3 upload successful');
+
+    // Confirm upload
+    await confirmDocumentUpload(tempDocumentRecord.id);
+
+    // Get the download URL
+    const tempDownloadUrl = await getDownloadUrl(tempDocumentRecord.id);
+    const signatureDocumentUrl = tempDownloadUrl || 
+      'https://pub-9cb75390636c4a8a83a6f76da33d7f45.r2.dev/privacy-placeholder.pdf';
+    console.log('[Agreements] Document URL for SignatureAPI:', signatureDocumentUrl);
+
+    // ========================================================================
+    // STEP 3: Create SignatureAPI envelope FIRST (before agreement)
+    // ========================================================================
+    console.log('[Agreements] Step 3: Creating SignatureAPI envelope');
     const signatureResult = await createEnvelopeWithCeremony({
       title: agreementTitle,
-      documentUrl: 'https://pub-9cb75390636c4a8a83a6f76da33d7f45.r2.dev/privacy-placeholder.pdf',
+      documentUrl: signatureDocumentUrl,
       recipient: {
         name: clientName,
         email: client.email,
       },
-      redirectUrl: redirectUrl || `${baseUrl}/client/agreements?signed=true`,
+      redirectUrl: redirectUrl || `${baseUrl}/client/onboarding?signed=true`,
       metadata: {
         clientId,
         agreementTitle,
@@ -263,20 +190,23 @@ export async function sendAgreementToClient(params: {
     console.log('[Agreements] SignatureAPI envelope created:', signatureResult.envelopeId);
     console.log('[Agreements] Ceremony URL:', signatureResult.ceremonyUrl);
 
-    // 3. Build description with signature metadata embedded
+    // ========================================================================
+    // STEP 4: Create agreement with __SIGNATURE_METADATA__ embedded in description
+    // ========================================================================
+    console.log('[Agreements] Step 4: Creating agreement with signature metadata embedded');
     const signatureMetadata = {
       envelopeId: signatureResult.envelopeId,
       recipientId: signatureResult.recipientId,
       ceremonyUrl: signatureResult.ceremonyUrl,
       createdAt: new Date().toISOString(),
     };
+    
+    // Embed metadata in description (this is how the working agreements do it)
     const descriptionWithMetadata = `${description}\n\n__SIGNATURE_METADATA__:${JSON.stringify(signatureMetadata)}`;
-
-    // 4. Create agreement in backend WITH signature metadata in description
-    console.log('[Agreements] Step 2: Creating agreement in backend');
+    
     const agreement = await createAgreement({
       name: agreementTitle,
-      description: descriptionWithMetadata,
+      description: descriptionWithMetadata, // Include metadata so client can find ceremonyUrl
       clientId,
       price,
     });
@@ -284,11 +214,54 @@ export async function sendAgreementToClient(params: {
     if (!agreement) {
       return { success: false, error: 'Failed to create agreement in backend' };
     }
-    console.log('[Agreements] Agreement created:', agreement.id);
+    console.log('[Agreements] Agreement created with embedded metadata:', agreement.id);
 
-    // 5. Create todo list for the agreement
-    // Note: When agreementId is provided, the backend auto-assigns the client from the agreement
-    console.log('[Agreements] Step 3: Creating todo list');
+    // ========================================================================
+    // STEP 4a: Attach the contract document to the agreement
+    // First update the document to set its agreementId, then attach it
+    // ========================================================================
+    console.log('[Agreements] Step 4a: Linking document to agreement');
+    
+    // Update document with agreementId (as Daniel said - document should have agreementId)
+    const documentLinked = await updateDocumentAgreement(tempDocumentRecord.id, agreement.id);
+    if (documentLinked) {
+      console.log('[Agreements] Document linked to agreement via agreementId');
+    } else {
+      console.warn('[Agreements] Failed to link document via agreementId (trying attachContract fallback)');
+    }
+    
+    // Also call attachContract as before (sets contractDocumentId on agreement)
+    const contractAttached = await attachContract(agreement.id, tempDocumentRecord.id);
+    if (contractAttached) {
+      console.log('[Agreements] Contract document attached:', tempDocumentRecord.id);
+    } else {
+      console.warn('[Agreements] Failed to attach contract document (continuing anyway)');
+    }
+
+    // ========================================================================
+    // STEP 4b: Create a charge for the agreement (for Stripe payments)
+    // ========================================================================
+    console.log('[Agreements] Step 4b: Creating charge for agreement');
+    try {
+      const charge = await createCharge({
+        agreementId: agreement.id,
+        amount: price,
+        currency: 'usd',
+        description: `Payment for ${agreementTitle}`,
+      });
+      if (charge) {
+        console.log('[Agreements] Charge created:', charge.id);
+      }
+    } catch (chargeError) {
+      // Don't fail the whole flow if charge creation fails
+      // The strategist might not have payment integration set up yet
+      console.error('[Agreements] Failed to create charge (continuing anyway):', chargeError);
+    }
+
+    // ========================================================================
+    // STEP 5: Create todo list and signing todo
+    // ========================================================================
+    console.log('[Agreements] Step 5: Creating todo list');
     const todoList = await createTodoList({
       name: 'Contract Documents',
       agreementId: agreement.id,
@@ -299,11 +272,10 @@ export async function sendAgreementToClient(params: {
     }
     console.log('[Agreements] Todo list created:', todoList.id);
 
-    // 6. Create todo for signing the contract
-    console.log('[Agreements] Step 4: Creating signing todo');
+    console.log('[Agreements] Step 6: Creating default todos (sign + pay)');
     const signingTodo = await createTodo({
       title: 'Sign service agreement',
-      description: `Please review and sign the ${agreementTitle}. You will receive an email with a link to sign electronically.`,
+      description: `Please review and sign the ${agreementTitle}.`,
       todoListId: todoList.id,
     });
 
@@ -312,74 +284,21 @@ export async function sendAgreementToClient(params: {
     }
     console.log('[Agreements] Signing todo created:', signingTodo.id);
 
-    // 7. Generate the DOCX document
-    console.log('[Agreements] Step 5: Generating DOCX document');
-    const docxBuffer = await generateAgreementDocx({
-      agreementTitle,
-      date: new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-      strategistName,
-      clientName,
-      clientEmail: client.email,
-      serviceDescription: description,
-      price,
-    });
-    console.log('[Agreements] DOCX generated, size:', docxBuffer.length);
-
-    // 6. Create document record with todoId → get uploadUrl
-    console.log('[Agreements] Step 5: Creating document record');
-    const fileName = `agreement-${clientName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.docx`;
-    const documentRecord = await createDocument({
-      type: 'AGREEMENT',
-      fileName,
-      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      size: docxBuffer.length,
-      agreementId: agreement.id,
-      todoId: signingTodo.id,
-      clientId: clientId, // Required for backend validation
+    // Create payment todo
+    const paymentTodo = await createTodo({
+      title: 'Pay',
+      description: `Complete the onboarding payment of $${price}.`,
+      todoListId: todoList.id,
     });
 
-    if (!documentRecord || !documentRecord.uploadUrl) {
-      return { success: false, error: 'Failed to create document record' };
+    if (!paymentTodo) {
+      return { success: false, error: 'Failed to create payment todo' };
     }
-    console.log('[Agreements] Document record created:', documentRecord.id);
+    console.log('[Agreements] Payment todo created:', paymentTodo.id);
 
-    // 7. Upload to S3
-    console.log('[Agreements] Step 6: Uploading to S3');
-    const uploadResponse = await fetch(documentRecord.uploadUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      },
-      body: docxBuffer,
-    });
-
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      console.error('[Agreements] S3 upload failed:', uploadResponse.status, errorText);
-      return { success: false, error: `S3 upload failed: ${uploadResponse.status}` };
-    }
-    console.log('[Agreements] S3 upload successful');
-
-    // 8. Confirm document upload
-    console.log('[Agreements] Step 6: Confirming document upload');
-    const confirmed = await confirmDocumentUpload(documentRecord.id);
-    if (!confirmed) {
-      return { success: false, error: 'Failed to confirm document upload' };
-    }
-    console.log('[Agreements] Document upload confirmed');
-
-    // 9. Attach contract to agreement
-    console.log('[Agreements] Step 7: Attaching contract to agreement');
-    const attached = await attachContract(agreement.id, documentRecord.id);
-    if (!attached) {
-      console.warn('[Agreements] Failed to attach contract - continuing anyway');
-    }
-
-    // 10. Create custom todos if any
+    // ========================================================================
+    // STEP 7: Create custom todos if any
+    // ========================================================================
     for (const todo of todos) {
       try {
         await createTodo({
@@ -394,6 +313,8 @@ export async function sendAgreementToClient(params: {
     }
 
     console.log('[Agreements] ✅ Agreement flow completed successfully');
+    console.log('[Agreements] Agreement ID:', agreement.id);
+    console.log('[Agreements] Ceremony URL available in description metadata');
 
     return {
       success: true,

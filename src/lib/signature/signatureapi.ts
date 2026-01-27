@@ -84,6 +84,7 @@ export async function createEnvelopeWithDocument(params: {
   metadata?: Record<string, string>;
 }): Promise<{ envelopeId: string; recipientId: string }> {
   // Create envelope WITHOUT specifying ceremony config (will create ceremony separately)
+  // Use fixed position for signature since we're generating the PDF dynamically
   const requestBody = {
     title: params.title,
     message: params.message || `Please review and sign the ${params.title}.`,
@@ -96,6 +97,16 @@ export async function createEnvelopeWithDocument(params: {
             key: 'signer_signs_here',
             type: 'signature',
             recipient_key: 'signer',
+          },
+        ],
+        // Fixed positions for places (in points: 72 points = 1 inch)
+        // Position signature at bottom of first page
+        fixed_positions: [
+          {
+            place_key: 'signer_signs_here',
+            page: 1,
+            top: 580,  // ~8 inches from top (letter is 11 inches = 792pt)
+            left: 72,  // 1 inch from left
           },
         ],
       },
@@ -202,7 +213,7 @@ export async function createCeremonyForRecipient(params: {
       'http://localhost:3000',
       'https://localhost:3000',
     ],
-    redirect_url: params.redirectUrl || `${baseUrl}/client/agreements?signed=true`,
+    redirect_url: params.redirectUrl || `${baseUrl}/client/onboarding?signed=true`,
     url_variant: 'standard',
   };
 
@@ -436,9 +447,10 @@ export type SignatureWebhookEvent = {
 };
 
 /**
- * Download the signed PDF from SignatureAPI
+ * Get the URL of the signed PDF from SignatureAPI
+ * This returns the direct URL to the signed document without downloading it
  */
-export async function downloadSignedDocument(envelopeId: string): Promise<Blob | null> {
+export async function getSignedDocumentUrl(envelopeId: string): Promise<string | null> {
   try {
     // Get deliverables for the envelope
     const res = await fetch(`${SIGNATURE_API_BASE}/envelopes/${envelopeId}/deliverables`, {
@@ -461,8 +473,25 @@ export async function downloadSignedDocument(envelopeId: string): Promise<Blob |
       return null;
     }
     
+    return signedPdf.url;
+  } catch (error) {
+    console.error('[SignatureAPI] Failed to get signed document URL:', error);
+    return null;
+  }
+}
+
+/**
+ * Download the signed PDF from SignatureAPI
+ */
+export async function downloadSignedDocument(envelopeId: string): Promise<Blob | null> {
+  try {
+    const signedUrl = await getSignedDocumentUrl(envelopeId);
+    if (!signedUrl) {
+      return null;
+    }
+    
     // Download the signed PDF
-    const pdfRes = await fetch(signedPdf.url);
+    const pdfRes = await fetch(signedUrl);
     if (!pdfRes.ok) {
       throw new Error(`Failed to download signed PDF: ${pdfRes.status}`);
     }
@@ -473,3 +502,42 @@ export async function downloadSignedDocument(envelopeId: string): Promise<Blob |
     return null;
   }
 }
+
+// ============================================================================
+// Get Recent Envelope for Email
+// ============================================================================
+
+/**
+ * Search for a recent in_progress envelope for a specific email
+ */
+export async function getRecentEnvelopeForEmail(email: string): Promise<{ envelopeId: string; recipientId: string } | null> {
+  try {
+    console.log('[SignatureAPI] Searching for envelope for email:', email);
+    
+    // List recent envelopes
+    const envelopes = await api<{ data: SignatureApiEnvelope[] }>('/envelopes?status=in_progress', {
+      method: 'GET',
+    });
+    
+    console.log('[SignatureAPI] Found', envelopes.data?.length || 0, 'in_progress envelopes');
+    
+    // Find envelope with matching recipient email
+    for (const envelope of (envelopes.data || [])) {
+      const recipient = envelope.recipients?.find(r => r.email.toLowerCase() === email.toLowerCase());
+      if (recipient) {
+        console.log('[SignatureAPI] Found matching envelope:', envelope.id, 'recipient:', recipient.id);
+        return {
+          envelopeId: envelope.id,
+          recipientId: recipient.id,
+        };
+      }
+    }
+    
+    console.log('[SignatureAPI] No matching envelope found for email:', email);
+    return null;
+  } catch (error) {
+    console.error('[SignatureAPI] getRecentEnvelopeForEmail error:', error);
+    return null;
+  }
+}
+

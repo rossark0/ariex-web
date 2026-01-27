@@ -417,7 +417,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           document.cookie = `ariex_user_id=${user.id}; path=/; max-age=${maxAge}; SameSite=Lax`;
         }
 
-        return { success: true, redirectTo: getRoleHomePath(user.role) };
+        // For clients completing password, this is their first login - send to onboarding
+        const isNewClient = user.role === 'CLIENT';
+        return { success: true, redirectTo: getRoleHomePath(user.role, isNewClient) };
       } else {
         set({ isLoading: false, error: result.error });
         return { success: false, error: result.error };

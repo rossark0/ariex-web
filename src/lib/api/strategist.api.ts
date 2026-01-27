@@ -482,6 +482,25 @@ export async function confirmDocumentUpload(documentId: string): Promise<boolean
 }
 
 /**
+ * Update document to link it to an agreement
+ * This is needed when the document is created before the agreement exists
+ */
+export async function updateDocumentAgreement(documentId: string, agreementId: string): Promise<boolean> {
+  try {
+    console.log('[API] Linking document to agreement:', { documentId, agreementId });
+    await apiRequest(`/documents/${documentId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ agreementId }),
+    });
+    console.log('[API] Document linked to agreement');
+    return true;
+  } catch (error) {
+    console.error('[API] Failed to link document to agreement:', error);
+    return false;
+  }
+}
+
+/**
  * Get document by todo ID
  * @see https://qt4pgrsacn.us-east-2.awsapprunner.com/api#/Documents/DocumentController_getByTodoId
  */
@@ -681,9 +700,38 @@ export async function listClientAgreements(clientId: string): Promise<ApiAgreeme
 
     console.log('[API] Client agreements after filter:', clientAgreements.length);
 
+    // Parse embedded signature metadata from description to extract envelope IDs
+    // The metadata is embedded as: __SIGNATURE_METADATA__:{json}
+    const enrichedAgreements = clientAgreements.map(a => {
+      if (a.signatureEnvelopeId) {
+        console.log('[API] Agreement', a.id, 'already has envelopeId:', a.signatureEnvelopeId);
+        return a; // Already has envelope ID
+      }
+      
+      console.log('[API] Agreement', a.id, 'description:', a.description?.substring(0, 200));
+      const metadataMatch = a.description?.match(/__SIGNATURE_METADATA__:([\s\S]+)$/);
+      if (metadataMatch) {
+        try {
+          const metadata = JSON.parse(metadataMatch[1]);
+          console.log('[API] Parsed metadata for agreement', a.id, ':', metadata);
+          return {
+            ...a,
+            signatureEnvelopeId: metadata.envelopeId,
+            signatureRecipientId: metadata.recipientId,
+            signatureCeremonyUrl: metadata.ceremonyUrl,
+          };
+        } catch (e) {
+          console.error('[API] Failed to parse metadata for agreement', a.id, ':', e);
+        }
+      } else {
+        console.log('[API] No metadata found in agreement', a.id, 'description');
+      }
+      return a;
+    });
+
     // The /agreements endpoint already returns nested todoLists with todos
     // No need to fetch them separately
-    return clientAgreements;
+    return enrichedAgreements;
   } catch (error) {
     console.error(
       '[API] listClientAgreements failed:',
@@ -721,12 +769,15 @@ export async function createAgreement(data: {
 
 /**
  * Attach a contract file to an agreement
+ * @param agreementId - The agreement ID
+ * @param documentId - The document ID (not file ID)
  */
-export async function attachContract(agreementId: string, fileId: string): Promise<boolean> {
+export async function attachContract(agreementId: string, documentId: string): Promise<boolean> {
   try {
+    console.log('[API] Attaching contract:', { agreementId, documentId });
     await apiRequest(`/agreements/${agreementId}/contract`, {
       method: 'POST',
-      body: JSON.stringify({ fileId }),
+      body: JSON.stringify({ contractDocumentId: documentId }),
     });
     return true;
   } catch (error) {
@@ -909,5 +960,211 @@ export async function cancelAgreement(agreementId: string): Promise<boolean> {
   } catch (error) {
     console.error('[API] Failed to cancel agreement:', error);
     return false;
+  }
+}
+
+// ============================================================================
+// Payment Integrations API
+// ============================================================================
+
+export interface PaymentIntegration {
+  id: string;
+  strategistId: string;
+  provider: 'stripe';
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Get current strategist's payment integration
+ * Returns null if no integration exists
+ */
+export async function getPaymentIntegration(): Promise<PaymentIntegration | null> {
+  try {
+    const integration = await apiRequest<PaymentIntegration>('/payment-integrations/mine');
+    return integration;
+  } catch (error) {
+    // 404 means no integration - that's expected for new users
+    console.log('[API] No payment integration found (or error):', error);
+    return null;
+  }
+}
+
+/**
+ * Create/submit Stripe secret key for current strategist
+ */
+export async function createPaymentIntegration(stripeSecretKey: string): Promise<PaymentIntegration | null> {
+  try {
+    const integration = await apiRequest<PaymentIntegration>('/payment-integrations', {
+      method: 'POST',
+      body: JSON.stringify({ stripeSecretKey, provider: 'stripe' }),
+    });
+    console.log('[API] Payment integration created');
+    return integration;
+  } catch (error) {
+    console.error('[API] Failed to create payment integration:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete/revoke payment integration
+ */
+export async function deletePaymentIntegration(integrationId: string): Promise<boolean> {
+  try {
+    await apiRequest(`/payment-integrations/${integrationId}`, {
+      method: 'DELETE',
+    });
+    return true;
+  } catch (error) {
+    console.error('[API] Failed to delete payment integration:', error);
+    return false;
+  }
+}
+
+// ============================================================================
+// Charges API
+// ============================================================================
+
+export interface Charge {
+  id: string;
+  agreementId: string;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'paid' | 'cancelled' | 'failed';
+  description?: string;
+  paymentLink?: string;
+  stripePaymentIntentId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Create a charge for an agreement
+ */
+export async function createCharge(data: {
+  agreementId: string;
+  amount: number;
+  currency?: string;
+  description?: string;
+}): Promise<Charge | null> {
+  try {
+    // Convert amount (dollars) to amountCents
+    const amountCents = Math.round(data.amount * 100);
+    console.log('[API] Creating charge:', { agreementId: data.agreementId, amount: data.amount, amountCents });
+    const charge = await apiRequest<Charge>('/charges', {
+      method: 'POST',
+      body: JSON.stringify({
+        agreementId: data.agreementId,
+        amountCents: amountCents,
+        currency: data.currency || 'usd',
+        description: data.description,
+      }),
+    });
+    console.log('[API] Charge created:', charge.id);
+    return charge;
+  } catch (error) {
+    console.error('[API] Failed to create charge:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get all charges for an agreement
+ */
+export async function getChargesForAgreement(agreementId: string): Promise<Charge[]> {
+  try {
+    const charges = await apiRequest<Charge[]>(`/charges/agreement/${agreementId}`);
+    return charges;
+  } catch (error) {
+    console.error('[API] Failed to get charges for agreement:', error);
+    return [];
+  }
+}
+
+/**
+ * Get a single charge by ID
+ */
+export async function getCharge(chargeId: string): Promise<Charge | null> {
+  try {
+    const charge = await apiRequest<Charge>(`/charges/${chargeId}`);
+    return charge;
+  } catch (error) {
+    console.error('[API] Failed to get charge:', error);
+    return null;
+  }
+}
+
+/**
+ * Generate payment link for a charge (Stripe checkout URL)
+ */
+export async function generatePaymentLink(chargeId: string): Promise<string | null> {
+  try {
+    const result = await apiRequest<{ paymentLink: string; url?: string }>(`/charges/${chargeId}/payment-link`, {
+      method: 'POST',
+    });
+    console.log('[API] Payment link generated');
+    return result.paymentLink || result.url || null;
+  } catch (error) {
+    console.error('[API] Failed to generate payment link:', error);
+    throw error;
+  }
+}
+
+/**
+ * Cancel a charge
+ */
+export async function cancelCharge(chargeId: string): Promise<boolean> {
+  try {
+    await apiRequest(`/charges/${chargeId}/cancel`, {
+      method: 'POST',
+    });
+    return true;
+  } catch (error) {
+    console.error('[API] Failed to cancel charge:', error);
+    return false;
+  }
+}
+
+// ============================================================================
+// Signature Status Sync
+// ============================================================================
+
+import { getEnvelopeDetails } from '@/lib/signature/signatureapi';
+
+/**
+ * Check envelope status from SignatureAPI for an agreement
+ * This is used to verify signing status when the webhook may have failed
+ */
+export async function getAgreementEnvelopeStatus(agreementId: string, envelopeId: string): Promise<{ status: string | null; error?: string }> {
+  try {
+    const envelopeDetails = await getEnvelopeDetails(envelopeId);
+    console.log('[StrategistAPI] Envelope status from SignatureAPI:', envelopeDetails?.status);
+    
+    if (!envelopeDetails) {
+      return { status: null, error: 'Could not get envelope details from SignatureAPI' };
+    }
+
+    // If envelope is completed, try to update backend
+    if (envelopeDetails.status === 'completed') {
+      console.log('[StrategistAPI] Envelope is COMPLETED - attempting to sync to backend');
+      
+      // Try to update agreement status to ACTIVE (signed)
+      await apiRequest(`/agreements/${agreementId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ 
+          status: 'ACTIVE',
+          signedAt: new Date().toISOString(),
+        }),
+      }).catch(() => {
+        console.log('[StrategistAPI] Failed to update agreement status (backend may not support this)');
+      });
+    }
+
+    return { status: envelopeDetails.status };
+  } catch (error) {
+    console.error('[StrategistAPI] Failed to get envelope status:', error);
+    return { status: null, error: 'Failed to check envelope status' };
   }
 }

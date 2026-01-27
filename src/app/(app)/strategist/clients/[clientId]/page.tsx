@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useUiStore } from '@/contexts/ui/UiStore';
 import { StrategySheet } from '@/components/strategy/strategy-sheet';
 import { Button } from '@/components/ui/button';
@@ -10,11 +10,11 @@ import {
   type ApiClient,
   type ApiAgreement,
   listClientAgreements,
+  getAgreementEnvelopeStatus,
 } from '@/lib/api/strategist.api';
 import { sendAgreementToClient } from '@/lib/api/agreements.actions';
 import { AgreementModal, type AgreementFormData } from '@/components/agreements/agreement-modal';
 import {
-  getClientTimelineAndStatus,
   CLIENT_STATUS_CONFIG,
   type ClientStatusKey,
 } from '@/lib/client-status';
@@ -224,6 +224,10 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const [isSendingPayment, setIsSendingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
+  // SignatureAPI sync state - tracks actual envelope status from SignatureAPI
+  const [envelopeStatuses, setEnvelopeStatuses] = useState<Record<string, string>>({});
+  const hasSyncedEnvelopesRef = useRef(false);
+
   // Load client data from API
   useEffect(() => {
     async function loadClient() {
@@ -293,6 +297,52 @@ export default function StrategistClientDetailPage({ params }: Props) {
     if (params.clientId) loadAgreements();
   }, [params.clientId]);
 
+  // Sync envelope statuses from SignatureAPI (the SOURCE OF TRUTH for signatures)
+  // This is needed because the webhook may fail to update the backend
+  useEffect(() => {
+    async function syncEnvelopeStatuses() {
+      if (hasSyncedEnvelopesRef.current || agreements.length === 0) return;
+      hasSyncedEnvelopesRef.current = true;
+
+      const statuses: Record<string, string> = {};
+      
+      for (const agreement of agreements) {
+        // Get envelope ID from agreement
+        const envelopeId = agreement.signatureEnvelopeId;
+        
+        if (envelopeId) {
+          console.log('[Page] Checking envelope status via server action:', envelopeId);
+          try {
+            const result = await getAgreementEnvelopeStatus(agreement.id, envelopeId);
+            if (result.status) {
+              statuses[agreement.id] = result.status;
+              console.log('[Page] Envelope', envelopeId, 'status:', result.status);
+              
+              // If completed, reload agreements to get updated backend status
+              if (result.status === 'completed') {
+                console.log('[Page] Envelope completed - will reload agreements');
+              }
+            }
+          } catch (e) {
+            console.error('[Page] Failed to get envelope status:', e);
+          }
+        }
+      }
+      
+      if (Object.keys(statuses).length > 0) {
+        setEnvelopeStatuses(statuses);
+        
+        // Reload agreements if any envelope was completed (backend might have been updated)
+        if (Object.values(statuses).some(s => s === 'completed')) {
+          const data = await listClientAgreements(params.clientId);
+          setAgreements(data);
+        }
+      }
+    }
+
+    syncEnvelopeStatuses();
+  }, [agreements, params.clientId]);
+
   // Handler for sending agreement from modal
   const handleSendAgreement = async (formData: AgreementFormData) => {
     setIsSendingAgreement(true);
@@ -361,28 +411,53 @@ export default function StrategistClientDetailPage({ params }: Props) {
   // Get the active agreement (most recent)
   const activeAgreement = agreements[0];
 
+  // Compute all todos from agreement first (needed for status checks)
+  const allTodos =
+    activeAgreement?.todoLists?.flatMap(list => list.todos || []) || [];
+
   // Compute agreement status from real data
   // Status: DRAFT (created) -> ACTIVE (signed) -> COMPLETED
+  // 
+  // SOURCE OF TRUTH: SignatureAPI envelope status
+  // The backend may not be updated if the webhook failed, so we check SignatureAPI directly
+  //
   const hasAgreementSent = agreements.some(
     a => a.status === 'DRAFT' || a.status === 'ACTIVE' || a.status === 'COMPLETED'
   );
-  const hasAgreementSigned = agreements.some(
+  
+  // Check SignatureAPI envelope status (the REAL source of truth)
+  const envelopeIsCompleted = activeAgreement && envelopeStatuses[activeAgreement.id] === 'completed';
+  
+  // Also check backend signals as backup
+  const backendSaysSignedOrComplete = agreements.some(
     a => a.status === 'ACTIVE' || a.status === 'COMPLETED'
   );
+  const documentSaysSigned = agreements.some(
+    a => a.contractDocument?.signedStatus === 'SIGNED'
+  );
+  const signTodoCompleted = allTodos.some(
+    t => t.title.toLowerCase().includes('sign') && 
+         t.title.toLowerCase().includes('agreement') && 
+         t.status === 'completed'
+  );
+  
+  // Agreement is signed if SignatureAPI says so OR backend says so
+  const hasAgreementSigned = envelopeIsCompleted || backendSaysSignedOrComplete || documentSaysSigned || signTodoCompleted;
 
-  // Get the signed agreement for payment
+  // Get the active agreement for payment (either signed or most recent with signing complete)
   const signedAgreement = agreements.find(
     a => a.status === 'ACTIVE' || a.status === 'COMPLETED'
+  ) || (hasAgreementSigned ? activeAgreement : null);
+  
+  const hasPaymentSent = signedAgreement && (
+    signedAgreement.paymentStatus === 'pending' || 
+    !!signedAgreement.paymentLink
   );
-  const hasPaymentSent =
-    signedAgreement?.paymentStatus === 'pending' || signedAgreement?.paymentLink;
   const hasPaymentReceived = signedAgreement?.paymentStatus === 'paid';
 
-  // Compute document todos from agreement (excluding the signing todo)
-  const allTodos =
-    activeAgreement?.todoLists?.flatMap(list => list.todos || []) || [];
+  // Document todos from agreement (excluding the signing and payment todos)
   const documentTodos = allTodos.filter(
-    todo => !todo.title.toLowerCase().includes('sign')
+    todo => !todo.title.toLowerCase().includes('sign') && todo.title.toLowerCase() !== 'pay'
   );
   const completedDocTodos = documentTodos.filter(
     todo =>
@@ -459,30 +534,48 @@ export default function StrategistClientDetailPage({ params }: Props) {
     .slice(0, 3);
 
   // ============================================================================
-  // 5-STEP TIMELINE COMPLETION STATES (from shared module)
+  // 5-STEP TIMELINE COMPLETION STATES (computed from REAL API data)
   // ============================================================================
-  const timeline = getClientTimelineAndStatus(client);
-  const {
-    step1Complete,
-    step2Complete,
-    step3Complete,
-    step4Complete,
-    step5Complete,
-    step2Sent,
-    step3Sent,
-    step4Sent,
-    step5Sent,
-    statusKey,
-    statusConfig,
-  } = timeline;
+  
+  // Step 1: Account always created
+  const step1Complete = true;
+  
+  // Step 2: Agreement - Use REAL agreement status from API
+  // Backend statuses: DRAFT (sent but not signed), ACTIVE (signed), COMPLETED
+  const step2Sent = hasAgreementSent; // Agreement has been sent (DRAFT, ACTIVE, or COMPLETED)
+  const step2Complete = hasAgreementSigned; // Agreement has been signed (ACTIVE or COMPLETED)
+  
+  // Step 3: Payment - Use REAL payment status from API
+  const step3Sent = step2Complete && (hasPaymentSent || hasPaymentReceived);
+  const step3Complete = hasPaymentReceived;
+  
+  // Step 4: Documents - Use REAL document upload status from API
+  const step4Sent = step3Complete || hasDocumentsRequested;
+  const step4Complete = hasAllDocumentsUploaded;
+  
+  // Step 5: Strategy - Check if strategy document exists and is signed
+  const strategyDoc = client.documents.find(
+    d => d.category === 'contract' && d.originalName.toLowerCase().includes('strategy')
+  );
+  const step5Sent = step4Complete && (strategyDoc?.signatureStatus === 'SENT' || strategyDoc?.signatureStatus === 'SIGNED');
+  const step5Complete = strategyDoc?.signatureStatus === 'SIGNED';
+
+  // Compute status key from real data
+  type StatusKey = 'awaiting_agreement' | 'awaiting_payment' | 'awaiting_documents' | 'ready_for_strategy' | 'awaiting_signature' | 'active';
+  let statusKey: StatusKey;
+  if (!step2Complete) statusKey = 'awaiting_agreement';
+  else if (!step3Complete) statusKey = 'awaiting_payment';
+  else if (!step4Complete) statusKey = 'awaiting_documents';
+  else if (step5Complete) statusKey = 'active';
+  else if (step5Sent) statusKey = 'awaiting_signature';
+  else statusKey = 'ready_for_strategy';
+  
+  const statusConfig = CLIENT_STATUS_CONFIG[statusKey];
 
   // Additional data for timeline display
   const agreementTask = client.onboardingTasks.find(t => t.type === 'sign_agreement');
   const docsTask = client.onboardingTasks.find(t => t.type === 'upload_documents');
   const payment = client.payments[0];
-  const strategyDoc = client.documents.find(
-    d => d.category === 'contract' && d.originalName.toLowerCase().includes('strategy')
-  );
 
   // Icon mapping for status badge
   const statusIconMap: Record<ClientStatusKey, typeof Clock> = {

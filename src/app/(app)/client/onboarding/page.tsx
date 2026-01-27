@@ -1,31 +1,44 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth/AuthStore';
-import { Check, SpinnerGap } from '@phosphor-icons/react';
+import { Check, SpinnerGap, CreditCard, ArrowSquareOut, Warning, FilePdf } from '@phosphor-icons/react';
+import Image from 'next/image';
 import {
   getClientDashboardData,
+  markOnboardingTodosComplete,
+  updateClientProfile,
+  getChargesForAgreement,
+  generatePaymentLink,
+  getDocumentDownloadUrl,
+  getSignedDocumentDownloadUrl,
   type ClientDashboardData,
   type ClientAgreement,
+  type ClientCharge,
 } from '@/lib/api/client.api';
 
 // ============================================================================
 // ONBOARDING STEPS
 // ============================================================================
 
-type OnboardingStep = 'profile' | 'agreement' | 'complete';
+type OnboardingStep = 'profile' | 'agreement' | 'payment' | 'complete';
 
 const STEPS: { id: OnboardingStep; title: string; description: string }[] = [
   {
     id: 'profile',
-    title: 'Review your profile',
-    description: 'Make sure your information is correct',
+    title: 'Complete your profile',
+    description: 'Add your information to get started',
   },
   {
     id: 'agreement',
     title: 'Sign agreement',
     description: 'Review and sign the service agreement',
+  },
+  {
+    id: 'payment',
+    title: 'Payment',
+    description: 'Complete your payment to get started',
   },
   {
     id: 'complete',
@@ -44,102 +57,198 @@ interface StepProps {
   dashboardData: ClientDashboardData | null;
   isFirst: boolean;
   isLast: boolean;
+  onProfileUpdate?: (data: ClientDashboardData) => void;
 }
 
-function ProfileStep({ onContinue, onBack, dashboardData, isFirst }: StepProps) {
+const BUSINESS_TYPES = [
+  { value: '', label: 'Select type' },
+  { value: 'sole_proprietorship', label: 'Sole Proprietorship' },
+  { value: 'llc', label: 'LLC' },
+  { value: 's_corp', label: 'S Corporation' },
+  { value: 'c_corp', label: 'C Corporation' },
+  { value: 'partnership', label: 'Partnership' },
+  { value: 'non_profit', label: 'Non-Profit' },
+  { value: 'other', label: 'Other' },
+];
+
+function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpdate }: StepProps) {
   const profile = dashboardData?.profile;
   const user = dashboardData?.user;
   const strategist = dashboardData?.strategist;
 
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Form state - initialize with existing data (only fields the API supports)
+  const [formData, setFormData] = useState({
+    phoneNumber: profile?.phoneNumber || profile?.phone || '',
+    address: profile?.address || '',
+    businessName: profile?.businessName || '',
+    businessType: profile?.businessType || '',
+  });
+
+  // Update form when profile data loads
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        phoneNumber: profile.phoneNumber || profile.phone || '',
+        address: profile.address || '',
+        businessName: profile.businessName || '',
+        businessType: profile.businessType || '',
+      });
+    }
+  }, [profile]);
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setError(null);
+  };
+
+  const handleSaveAndContinue = async () => {
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      // Build update payload - only include changed/filled fields
+      const updateData: Record<string, unknown> = {};
+      
+      if (formData.phoneNumber) updateData.phoneNumber = formData.phoneNumber;
+      if (formData.address) updateData.address = formData.address;
+      if (formData.businessName) updateData.businessName = formData.businessName;
+      if (formData.businessType) updateData.businessType = formData.businessType;
+
+      // Only call API if there's data to update
+      if (Object.keys(updateData).length > 0) {
+        const updatedProfile = await updateClientProfile(updateData);
+        
+        if (updatedProfile && dashboardData && onProfileUpdate) {
+          // Update the dashboard data with new profile
+          onProfileUpdate({
+            ...dashboardData,
+            profile: updatedProfile,
+          });
+        }
+      }
+
+      onContinue();
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+      setError('Failed to save profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Account Summary Card */}
-      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-6">
-        <h3 className="mb-4 text-sm font-medium text-zinc-500">Account Information</h3>
+      {/* Account Info (Read-only) */}
+      <div className="border-b border-zinc-200 pb-6">
+        <h3 className="mb-4 text-xs font-medium text-zinc-400 uppercase">Account Information</h3>
 
         <div className="space-y-4">
-          {/* Name & Email */}
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-200 text-lg font-semibold text-zinc-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-sm font-semibold text-zinc-600">
               {(user?.fullName || user?.name || user?.email)?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div>
-              <p className="font-medium text-zinc-900">{user?.fullName || user?.name || 'N/A'}</p>
-              <p className="text-sm text-zinc-500">{user?.email || 'N/A'}</p>
+              <p className="text-sm font-medium text-zinc-900">{user?.fullName || user?.name || 'N/A'}</p>
+              <p className="text-xs text-zinc-500">{user?.email || 'N/A'}</p>
             </div>
           </div>
 
-          <div className="h-px bg-zinc-200" />
-
-          {/* Contact */}
-          <div className="flex justify-between">
-            <span className="text-sm text-zinc-500">Phone</span>
-            <span className="text-sm font-medium text-zinc-900">
-              {profile?.phoneNumber || profile?.phone || 'Not provided'}
-            </span>
-          </div>
-
-          {/* Strategist */}
           {strategist && (
-            <div className="flex justify-between">
-              <span className="text-sm text-zinc-500">Your Strategist</span>
-              <span className="text-sm font-medium text-zinc-900">{strategist.name}</span>
+            <div className="flex justify-between pt-2">
+              <span className="text-xs text-zinc-500">Your Strategist</span>
+              <span className="text-xs font-medium text-zinc-900">{strategist.name}</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Business Summary Card */}
-      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-6">
-        <h3 className="mb-4 text-sm font-medium text-zinc-500">Business Information</h3>
+      {/* Contact Information (Editable) */}
+      <div className="py-6">
+        <h3 className="mb-4 text-xs font-medium text-zinc-400 uppercase">Contact Information</h3>
 
-        <div className="space-y-3">
-          <div className="flex justify-between">
-            <span className="text-sm text-zinc-500">Business name</span>
-            <span className="text-sm font-medium text-zinc-900">
-              {profile?.businessName || 'Not provided'}
-            </span>
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-500">Phone Number</label>
+            <input
+              type="tel"
+              placeholder="(555) 000-0000"
+              value={formData.phoneNumber}
+              onChange={e => handleInputChange('phoneNumber', e.target.value)}
+              className="w-full border-b border-zinc-200 bg-transparent py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none"
+            />
           </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-zinc-500">Business type</span>
-            <span className="text-sm font-medium text-zinc-900">
-              {profile?.businessType || 'Not provided'}
-            </span>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-500">Address</label>
+            <input
+              type="text"
+              placeholder="City, State"
+              value={formData.address}
+              onChange={e => handleInputChange('address', e.target.value)}
+              className="w-full border-b border-zinc-200 bg-transparent py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none"
+            />
           </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-zinc-500">Location</span>
-            <span className="text-sm font-medium text-zinc-900">
-              {profile?.city && profile?.state
-                ? `${profile.city}, ${profile.state}`
-                : profile?.address || 'Not provided'}
-            </span>
-          </div>
-          {profile?.filingStatus && (
-            <div className="flex justify-between">
-              <span className="text-sm text-zinc-500">Filing status</span>
-              <span className="text-sm font-medium text-zinc-900">
-                {profile.filingStatus.replace('_', ' ')}
-              </span>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Business Information (Editable) */}
+      <div className="pt-0">
+        <h3 className="mb-4 text-xs font-medium text-zinc-400 uppercase">Business Information</h3>
+
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-500">Business Name</label>
+            <input
+              type="text"
+              placeholder="Your business name"
+              value={formData.businessName}
+              onChange={e => handleInputChange('businessName', e.target.value)}
+              className="w-full border-b border-zinc-200 bg-transparent py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-500">Business Type</label>
+            <select
+              value={formData.businessType}
+              onChange={e => handleInputChange('businessType', e.target.value)}
+              className="w-full border-b border-zinc-200 bg-transparent py-2 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none"
+            >
+              {BUSINESS_TYPES.map(type => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Error message */}
+      {error && (
+        <p className="mt-4 text-sm text-red-600">{error}</p>
+      )}
 
       {/* Navigation Buttons */}
-      <div className="mt-4 flex gap-3">
+      <div className="mt-8 flex gap-3">
         {!isFirst && (
           <button
             onClick={onBack}
-            className="flex-1 rounded-lg border border-zinc-200 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            disabled={isSaving}
+            className="flex-1 rounded-md border border-zinc-200 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-40"
           >
             Back
           </button>
         )}
         <button
-          onClick={onContinue}
-          className="flex-1 cursor-pointer rounded-lg bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+          onClick={handleSaveAndContinue}
+          disabled={isSaving}
+          className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white py-3 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 disabled:opacity-40"
         >
-          Continue
+          {isSaving ? 'Saving...' : 'Continue'}
         </button>
       </div>
     </div>
@@ -154,8 +263,85 @@ interface AgreementStepProps extends StepProps {
   pendingAgreement: ClientAgreement | null;
 }
 
-function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement }: AgreementStepProps) {
+function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardData }: AgreementStepProps) {
   const [signingInProgress, setSigningInProgress] = useState(false);
+  const [documentUrl, setDocumentUrl] = useState<string | null>(null);
+  const [signedDocumentUrl, setSignedDocumentUrl] = useState<string | null>(null);
+  const [isLoadingDocument, setIsLoadingDocument] = useState(false);
+
+  // Check if agreement is already signed
+  const isAgreementSigned = pendingAgreement?.status === 'signed' || 
+    pendingAgreement?.status === 'completed' ||
+    !!pendingAgreement?.signedAt;
+
+  // Fetch document URL - try contractFileId first, then find AGREEMENT type document
+  // Also fetch signed document URL if agreement is signed
+  useEffect(() => {
+    async function fetchDocumentUrl() {
+      setIsLoadingDocument(true);
+      
+      console.log('[AgreementStep] Starting document fetch...');
+      console.log('[AgreementStep] pendingAgreement:', pendingAgreement);
+      console.log('[AgreementStep] isAgreementSigned:', isAgreementSigned);
+      console.log('[AgreementStep] dashboardData.documents:', dashboardData?.documents);
+      
+      try {
+        // If agreement is signed, try to get the signed document URL
+        // Uses S3 first (if stored by webhook), then falls back to SignatureAPI
+        if (isAgreementSigned) {
+          console.log('[AgreementStep] Fetching signed document URL...');
+          const signedUrl = await getSignedDocumentDownloadUrl(
+            pendingAgreement?.signedDocumentFileId,
+            pendingAgreement?.signatureEnvelopeId
+          );
+          if (signedUrl) {
+            console.log('[AgreementStep] Got signed document URL:', signedUrl);
+            setSignedDocumentUrl(signedUrl);
+            setIsLoadingDocument(false);
+            return;
+          }
+        }
+
+        // First try direct file ID from agreement
+        let fileId = pendingAgreement?.contractFileId || pendingAgreement?.contractDocumentId;
+        console.log('[AgreementStep] Direct fileId from agreement:', fileId);
+        
+        // If no direct file ID, look for AGREEMENT type document in dashboard documents
+        if (!fileId && dashboardData?.documents) {
+          console.log('[AgreementStep] Searching documents for AGREEMENT type...');
+          const agreementDoc = dashboardData.documents.find(
+            doc => doc.type === 'AGREEMENT' || doc.type?.toUpperCase() === 'AGREEMENT'
+          );
+          console.log('[AgreementStep] Found agreementDoc:', agreementDoc);
+          if (agreementDoc?.fileId) {
+            fileId = agreementDoc.fileId;
+            console.log('[AgreementStep] Found agreement document:', agreementDoc.id, 'fileId:', fileId);
+          } else if (agreementDoc?.id) {
+            // Try using document ID directly
+            fileId = agreementDoc.id;
+            console.log('[AgreementStep] Using document ID as fileId:', fileId);
+          }
+        }
+        
+        if (!fileId) {
+          console.log('[AgreementStep] No document file ID found');
+          setIsLoadingDocument(false);
+          return;
+        }
+
+        console.log('[AgreementStep] Fetching download URL for fileId:', fileId);
+        const url = await getDocumentDownloadUrl(fileId);
+        console.log('[AgreementStep] Got document URL:', url);
+        setDocumentUrl(url);
+      } catch (error) {
+        console.error('Failed to fetch document URL:', error);
+      } finally {
+        setIsLoadingDocument(false);
+      }
+    }
+
+    fetchDocumentUrl();
+  }, [pendingAgreement, isAgreementSigned, dashboardData?.documents]);
 
   const handleSignAgreement = () => {
     if (pendingAgreement?.signatureCeremonyUrl) {
@@ -170,82 +356,428 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement }: Agreem
     ? `$${typeof pendingAgreement.price === 'string' ? parseFloat(pendingAgreement.price).toLocaleString() : pendingAgreement.price.toLocaleString()}`
     : '$499';
 
+  // If agreement is already signed, show success state
+  if (isAgreementSigned) {
+    return (
+      <div className="flex flex-col gap-6">
+        {/* Success Message */}
+        <div className="border-b border-zinc-200 pb-6 text-center">
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+            <Check weight="bold" className="h-5 w-5 text-emerald-600" />
+          </div>
+          <h3 className="mb-1 text-sm font-medium text-zinc-900">Agreement Signed</h3>
+          <p className="text-xs text-zinc-500">
+            Signed{pendingAgreement?.signedAt ? ` on ${new Date(pendingAgreement.signedAt).toLocaleDateString()}` : ''}
+          </p>
+        </div>
+
+        {/* Agreement Info */}
+        <div className="py-4">
+          <h3 className="mb-2 text-sm font-medium text-zinc-900">{agreementTitle}</h3>
+          {pendingAgreement?.description && (
+            <p className="mb-4 text-xs text-zinc-500">{pendingAgreement.description}</p>
+          )}
+          <div className="flex items-center justify-between border-t border-zinc-200 pt-4">
+            <span className="text-xs text-zinc-500">Service Fee</span>
+            <span className="text-sm font-medium text-zinc-900">{agreementPrice}</span>
+          </div>
+        </div>
+
+        {/* Signed Document Preview */}
+        <div className="py-4">
+          <h4 className="mb-3 text-xs font-medium text-zinc-400 uppercase">Signed Document</h4>
+          {isLoadingDocument ? (
+            <div className="flex h-64 w-full items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
+              <SpinnerGap weight="bold" className="h-5 w-5 animate-spin text-zinc-400" />
+            </div>
+          ) : signedDocumentUrl ? (
+            <div className="overflow-hidden rounded-md border border-zinc-200 bg-white">
+              <iframe
+                src={signedDocumentUrl}
+                className="h-80 w-full"
+                title="Signed Agreement Document"
+              />
+              <div className="flex items-center justify-between border-t border-zinc-200 bg-zinc-50 px-4 py-2">
+                <span className="text-xs text-zinc-500">Signed Agreement PDF</span>
+                <a
+                  href={signedDocumentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900"
+                >
+                  <ArrowSquareOut weight="bold" className="h-3.5 w-3.5" />
+                  Open PDF
+                </a>
+              </div>
+            </div>
+          ) : documentUrl ? (
+            <div className="overflow-hidden rounded-md border border-zinc-200 bg-white">
+              <iframe
+                src={documentUrl}
+                className="h-80 w-full"
+                title="Agreement Document"
+              />
+              <div className="flex items-center justify-between border-t border-zinc-200 bg-zinc-50 px-4 py-2">
+                <span className="text-xs text-zinc-500">Agreement PDF</span>
+                <a
+                  href={documentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900"
+                >
+                  <ArrowSquareOut weight="bold" className="h-3.5 w-3.5" />
+                  Open PDF
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-32 w-full flex-col items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
+              <FilePdf weight="duotone" className="mb-2 h-8 w-8 text-emerald-500" />
+              <p className="text-xs text-zinc-500">Agreement signed successfully</p>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="mt-4 flex gap-3">
+          {!isFirst && (
+            <button
+              onClick={onBack}
+              className="flex-1 rounded-md border border-zinc-200 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            >
+              Back
+            </button>
+          )}
+          <button
+            onClick={onContinue}
+            className="flex-1 cursor-pointer rounded-md bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* Agreement Info */}
       {pendingAgreement ? (
-        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-6">
-          <h3 className="mb-2 text-lg font-semibold text-zinc-900">{agreementTitle}</h3>
+        <div className="border-b border-zinc-200 pb-6">
+          <h3 className="mb-2 text-sm font-medium text-zinc-900">{agreementTitle}</h3>
           {pendingAgreement.description && (
-            <p className="mb-4 text-sm text-zinc-600">{pendingAgreement.description}</p>
+            <p className="mb-4 text-xs text-zinc-500">{pendingAgreement.description}</p>
           )}
-          <div className="flex items-center justify-between border-t border-zinc-200 pt-4">
-            <span className="text-sm text-zinc-500">Service Fee</span>
-            <span className="text-lg font-semibold text-zinc-900">{agreementPrice}</span>
+          <div className="flex items-center justify-between pt-2">
+            <span className="text-xs text-zinc-500">Service Fee</span>
+            <span className="text-sm font-medium text-zinc-900">{agreementPrice}</span>
           </div>
         </div>
       ) : (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-center">
-          <p className="text-sm text-amber-800">
+        <div className="border-b border-zinc-200 pb-6 text-left">
+          <p className="text-sm text-zinc-500">
             No agreement has been sent yet. Your strategist will send you an agreement to sign
             shortly.
           </p>
         </div>
       )}
 
-      {/* Agreement Preview */}
-      <div className="rounded-lg border border-zinc-200 bg-white p-6">
-        <h4 className="mb-4 text-sm font-medium text-zinc-700">Agreement Summary</h4>
-        <div className="max-h-48 overflow-y-auto text-sm text-zinc-600">
-          <p className="mb-3">By signing this agreement, you agree to:</p>
-          <ul className="list-disc space-y-2 pl-5">
-            <li>Receive tax strategy and planning services from Ariex Tax Advisory</li>
-            <li>Provide accurate and complete tax information</li>
-            <li>Upload all required tax documents in a timely manner</li>
-            <li>Pay the agreed service fee</li>
-            <li>Maintain confidentiality of strategy recommendations</li>
-          </ul>
-        </div>
-      </div>
+      {/* Document Preview */}
+      {/* <div className="py-4">
+        <h4 className="mb-3 text-xs font-medium text-zinc-400 uppercase">Document Preview</h4>
+        {isLoadingDocument ? (
+          <div className="flex h-64 w-full items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
+            <SpinnerGap weight="bold" className="h-5 w-5 animate-spin text-zinc-400" />
+          </div>
+        ) : documentUrl ? (
+          <div className="overflow-hidden rounded-md border border-zinc-200 bg-white">
+            <iframe
+              src={documentUrl}
+              className="h-80 w-full"
+              title="Agreement Document"
+            />
+            <div className="flex items-center justify-between border-t border-zinc-200 bg-zinc-50 px-4 py-2">
+              <span className="text-xs text-zinc-500">Agreement PDF</span>
+              <a
+                href={documentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900"
+              >
+                <ArrowSquareOut weight="bold" className="h-3.5 w-3.5" />
+                Open PDF
+              </a>
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-40 w-full flex-col items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
+            <FilePdf weight="duotone" className="mb-3 h-10 w-10 text-zinc-300" />
+            <p className="text-xs text-zinc-500">Service Agreement</p>
+            <p className="mt-1 text-xs text-zinc-400">Click below to view and sign</p>
+          </div>
+        )}
+      </div> */}
 
-      {/* Sign Button */}
-      {pendingAgreement?.signatureCeremonyUrl ? (
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={handleSignAgreement}
-            className="w-full rounded-lg bg-emerald-600 py-3 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-          >
-            Sign Agreement Electronically
-          </button>
-          {signingInProgress && (
-            <p className="text-center text-xs text-zinc-500">
-              A new tab has opened for signing. Once complete, click &quot;Continue&quot; below.
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className="rounded-lg border border-zinc-200 bg-zinc-100 py-3 text-center text-sm text-zinc-500">
-          Waiting for agreement link from your strategist...
-        </div>
+      {signingInProgress && (
+        <p className="text-center text-xs text-zinc-400">
+          A new tab has opened for signing. Once complete, click Continue below.
+        </p>
       )}
 
       {/* Navigation Buttons */}
-      <div className="mt-4 flex gap-3">
+      <div className="mt-8 flex gap-3">
         {!isFirst && (
           <button
             onClick={onBack}
-            className="flex-1 rounded-lg border border-zinc-200 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            className="flex-1 rounded-md border border-zinc-200 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
           >
             Back
           </button>
         )}
-        <button
-          onClick={onContinue}
-          disabled={!signingInProgress && !pendingAgreement?.signatureCeremonyUrl}
-          className="flex-1 cursor-pointer rounded-lg bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {signingInProgress ? 'Continue' : 'Skip for now'}
-        </button>
+        {signingInProgress ? (
+          <button
+            onClick={onContinue}
+            className="flex-1 cursor-pointer rounded-md bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+          >
+            Continue
+          </button>
+        ) : pendingAgreement?.signatureCeremonyUrl ? (
+          <button
+            onClick={handleSignAgreement}
+            className="flex-1 rounded-md bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+          >
+            Sign Agreement
+          </button>
+        ) : (
+          <div className="flex-1 py-3 text-center text-xs text-zinc-400">
+            Waiting for agreement link...
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// PAYMENT STEP COMPONENT
+// ============================================================================
+
+interface PaymentStepProps extends StepProps {
+  pendingAgreement: ClientAgreement | null;
+}
+
+function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardData }: PaymentStepProps) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
+  const [charge, setCharge] = useState<ClientCharge | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Get client email for Stripe checkout pre-fill
+  const clientEmail = dashboardData?.user?.email;
+
+  const agreementPrice = pendingAgreement?.price
+    ? typeof pendingAgreement.price === 'string'
+      ? parseFloat(pendingAgreement.price)
+      : pendingAgreement.price
+    : 499;
+
+  // Check if payment is already complete
+  const isPaymentComplete = charge?.status === 'paid';
+
+  // Fetch charges for this agreement
+  useEffect(() => {
+    async function fetchCharges() {
+      if (!pendingAgreement?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const charges = await getChargesForAgreement(pendingAgreement.id);
+        // Get the first pending charge (or the most recent one)
+        const pendingCharge = charges.find(c => c.status === 'pending') || charges[0];
+        setCharge(pendingCharge || null);
+      } catch (err) {
+        console.error('Failed to fetch charges:', err);
+        setError('Failed to load payment information');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchCharges();
+  }, [pendingAgreement?.id]);
+
+  const handlePayNow = async () => {
+    if (!charge) {
+      setError('No payment charge found. Please contact support.');
+      return;
+    }
+
+    setIsGeneratingLink(true);
+    setError(null);
+
+    try {
+      // Generate Stripe payment link with client email pre-filled
+      const paymentUrl = await generatePaymentLink(charge.id, {
+        customerEmail: clientEmail,
+      });
+      
+      if (paymentUrl) {
+        // Mark onboarding progress in localStorage before redirect
+        localStorage.setItem('ariex_payment_initiated', 'true');
+        // Open Stripe checkout in new tab
+        window.open(paymentUrl, '_blank');
+      } else {
+        setError('Failed to generate payment link. Please try again.');
+      }
+    } catch (err) {
+      console.error('Failed to generate payment link:', err);
+      setError('Failed to generate payment link. Please try again.');
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-12">
+        <p className="text-xs text-zinc-400 uppercase font-medium">Loading payment information...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Payment Summary */}
+      <div className="border-b border-zinc-200 pb-6">
+        <h3 className="mb-4 text-xs font-medium text-zinc-400 uppercase">Payment Summary</h3>
+
+        <div className="space-y-3">
+          <div className="flex justify-between">
+            <span className="text-xs text-zinc-500">
+              {pendingAgreement?.title || pendingAgreement?.name || 'Tax Advisory Services'}
+            </span>
+            <span className="text-sm font-medium text-zinc-900">
+              ${agreementPrice.toLocaleString()}
+            </span>
+          </div>
+          <div className="h-px bg-zinc-100" />
+          <div className="flex justify-between">
+            <span className="text-xs font-medium text-zinc-900">Total</span>
+            <span className="text-sm font-medium text-zinc-900">
+              ${agreementPrice.toLocaleString()}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment Status / Action */}
+      {isPaymentComplete ? (
+        // Payment already complete
+        <div className="py-6 text-center">
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+            <Check weight="bold" className="h-5 w-5 text-emerald-600" />
+          </div>
+          <p className="text-sm font-medium text-zinc-900">Payment Complete</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            Thank you for your payment. Click continue to finish onboarding.
+          </p>
+        </div>
+      ) : charge ? (
+        // Has charge - show pay button
+        <>
+          <div className="py-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100">
+                <CreditCard weight="duotone" className="h-4 w-4 text-zinc-600" />
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-zinc-900">Secure Payment</h4>
+                <p className="text-xs text-zinc-400">Powered by Stripe</p>
+              </div>
+            </div>
+            <p className="text-xs text-zinc-500">
+              Click the button below to complete your payment securely via Stripe. 
+              You will be redirected to a secure checkout page.
+            </p>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <p className="text-sm text-red-600">{error}</p>
+          )}
+
+          {/* Pay Button */}
+          <button
+            onClick={handlePayNow}
+            disabled={isGeneratingLink}
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white py-3 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 disabled:opacity-40"
+          >
+            {isGeneratingLink ? (
+              'Preparing checkout...'
+            ) : (
+              <>
+                Pay ${agreementPrice.toLocaleString()}
+                <ArrowSquareOut weight="bold" className="h-4 w-4" />
+              </>
+            )}
+          </button>
+        </>
+      ) : (
+        // No charge found
+        <div className="py-6 text-center">
+          <p className="text-xs text-zinc-500">
+            Payment information is being set up. Please check back shortly or contact your strategist.
+          </p>
+        </div>
+      )}
+
+      {/* Navigation Buttons */}
+      <div className="mt-8 flex flex-col gap-3">
+        {/* Skip button for testing (marks todo as complete) */}
+        {!isPaymentComplete && charge && (
+          <button
+            onClick={async () => {
+              setIsSkipping(true);
+              try {
+                // Mark the Pay todo as completed so strategist sees it
+                const result = await markOnboardingTodosComplete();
+                console.log('[Onboarding] Skipped payment, todos marked complete:', result);
+                onContinue();
+              } catch (err) {
+                console.error('Failed to skip payment:', err);
+                setError('Failed to skip. Please try again.');
+              } finally {
+                setIsSkipping(false);
+              }
+            }}
+            disabled={isSkipping}
+            className="w-full rounded-md border border-amber-200 bg-amber-50 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-40"
+          >
+            {isSkipping ? 'Skipping...' : '⚠️ Skip payment (testing only)'}
+          </button>
+        )}
+        
+        <div className="flex gap-3">
+          {!isFirst && !isPaymentComplete && (
+            <button
+              onClick={onBack}
+              className="flex-1 rounded-md border border-zinc-200 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            >
+              Back
+            </button>
+          )}
+          {isPaymentComplete && (
+            <button
+              onClick={onContinue}
+              className="flex-1 cursor-pointer rounded-md border border-zinc-200 bg-white py-3 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50"
+            >
+              Continue
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -257,38 +789,53 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement }: Agreem
 
 function CompleteStep({ dashboardData }: { dashboardData: ClientDashboardData | null }) {
   const router = useRouter();
+  const [isFinishing, setIsFinishing] = useState(false);
   const strategist = dashboardData?.strategist;
+
+  const handleGoToDashboard = async () => {
+    setIsFinishing(true);
+    try {
+      // Mark sign + pay todos as completed in backend
+      const result = await markOnboardingTodosComplete();
+      console.log('[Onboarding] Todos marked complete:', result);
+    } catch (error) {
+      console.error('[Onboarding] Failed to mark todos complete:', error);
+    }
+    // Mark onboarding as complete in localStorage (fallback)
+    localStorage.setItem('ariex_onboarding_complete', 'true');
+    router.push('/client/home');
+  };
 
   return (
     <div className="flex flex-col items-center gap-6 text-center">
       {/* Success Icon */}
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
-        <Check weight="bold" className="h-10 w-10 text-emerald-600" />
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+        <Check weight="bold" className="h-6 w-6 text-emerald-600" />
       </div>
 
       {/* Message */}
       <div>
-        <h2 className="mb-2 text-xl font-semibold text-zinc-900">Welcome to Ariex!</h2>
-        <p className="text-sm text-zinc-600">
+        <h2 className="mb-2 text-lg font-medium text-zinc-900">Welcome to Ariex</h2>
+        <p className="text-xs text-zinc-500">
           Your account is set up and ready to go.
           {strategist && ` ${strategist.name} will be your dedicated tax strategist.`}
         </p>
       </div>
 
       {/* Next Steps */}
-      <div className="w-full rounded-lg border border-zinc-200 bg-zinc-50 p-6 text-left">
-        <h3 className="mb-3 text-sm font-medium text-zinc-700">What happens next?</h3>
-        <ul className="space-y-2 text-sm text-zinc-600">
+      <div className="w-full border-t border-zinc-200 pt-6 text-left">
+        <h3 className="mb-3 text-xs font-medium text-zinc-400 uppercase">What happens next</h3>
+        <ul className="space-y-2 text-xs text-zinc-600">
           <li className="flex items-start gap-2">
-            <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span className="mt-1 h-1 w-1 rounded-full bg-emerald-500" />
             <span>Check your email for the agreement signing link</span>
           </li>
           <li className="flex items-start gap-2">
-            <span className="mt-1 h-1.5 w-1.5 rounded-full bg-zinc-300" />
+            <span className="mt-1 h-1 w-1 rounded-full bg-zinc-300" />
             <span>Upload your tax documents when requested</span>
           </li>
           <li className="flex items-start gap-2">
-            <span className="mt-1 h-1.5 w-1.5 rounded-full bg-zinc-300" />
+            <span className="mt-1 h-1 w-1 rounded-full bg-zinc-300" />
             <span>Receive your personalized tax strategy</span>
           </li>
         </ul>
@@ -296,10 +843,11 @@ function CompleteStep({ dashboardData }: { dashboardData: ClientDashboardData | 
 
       {/* Go to Dashboard Button */}
       <button
-        onClick={() => router.push('/client/home')}
-        className="w-full rounded-lg bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+        onClick={handleGoToDashboard}
+        disabled={isFinishing}
+        className="w-full rounded-md border border-zinc-200 bg-white py-3 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 disabled:opacity-40"
       >
-        Go to Dashboard
+        {isFinishing ? 'Finishing...' : 'Go to Dashboard'}
       </button>
     </div>
   );
@@ -316,24 +864,14 @@ interface StepIndicatorProps {
 
 function StepIndicator({ currentStep, steps }: StepIndicatorProps) {
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex items-center -translate-y-5 justify-center gap-1.5">
       {steps.map((step, index) => (
-        <div key={step.id} className="flex items-center gap-2">
-          <div
-            className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
-              index < currentStep
-                ? 'bg-emerald-500 text-white'
-                : index === currentStep
-                  ? 'bg-zinc-900 text-white'
-                  : 'bg-zinc-100 text-zinc-400'
-            }`}
-          >
-            {index < currentStep ? <Check weight="bold" className="h-4 w-4" /> : index + 1}
-          </div>
-          {index < steps.length - 1 && (
-            <div className={`h-px w-8 ${index < currentStep ? 'bg-emerald-500' : 'bg-zinc-200'}`} />
-          )}
-        </div>
+        <div
+          key={step.id}
+          className={`h-1.5 w-1.5 rounded-full ${
+            index <= currentStep ? 'bg-emerald-500' : 'bg-zinc-200'
+          }`}
+        />
       ))}
     </div>
   );
@@ -343,8 +881,9 @@ function StepIndicator({ currentStep, steps }: StepIndicatorProps) {
 // MAIN ONBOARDING PAGE
 // ============================================================================
 
-export default function ClientOnboardingPage() {
+function OnboardingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, logout } = useAuth();
 
   const handleLogout = async () => {
@@ -356,17 +895,66 @@ export default function ClientOnboardingPage() {
   const [dashboardData, setDashboardData] = useState<ClientDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Track if we came from signing or payment to prevent race conditions
+  const cameFromSigning = useRef(false);
+  const cameFromPayment = useRef(false);
+
+  // Handle ?signed=true redirect from SignatureAPI - go to payment step
+  useEffect(() => {
+    if (searchParams.get('signed') === 'true') {
+      console.log('[Onboarding] Detected signed=true, going to payment step');
+      cameFromSigning.current = true;
+      setCurrentStep(2); // Go to payment step (index 2)
+      setIsLoading(false); // Stop loading immediately
+      // Remove the query param from URL (use shallow to avoid re-render)
+      window.history.replaceState({}, '', '/client/onboarding');
+    }
+  }, [searchParams]);
+
+  // Handle ?payment=success or ?payment=cancel redirect from Stripe
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment');
+    if (paymentStatus === 'success') {
+      console.log('[Onboarding] Payment successful, going to complete step');
+      cameFromPayment.current = true;
+      setCurrentStep(3); // Go to complete step (index 3)
+      setIsLoading(false);
+      // Remove the query param from URL
+      window.history.replaceState({}, '', '/client/onboarding');
+      
+      // Mark todos as complete in background
+      markOnboardingTodosComplete().then(result => {
+        console.log('[Onboarding] Auto-marked todos complete after payment:', result);
+      }).catch(err => {
+        console.error('[Onboarding] Failed to auto-mark todos:', err);
+      });
+    } else if (paymentStatus === 'cancel') {
+      console.log('[Onboarding] Payment cancelled, staying on payment step');
+      cameFromPayment.current = true;
+      setCurrentStep(2); // Stay on payment step
+      setIsLoading(false);
+      // Remove the query param from URL
+      window.history.replaceState({}, '', '/client/onboarding');
+    }
+  }, [searchParams]);
+
   // Fetch dashboard data from API
   useEffect(() => {
     async function fetchData() {
       try {
-        setIsLoading(true);
+        // Don't show loading if we came from signing or payment
+        if (!cameFromSigning.current && !cameFromPayment.current) {
+          setIsLoading(true);
+        }
         const data = await getClientDashboardData();
         setDashboardData(data);
 
-        // If user already has a signed agreement, skip to complete
-        if (data?.agreements.some(a => a.status === 'signed' || a.status === 'completed')) {
-          setCurrentStep(2); // Go to complete step
+        // Only auto-navigate if not coming from signing or payment redirect
+        if (!cameFromSigning.current && !cameFromPayment.current) {
+          // If user already has a signed agreement, skip to payment or complete
+          if (data?.agreements.some(a => a.status === 'signed' || a.status === 'completed')) {
+            setCurrentStep(3); // Go to complete step (index 3)
+          }
         }
       } catch (err) {
         console.error('[Onboarding] Failed to fetch data:', err);
@@ -380,10 +968,13 @@ export default function ClientOnboardingPage() {
     }
   }, [user]);
 
-  // Find pending agreement (needs signing)
+  // Find pending agreement (needs signing) or signed agreement (for display)
   const pendingAgreement =
     dashboardData?.agreements.find(
       a => a.status === 'pending' || a.status === 'sent' || a.status === 'draft'
+    ) || 
+    dashboardData?.agreements.find(
+      a => a.status === 'signed' || a.status === 'completed'
     ) || null;
 
   const handleNext = () => {
@@ -407,8 +998,7 @@ export default function ClientOnboardingPage() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-white">
-        <SpinnerGap className="h-8 w-8 animate-spin text-zinc-400" />
-        <p className="mt-4 text-sm text-zinc-500">Loading your information...</p>
+        <p className="text-xs text-zinc-400 uppercase font-medium">Loading...</p>
       </div>
     );
   }
@@ -416,25 +1006,30 @@ export default function ClientOnboardingPage() {
   return (
     <div className="flex min-h-screen flex-col bg-white">
       {/* Header */}
-      <header className="border-b border-zinc-100 px-6 py-4">
-        <div className="mx-auto flex max-w-lg items-center justify-between">
-          <div className="text-xl font-semibold tracking-tight">Ariex</div>
-          <StepIndicator currentStep={currentStep} steps={STEPS} />
+      <header className="flex items-center justify-between px-6 py-4">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-sm font-medium text-zinc-500 uppercase">ARIEX AI</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-zinc-500">{user?.email}</span>
           <button
             onClick={handleLogout}
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+            className="text-sm font-medium text-zinc-600 hover:text-zinc-900"
           >
-            Sign out
+            Log out
           </button>
         </div>
       </header>
 
+      {/* Progress dots */}
+      <StepIndicator currentStep={currentStep} steps={STEPS} />
+
       {/* Main Content */}
       <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
-        <div className="w-full max-w-lg">
+        <div className="w-full max-w-sm">
           {/* Step Title */}
-          <div className="mb-8 text-center">
-            <h1 className="mb-2 text-2xl font-semibold text-zinc-900">{currentStepData.title}</h1>
+          <div className="mb-8">
+            <h1 className="mb-2 text-xl font-medium text-zinc-900">{currentStepData.title}</h1>
             <p className="text-sm text-zinc-500">{currentStepData.description}</p>
           </div>
 
@@ -446,10 +1041,21 @@ export default function ClientOnboardingPage() {
               dashboardData={dashboardData}
               isFirst={currentStep === 0}
               isLast={currentStep === STEPS.length - 1}
+              onProfileUpdate={setDashboardData}
             />
           )}
           {currentStepData.id === 'agreement' && (
             <AgreementStep
+              onContinue={handleNext}
+              onBack={handleBack}
+              dashboardData={dashboardData}
+              isFirst={currentStep === 0}
+              isLast={currentStep === STEPS.length - 1}
+              pendingAgreement={pendingAgreement}
+            />
+          )}
+          {currentStepData.id === 'payment' && (
+            <PaymentStep
               onContinue={handleNext}
               onBack={handleBack}
               dashboardData={dashboardData}
@@ -463,14 +1069,35 @@ export default function ClientOnboardingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-100 px-6 py-4">
-        <div className="mx-auto max-w-lg text-center text-xs text-zinc-400">
-          Need help?{' '}
-          <a href="mailto:support@ariex.ai" className="underline hover:text-zinc-600">
-            Contact support
-          </a>
+      {/* <footer className="flex items-center justify-between bg-zinc-900 px-6 py-4">
+        <div className="flex items-center gap-2">
+          <div className="relative h-6 w-6">
+            <Image
+              className="object-contain"
+              src="/Icon.jpeg"
+              fill
+              alt="Ariex logo"
+            />
+          </div>
+          <span className="text-sm font-medium text-white">Ariex</span>
         </div>
-      </footer>
+        <p className="text-xs text-zinc-400 uppercase">Secure onboarding</p>
+      </footer> */}
     </div>
+  );
+}
+
+// Wrap with Suspense for useSearchParams
+export default function ClientOnboardingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen flex-col items-center justify-center bg-white">
+          <p className="text-xs text-zinc-400 uppercase font-medium">Loading...</p>
+        </div>
+      }
+    >
+      <OnboardingContent />
+    </Suspense>
   );
 }

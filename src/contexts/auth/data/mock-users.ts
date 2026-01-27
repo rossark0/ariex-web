@@ -129,8 +129,14 @@ export function getFullUserProfile(user: User) {
 
 /**
  * Get the default redirect path for a user role
+ * For new clients, redirect to onboarding instead of home
  */
-export function getRoleHomePath(role: Role): string {
+export function getRoleHomePath(role: Role, isNewClient: boolean = false): string {
+  // New clients go to onboarding
+  if (role === 'CLIENT' && isNewClient) {
+    return '/client/onboarding';
+  }
+
   const roleHomeMap: Record<Role, string> = {
     ADMIN: '/admin/dashboard',
     COMPLIANCE: '/compliance/strategists',
