@@ -13,7 +13,7 @@ import {
   getAgreementEnvelopeStatus,
 } from '@/lib/api/strategist.api';
 import { sendAgreementToClient } from '@/lib/api/agreements.actions';
-import { AgreementModal, type AgreementFormData } from '@/components/agreements/agreement-modal';
+import { AgreementSheet, type AgreementSendData } from '@/components/agreements/agreement-sheet';
 import {
   CLIENT_STATUS_CONFIG,
   type ClientStatusKey,
@@ -343,18 +343,19 @@ export default function StrategistClientDetailPage({ params }: Props) {
     syncEnvelopeStatuses();
   }, [agreements, params.clientId]);
 
-  // Handler for sending agreement from modal
-  const handleSendAgreement = async (formData: AgreementFormData) => {
+  // Handler for sending agreement from Agreement Sheet
+  const handleSendAgreement = async (data: AgreementSendData) => {
     setIsSendingAgreement(true);
     setAgreementError(null);
 
     try {
       const result = await sendAgreementToClient({
         clientId: params.clientId,
-        customTitle: formData.title,
-        description: formData.description,
-        price: formData.price,
-        todos: formData.todos,
+        customTitle: data.title,
+        description: data.description,
+        price: data.price,
+        todos: data.todos,
+        markdownContent: data.markdownContent,
       });
 
       if (result.success) {
@@ -383,9 +384,9 @@ export default function StrategistClientDetailPage({ params }: Props) {
           setAgreements([
             {
               id: result.agreementId || 'temp',
-              name: formData.title,
-              description: formData.description,
-              price: formData.price,
+              name: data.title,
+              description: data.description,
+              price: data.price,
               status: 'DRAFT',
               clientId: params.clientId,
               strategistId: '',
@@ -1129,14 +1130,14 @@ export default function StrategistClientDetailPage({ params }: Props) {
         onClose={() => setIsStrategySheetOpen(false)}
       />
 
-      {/* Agreement Modal */}
-      <AgreementModal
+      {/* Agreement Sheet (full-screen editor) */}
+      <AgreementSheet
+        clientId={params.clientId}
+        clientName={client.user.name || client.user.email || 'Client'}
+        clientEmail={client.user.email || ''}
         isOpen={isAgreementModalOpen}
         onClose={() => setIsAgreementModalOpen(false)}
-        onSubmit={handleSendAgreement}
-        clientName={client.user.name || client.user.email || 'Client'}
-        isLoading={isSendingAgreement}
-        error={agreementError}
+        onSend={handleSendAgreement}
       />
     </div>
   );

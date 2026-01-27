@@ -58,6 +58,8 @@ export async function sendAgreementToClient(params: {
   price?: number;
   todos?: Array<{ title: string; description?: string }>;
   redirectUrl?: string;
+  /** Optional markdown content from the Agreement Sheet editor */
+  markdownContent?: string;
 }): Promise<SendAgreementResult> {
   const {
     clientId,
@@ -66,6 +68,7 @@ export async function sendAgreementToClient(params: {
     price = 499,
     todos = [],
     redirectUrl,
+    markdownContent,
   } = params;
 
   try {
@@ -240,23 +243,25 @@ export async function sendAgreementToClient(params: {
 
     // ========================================================================
     // STEP 4b: Create a charge for the agreement (for Stripe payments)
+    // NOTE: Temporarily disabled - waiting for US Stripe account setup
+    // TODO: Re-enable when payment integration is ready
     // ========================================================================
-    console.log('[Agreements] Step 4b: Creating charge for agreement');
-    try {
-      const charge = await createCharge({
-        agreementId: agreement.id,
-        amount: price,
-        currency: 'usd',
-        description: `Payment for ${agreementTitle}`,
-      });
-      if (charge) {
-        console.log('[Agreements] Charge created:', charge.id);
-      }
-    } catch (chargeError) {
-      // Don't fail the whole flow if charge creation fails
-      // The strategist might not have payment integration set up yet
-      console.error('[Agreements] Failed to create charge (continuing anyway):', chargeError);
-    }
+    // console.log('[Agreements] Step 4b: Creating charge for agreement');
+    // try {
+    //   const charge = await createCharge({
+    //     agreementId: agreement.id,
+    //     amount: price,
+    //     currency: 'usd',
+    //     description: `Payment for ${agreementTitle}`,
+    //   });
+    //   if (charge) {
+    //     console.log('[Agreements] Charge created:', charge.id);
+    //   }
+    // } catch (chargeError) {
+    //   // Don't fail the whole flow if charge creation fails
+    //   // The strategist might not have payment integration set up yet
+    //   console.error('[Agreements] Failed to create charge (continuing anyway):', chargeError);
+    // }
 
     // ========================================================================
     // STEP 5: Create todo list and signing todo
