@@ -27,6 +27,8 @@ import {
   isAgreementSigned, 
   isAgreementPaid, 
   areTodosCompleted,
+  logAgreements,
+  logAgreementStatus,
 } from '@/types/agreement';
 import {
   ArrowLeftIcon,
@@ -222,6 +224,12 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [apiClient, setApiClient] = useState<ApiClient | null>(null);
+  
+  // 🔵 Debug: Log page mount
+  useEffect(() => {
+    console.log('\n🔵🔵🔵 STRATEGIST PAGE LOADED 🔵🔵🔵');
+    console.log('🔵 [STRATEGIST] Client ID:', params.clientId);
+  }, [params.clientId]);
   const [client, setClient] = useState<FullClientMock | null>(null);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [isStrategySheetOpen, setIsStrategySheetOpen] = useState(false);
@@ -304,6 +312,14 @@ export default function StrategistClientDetailPage({ params }: Props) {
           '[Page] Todos:',
           data.flatMap(a => a.todoLists?.flatMap(tl => tl.todos || []) || [])
         );
+        
+        // 🔵 Debug: Log agreements for strategist
+        logAgreements('strategist', data.map(a => ({ 
+          id: a.id, 
+          status: a.status as AgreementStatus, 
+          name: a.name 
+        })), `Client ${params.clientId}`);
+        
         setAgreements(data);
       } catch (error) {
         console.error('[Page] Failed to load agreements:', error);
@@ -332,6 +348,9 @@ export default function StrategistClientDetailPage({ params }: Props) {
             if (result.status) {
               statuses[agreement.id] = result.status;
               console.log('[Page] Envelope', envelopeId, 'status:', result.status);
+              
+              // 🔵 Debug: Log envelope status
+              logAgreementStatus('strategist', agreement.id, agreement.status as AgreementStatus, `Envelope: ${result.status}`);
               
               // If completed, reload agreements to get updated backend status
               if (result.status === 'completed') {
@@ -377,6 +396,11 @@ export default function StrategistClientDetailPage({ params }: Props) {
       });
 
       if (result.success) {
+        // 🔵 Debug: Log agreement sent
+        if (result.agreementId) {
+          logAgreementStatus('strategist', result.agreementId, AgreementStatus.PENDING_SIGNATURE, 'Agreement sent to client');
+        }
+        
         // Store ceremony URL in localStorage for client to retrieve
         // (Backend doesn't store this field yet)
         if (result.agreementId && result.ceremonyUrl) {
@@ -552,6 +576,9 @@ export default function StrategistClientDetailPage({ params }: Props) {
 
       if (success) {
         console.log('[Payment] Payment link attached to agreement');
+        // 🔵 Debug: Log payment link sent
+        logAgreementStatus('strategist', signedAgreement.id, AgreementStatus.PENDING_PAYMENT, 'Payment link sent');
+        
         // Close modal and reload agreements
         setIsPaymentModalOpen(false);
         const data = await listClientAgreements(params.clientId);

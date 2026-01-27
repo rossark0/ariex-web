@@ -14,7 +14,7 @@ import {
   type ClientAgreement,
   type ClientDocument,
 } from '@/lib/api/client.api';
-import { AgreementStatus, isAgreementSigned, isAgreementPaid } from '@/types/agreement';
+import { AgreementStatus, isAgreementSigned, isAgreementPaid, logAgreements } from '@/types/agreement';
 
 // ============================================================================
 // ANIMATED DOTS COMPONENT
@@ -131,6 +131,11 @@ export default function ClientDashboardPage() {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState<ClientDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // 🟣 Debug: Log page mount
+  useEffect(() => {
+    console.log('\n🟣🟣🟣 CLIENT HOME PAGE LOADED 🟣🟣🟣');
+  }, []);
   const [error, setError] = useState<string | null>(null);
   
   // SignatureAPI sync state - holds the REAL envelope statuses
@@ -144,6 +149,15 @@ export default function ClientDashboardPage() {
         setIsLoading(true);
         const data = await getClientDashboardData();
         setDashboardData(data);
+        
+        // 🟣 Debug: Log agreements for client
+        if (data?.agreements) {
+          logAgreements('client', data.agreements.map(a => ({ 
+            id: a.id, 
+            status: a.status as AgreementStatus, 
+            name: a.name 
+          })), 'Home dashboard loaded');
+        }
         
         // If no agreements exist, redirect to onboarding
         const hasAgreements = data?.agreements && data.agreements.length > 0;

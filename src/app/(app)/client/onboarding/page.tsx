@@ -22,6 +22,8 @@ import {
   AgreementStatus, 
   isAgreementSigned, 
   isAgreementPaid,
+  logAgreements,
+  logAgreementStatus,
 } from '@/types/agreement';
 
 // ============================================================================
@@ -985,6 +987,11 @@ function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, logout } = useAuth();
+  
+  // 🟣 Debug: Log page mount
+  useEffect(() => {
+    console.log('\n🟣🟣🟣 CLIENT ONBOARDING PAGE LOADED 🟣🟣🟣');
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -1025,6 +1032,9 @@ function OnboardingContent() {
             const result = await syncAgreementSignatureStatus(pendingAgreement.id);
             console.log('[Onboarding] Signature sync result:', result);
             
+            // 🟣 Debug: Log agreement signed
+            logAgreementStatus('client', pendingAgreement.id, AgreementStatus.PENDING_PAYMENT, 'Agreement signed, awaiting payment');
+            
             // Refresh dashboard data after sync
             const refreshedData = await getClientDashboardData();
             setDashboardData(refreshedData);
@@ -1041,6 +1051,14 @@ function OnboardingContent() {
     const paymentStatus = searchParams.get('payment');
     if (paymentStatus === 'success') {
       console.log('[Onboarding] Payment successful, going to complete step');
+      // 🟣 Debug: Log payment complete
+      const pendingPaymentAgreement = dashboardData?.agreements?.find(
+        a => a.status === AgreementStatus.PENDING_PAYMENT
+      );
+      if (pendingPaymentAgreement) {
+        logAgreementStatus('client', pendingPaymentAgreement.id, AgreementStatus.PENDING_TODOS_COMPLETION, 'Payment completed');
+      }
+      
       cameFromPayment.current = true;
       setCurrentStep(3); // Go to complete step (index 3)
       setIsLoading(false);
@@ -1073,6 +1091,15 @@ function OnboardingContent() {
         }
         const data = await getClientDashboardData();
         setDashboardData(data);
+        
+        // 🟣 Debug: Log agreements for client
+        if (data?.agreements) {
+          logAgreements('client', data.agreements.map(a => ({ 
+            id: a.id, 
+            status: a.status as AgreementStatus, 
+            name: a.name 
+          })), 'Onboarding data loaded');
+        }
 
         // Only auto-navigate if not coming from signing or payment redirect
         if (!cameFromSigning.current && !cameFromPayment.current) {

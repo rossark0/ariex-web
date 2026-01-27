@@ -108,3 +108,69 @@ export function getStatusLabel(status: AgreementStatus): string {
       return 'Unknown';
   }
 }
+
+// ============================================================================
+// DEBUG LOGGING
+// ============================================================================
+
+type UserRole = 'strategist' | 'client';
+
+const ROLE_EMOJI: Record<UserRole, string> = {
+  strategist: '🔵', // Blue circle for strategist
+  client: '🟣',     // Purple circle for client
+};
+
+const STATUS_EMOJI: Record<AgreementStatus, string> = {
+  [AgreementStatus.DRAFT]: '📝',
+  [AgreementStatus.PENDING_SIGNATURE]: '✍️',
+  [AgreementStatus.PENDING_PAYMENT]: '💳',
+  [AgreementStatus.PENDING_TODOS_COMPLETION]: '📋',
+  [AgreementStatus.PENDING_STRATEGY]: '📊',
+  [AgreementStatus.PENDING_STRATEGY_REVIEW]: '👀',
+  [AgreementStatus.CANCELLED]: '❌',
+  [AgreementStatus.COMPLETED]: '✅',
+};
+
+/**
+ * Log agreement status with role-specific emoji
+ */
+export function logAgreementStatus(
+  role: UserRole,
+  agreementId: string,
+  status: AgreementStatus,
+  context?: string
+): void {
+  const roleEmoji = ROLE_EMOJI[role];
+  const statusEmoji = STATUS_EMOJI[status] || '❓';
+  const label = getStatusLabel(status);
+  
+  console.log(
+    `${roleEmoji} [${role.toUpperCase()}] ${statusEmoji} Agreement ${agreementId.slice(0, 8)}... → ${label} (${status})${context ? ` | ${context}` : ''}`
+  );
+}
+
+/**
+ * Log multiple agreements at once
+ */
+export function logAgreements(
+  role: UserRole,
+  agreements: Array<{ id: string; status: AgreementStatus; name?: string }>,
+  context?: string
+): void {
+  const roleEmoji = ROLE_EMOJI[role];
+  console.log(`\n${roleEmoji} [${role.toUpperCase()}] ${context || 'Agreements loaded'}:`);
+  console.log('─'.repeat(50));
+  
+  if (agreements.length === 0) {
+    console.log('  (no agreements)');
+  } else {
+    agreements.forEach((a, i) => {
+      const statusEmoji = STATUS_EMOJI[a.status] || '❓';
+      const label = getStatusLabel(a.status);
+      console.log(
+        `  ${i + 1}. ${statusEmoji} ${a.name || a.id.slice(0, 8) + '...'} → ${label}`
+      );
+    });
+  }
+  console.log('─'.repeat(50) + '\n');
+}
