@@ -257,7 +257,7 @@ function PageNavigation({
         disabled={currentPage === 0}
         className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed"
       >
-        <CaretLeft className="h-5 w-5" />
+        <CaretLeft weight='bold' className="h-3 w-3" />
       </button>
 
       <div className="flex items-center gap-1">
@@ -266,9 +266,9 @@ function PageNavigation({
             key={index}
             onClick={() => onPageChange(index)}
             className={cn(
-              'h-8 w-8 rounded-md text-sm font-medium transition-colors',
+              'h-6 w-6 rounded-lg text-sm font-medium transition-colors',
               currentPage === index
-                ? 'bg-zinc-900 text-white'
+                ? 'bg-emerald-500 text-white'
                 : 'text-zinc-500 hover:bg-zinc-100'
             )}
           >
@@ -282,26 +282,26 @@ function PageNavigation({
         disabled={currentPage === totalPages - 1}
         className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed"
       >
-        <CaretRight className="h-5 w-5" />
+        <CaretRight weight='bold' className="h-3 w-3" />
       </button>
 
       <div className="mx-2 h-4 w-px bg-zinc-200" />
 
       <button
         onClick={onAddPage}
-        className="flex items-center gap-1 font-semibold rounded-md bg-zinc-100 px-2 py-1.5 text-xs text-zinc-600 hover:bg-zinc-200 transition-colors"
+        className="flex items-center cursor-pointer gap-1 font-semibold rounded-md bg-zinc-100 px-2 py-1.5 text-xs text-zinc-600 hover:bg-zinc-200 transition-colors"
       >
-        <Plus className="h-3.5 w-3.5" />
+        <Plus weight='bold' className="h-3.5 w-3.5" />
         Add Page
       </button>
 
       {totalPages > 1 && (
         <button
           onClick={onDeletePage}
-          className="flex items-center gap-1 rounded-md bg-red-50 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 transition-colors"
+          className="flex items-center font-semibold gap-1 rounded-md bg-white px-2 py-1.5 text-xs text-red-500 hover:bg-red-600 hover:text-white transition-colors"
         >
-          <Trash className="h-3.5 w-3.5" />
-          Delete
+          <Trash weight='bold' className="h-3.5 w-3.5" />
+          Delete page
         </button>
       )}
     </div>
@@ -1008,7 +1008,7 @@ export function AgreementSheet({
                     <span>Sending...</span>
                   </>
                 ) : (
-                  <span>Save</span>
+                  <span>Send to client</span>
                 )}
               </button>
             </div>
@@ -1028,7 +1028,7 @@ export function AgreementSheet({
                   />
                   
                   {/* Page indicator */}
-                  <p className="mt-1 text-xs text-zinc-400">
+                  <p className="mt-1 text-xs font-semibold uppercase text-zinc-400">
                     Page {currentPageIndex + 1} of {pages.length}
                   </p>
                   
