@@ -121,10 +121,21 @@ ${businessName ? `<p><strong>Business:</strong> ${businessName}</p>` : ''}
 // ============================================================================
 
 const aiSuggestions = [
-  { label: 'List action items', hasGradientIcon: true },
-  { label: 'Write follow-up email', hasGradientIcon: true },
-  { label: 'List Q&A', hasGradientIcon: true },
+  { label: 'Improve executive summary', hasGradientIcon: true },
+  { label: 'Add professional legal language', hasGradientIcon: true },
+  { label: 'Generate payment terms', hasGradientIcon: true },
+  { label: 'Create signature section', hasGradientIcon: true },
 ];
+
+// AI Chat Message type
+interface AiChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  isEditing?: boolean;
+  suggestions?: string[];
+}
 
 // Predefined signature roles
 const SIGNATURE_ROLES = [
@@ -364,8 +375,9 @@ function UploadCard({ onFileSelect, onSkipUpload, isProcessing }: UploadCardProp
         {isProcessing ? (
           <>
             <SpinnerGap className="h-12 w-12 animate-spin text-emerald-500" />
-            <p className="mt-4 text-sm font-medium text-zinc-700">Processing PDF...</p>
-            <p className="mt-1 text-xs text-zinc-500">Extracting text content</p>
+            <p className="mt-4 text-sm font-medium text-zinc-700">Processing PDF with AI...</p>
+            <p className="mt-1 text-xs text-zinc-500">Using OCR to extract and format content</p>
+            <p className="mt-2 text-[10px] text-zinc-400">This may take a moment for multi-page documents</p>
           </>
         ) : (
           <>
@@ -458,27 +470,160 @@ function MarkdownEditor({ content, onChange }: MarkdownEditorProps) {
 
 interface AiAssistantProps {
   clientName: string;
-  onInsertContent: (content: string) => void;
+  documentContent: string;
+  currentPageIndex: number;
+  totalPages: number;
+  onUpdateContent: (content: string) => void;
+  onAddPage: (content?: string) => void;
+  onGoToPage: (pageIndex: number) => void;
 }
 
-function AiAssistant({ clientName, onInsertContent }: AiAssistantProps) {
+function AiAssistant({ 
+  clientName, 
+  documentContent,
+  currentPageIndex,
+  totalPages,
+  onUpdateContent,
+  onAddPage,
+  onGoToPage,
+}: AiAssistantProps) {
+  const [messages, setMessages] = useState<AiChatMessage[]>([]);
   const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isTyping]);
+
+  const handleSend = useCallback(async (content: string) => {
+    if (!content.trim()) return;
+
+    const userMessage: AiChatMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsTyping(true);
+
+    try {
+      const response = await fetch('/api/ai/document-editor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'chat',
+          documentContent,
+          userMessage: content,
+          chatHistory: messages.map(m => ({ role: m.role, content: m.content })),
+          clientName,
+          currentPageIndex: currentPageIndex + 1,
+          totalPages,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get AI response');
+      }
+
+      const data = await response.json();
+
+      const aiMessage: AiChatMessage = {
+        id: `ai-${Date.now()}`,
+        role: 'assistant',
+        content: data.message || 'I apologize, I could not process that request.',
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
+
+      // If AI provided updated content, apply it
+      if (data.fullContent) {
+        onUpdateContent(data.fullContent);
+      }
+
+      // If AI wants to create a new page
+      if (data.action === 'addPage') {
+        onAddPage(data.newPageContent || '');
+      }
+
+      // If AI wants to navigate to a specific page
+      if (data.action === 'goToPage' && typeof data.pageIndex === 'number') {
+        onGoToPage(data.pageIndex - 1); // Convert to 0-indexed
+      }
+    } catch (error) {
+      console.error('AI chat error:', error);
+      const errorMessage: AiChatMessage = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  }, [documentContent, messages, clientName, currentPageIndex, totalPages, onUpdateContent, onAddPage, onGoToPage]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      // Handle send
+      handleSend(input);
     }
   };
 
   const handleSuggestionClick = (label: string) => {
-    // Handle suggestion click
+    handleSend(label);
   };
 
   return (
     <div className="flex h-full flex-col rounded-xl bg-white">
-      {/* Messages area - empty for now */}
-      <div className="flex-1 overflow-y-auto p-4"></div>
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {messages.length === 0 ? null : (
+          <div className="space-y-6">
+            {messages.map(message => (
+              <div key={message.id}>
+                {message.role === 'user' ? (
+                  /* User message - simple pill on the right */
+                  <div className="flex justify-end">
+                    <div className="max-w-[80%] rounded-full bg-zinc-100 px-4 py-2">
+                      <p className="text-sm font-medium text-zinc-900">{message.content}</p>
+                    </div>
+                  </div>
+                ) : (
+                  /* AI message - plain text, no bubble */
+                  <div className="space-y-3">
+                    <p className="text-base leading-relaxed text-zinc-900">{message.content}</p>
+                    <button
+                      onClick={() => onUpdateContent(message.content)}
+                      className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-all hover:bg-zinc-50"
+                    >
+                      Say more
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {isTyping && (
+              <div className="flex gap-1 py-2">
+                <div className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.3s]" />
+                <div className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.15s]" />
+                <div className="h-2 w-2 animate-bounce rounded-full bg-zinc-400" />
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+      </div>
 
       {/* Suggestions - matching strategy-sheet styling */}
       <div className="px-4 pb-2">
@@ -490,7 +635,7 @@ function AiAssistant({ clientName, onInsertContent }: AiAssistantProps) {
               className="flex cursor-pointer items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-all hover:bg-zinc-50"
             >
               {/* Gradient icon */}
-              <span className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-br from-cyan-400 to-emerald-500 text-[10px] font-bold text-white">
+              <span className="flex h-5 w-5 items-center justify-center rounded bg-linear-to-br from-cyan-400 to-emerald-500 text-[10px] font-bold text-white">
                 /
               </span>
               {suggestion.label}
@@ -511,11 +656,11 @@ function AiAssistant({ clientName, onInsertContent }: AiAssistantProps) {
       <div className="p-3">
         <textarea
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask AI to help with strategy..."
+          placeholder="Ask AI to help with agreement..."
           rows={1}
-          className="min-h-[56px] w-full resize-none rounded-[28px] border border-zinc-200 bg-white px-6 py-4 text-sm font-medium leading-relaxed tracking-tight text-zinc-500 shadow-2xl transition-all duration-300 placeholder:text-zinc-500 hover:bg-white focus:ring-2 focus:ring-zinc-300 focus:outline-none"
+          className="min-h-[56px] w-full resize-none rounded-4xl border border-zinc-200 bg-white px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-zinc-500 shadow-2xl transition-all duration-300 placeholder:text-zinc-500 hover:bg-white focus:ring-2 focus:ring-zinc-300 focus:outline-none"
         />
       </div>
     </div>
@@ -612,58 +757,56 @@ export function AgreementSheet({
     setError(null);
 
     try {
-      // Read file and convert to base64 for server action
+      // Read file as base64
       const arrayBuffer = await file.arrayBuffer();
       const base64 = btoa(
         new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
       );
+      
+      // Send PDF base64 to server for OCR processing with OpenAI Vision
+      const aiResponse = await fetch('/api/ai/document-editor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'ocr-pdf',
+          pdfBase64: base64,
+          clientName,
+        }),
+      });
 
-      // Call server action to extract text
-      const { extractTextFromPdf } = await import('@/lib/pdf/extract-text');
-      const result = await extractTextFromPdf(base64);
+      if (!aiResponse.ok) {
+        const errorData = await aiResponse.json();
+        throw new Error(errorData.error || 'Failed to process PDF with AI');
+      }
 
-      if (result.success && result.markdown) {
-        // Convert markdown to HTML for Tiptap
-        const html = result.markdown
-          .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-          .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-          .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-          .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-          .replace(/\*(.*?)\*/gim, '<em>$1</em>')
-          .replace(/^- (.*$)/gim, '<li>$1</li>')
-          .replace(/(<li>.*<\/li>\n?)+/gim, '<ul>$&</ul>')
-          .replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>')
-          .replace(/\n---\n/g, '<hr />')
-          .replace(/\n\n/g, '</p><p>')
-          .replace(/\n/g, '<br />')
-          .replace(/^(.*)$/gm, (match) => {
-            if (match.startsWith('<')) return match;
-            return `<p>${match}</p>`;
-          });
-        
-        // Create first page with extracted content
-        const firstPage: Page = {
+      const aiData = await aiResponse.json();
+      
+      if (aiData.pages && aiData.pages.length > 0) {
+        // Create pages from AI-interpreted content
+        const interpretedPages: Page[] = aiData.pages.map((p: { pageNumber: number; content: string }) => ({
           id: generateId(),
-          content: html,
+          content: p.content,
           signatureFields: [],
-        };
-        setPages([firstPage]);
+        }));
+        
+        setPages(interpretedPages);
         setCurrentPageIndex(0);
         
-        // Extract title from first heading if available
-        const titleMatch = result.markdown.match(/^#\s+(.+)$/m);
-        if (titleMatch) {
-          setTitle(titleMatch[1]);
+        if (aiData.title) {
+          setTitle(aiData.title);
         }
+        
         setState('edit');
       } else {
-        setError(
-          result.error || 'Failed to extract text from PDF. You can start from the template instead.'
-        );
+        throw new Error('No content extracted from PDF');
       }
     } catch (err) {
       console.error('Failed to process PDF:', err);
-      setError('Failed to process PDF file. You can start from the template instead.');
+      setError(
+        err instanceof Error 
+          ? err.message 
+          : 'Failed to process PDF file. You can start from the template instead.'
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -692,6 +835,17 @@ export function AgreementSheet({
 
   const addPage = () => {
     const newPage = createEmptyPage();
+    setPages((prev) => [...prev, newPage]);
+    setCurrentPageIndex(pages.length);
+  };
+
+  // Add page with optional initial content (used by AI)
+  const addPageWithContent = (content?: string) => {
+    const newPage: Page = {
+      id: generateId(),
+      content: content || '',
+      signatureFields: [],
+    };
     setPages((prev) => [...prev, newPage]);
     setCurrentPageIndex(pages.length);
   };
@@ -1059,7 +1213,15 @@ export function AgreementSheet({
 
               {/* Right Column - AI Assistant */}
               <div className="w-[400px] shrink-0 border-l border-zinc-200 bg-white p-4">
-                <AiAssistant clientName={clientName} onInsertContent={handleInsertContent} />
+                <AiAssistant 
+                  clientName={clientName} 
+                  documentContent={currentPage.content}
+                  currentPageIndex={currentPageIndex}
+                  totalPages={pages.length}
+                  onUpdateContent={updateCurrentPageContent}
+                  onAddPage={addPageWithContent}
+                  onGoToPage={setCurrentPageIndex}
+                />
               </div>
             </div>
           </>

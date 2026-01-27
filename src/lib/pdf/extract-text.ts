@@ -17,6 +17,19 @@ export interface PdfExtractionResult {
   error?: string;
 }
 
+export interface PdfPageContent {
+  pageNumber: number;
+  text: string;
+  markdown: string;
+}
+
+export interface PdfExtractionWithPagesResult {
+  success: boolean;
+  pages?: PdfPageContent[];
+  pageCount?: number;
+  error?: string;
+}
+
 // ============================================================================
 // PDF Text Extraction
 // ============================================================================
@@ -83,15 +96,111 @@ export async function extractTextFromPdfUrl(url: string): Promise<PdfExtractionR
     }
     
     const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
     
-    return extractTextFromPdf(buffer);
+    return extractTextFromPdf(base64);
   } catch (error) {
     console.error('[PDF Extract] Failed to extract from URL:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch PDF',
     };
+  }
+}
+
+/**
+ * Extract text from a PDF with page-by-page separation.
+ * Accepts base64 encoded PDF data.
+ * Returns text content organized by page.
+ */
+export async function extractTextFromPdfWithPages(base64Data: string): Promise<PdfExtractionWithPagesResult> {
+  try {
+    // We'll use pdfjs-dist for page-by-page extraction
+    const pdfjs = await import('pdfjs-dist');
+    
+    // Set worker source (required for pdfjs-dist)
+    pdfjs.GlobalWorkerOptions.workerSrc = '';
+    
+    // Convert base64 to Uint8Array
+    const binaryString = Buffer.from(base64Data, 'base64');
+    const data = new Uint8Array(binaryString);
+    
+    // Load the PDF
+    const loadingTask = pdfjs.getDocument({ data });
+    const pdf = await loadingTask.promise;
+    
+    const pageCount = pdf.numPages;
+    const pages: PdfPageContent[] = [];
+    
+    // Extract text from each page
+    for (let i = 1; i <= pageCount; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      
+      // Combine text items with proper spacing
+      let pageText = '';
+      let lastY: number | null = null;
+      
+      for (const item of textContent.items) {
+        if ('str' in item) {
+          const textItem = item as { str: string; transform: number[] };
+          const currentY = textItem.transform[5];
+          
+          // Add newline when Y position changes significantly (new line)
+          if (lastY !== null && Math.abs(currentY - lastY) > 5) {
+            pageText += '\n';
+          } else if (lastY !== null && pageText && !pageText.endsWith(' ')) {
+            pageText += ' ';
+          }
+          
+          pageText += textItem.str;
+          lastY = currentY;
+        }
+      }
+      
+      const text = pageText.trim();
+      const markdown = convertTextToMarkdown(text);
+      
+      pages.push({
+        pageNumber: i,
+        text,
+        markdown,
+      });
+    }
+    
+    return {
+      success: true,
+      pages,
+      pageCount,
+    };
+  } catch (error) {
+    console.error('[PDF Extract] Failed to extract with pages:', error);
+    
+    // Fall back to basic extraction if pdfjs fails
+    try {
+      const basicResult = await extractTextFromPdf(base64Data);
+      if (basicResult.success && basicResult.text) {
+        // Split by page markers or just return as single page
+        return {
+          success: true,
+          pages: [{
+            pageNumber: 1,
+            text: basicResult.text,
+            markdown: basicResult.markdown || basicResult.text,
+          }],
+          pageCount: basicResult.pageCount || 1,
+        };
+      }
+      return {
+        success: false,
+        error: basicResult.error || 'Failed to extract PDF content',
+      };
+    } catch (fallbackError) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to extract PDF pages',
+      };
+    }
   }
 }
 
