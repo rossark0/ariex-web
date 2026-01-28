@@ -10,7 +10,7 @@
  * The backend handles Cognito authentication - we just call REST endpoints
  */
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'https://qt4pgrsacn.us-east-2.awsapprunner.com';
+  process.env.NEXT_PUBLIC_API_URL
 
 /**
  * Check if mock auth is enabled for development

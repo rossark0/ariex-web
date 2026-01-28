@@ -7,7 +7,6 @@ import { Check, SpinnerGap, CreditCard, ArrowSquareOut, Warning, FilePdf } from 
 import Image from 'next/image';
 import {
   getClientDashboardData,
-  markOnboardingTodosComplete,
   updateClientProfile,
   getChargesForAgreement,
   generatePaymentLink,
@@ -644,8 +643,11 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [charge, setCharge] = useState<ClientCharge | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const hasFetchedRef = useRef(false);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get client email for Stripe checkout pre-fill
   const clientEmail = dashboardData?.user?.email;
@@ -661,15 +663,18 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
 
   // Fetch charges for this agreement
   useEffect(() => {
+    // Prevent duplicate fetches
+    if (hasFetchedRef.current) return;
+    
     async function fetchCharges() {
       if (!pendingAgreement?.id) {
         console.log('[PaymentStep] No pending agreement ID');
         setIsLoading(false);
-        return;
+        return null;
       }
 
       try {
-        console.log('[PaymentStep] Fetching charges for agreement:', pendingAgreement.id, 'paymentLink:', pendingAgreement.paymentLink);
+        console.log('[PaymentStep] Fetching charges for agreement:', pendingAgreement.id);
         const charges = await getChargesForAgreement(pendingAgreement.id);
         console.log('[PaymentStep] Found charges:', charges.length, charges);
         // Get the first pending charge (or the most recent one)
@@ -685,24 +690,32 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
       }
     }
 
-    fetchCharges();
+    hasFetchedRef.current = true;
+    fetchCharges().then(foundCharge => {
+      // Only set up polling if no charge found yet
+      if (!foundCharge && !pendingAgreement?.paymentLink && pendingAgreement?.id) {
+        console.log('[PaymentStep] No charge found, starting polling...');
+        pollIntervalRef.current = setInterval(async () => {
+          console.log('[PaymentStep] Polling for charge updates...');
+          const newCharge = await fetchCharges();
+          if (newCharge) {
+            console.log('[PaymentStep] Found charge, stopping poll');
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+          }
+        }, 5000);
+      }
+    });
 
-    // Poll for charge updates if no charge or paymentLink exists yet
-    // This handles the case where the strategist creates the payment link after the client loaded the page
-    const hasPaymentReady = charge || pendingAgreement?.paymentLink;
-    if (!hasPaymentReady && pendingAgreement?.id) {
-      const pollInterval = setInterval(async () => {
-        console.log('[PaymentStep] Polling for charge updates...');
-        const foundCharge = await fetchCharges();
-        if (foundCharge) {
-          console.log('[PaymentStep] Found charge, stopping poll');
-          clearInterval(pollInterval);
-        }
-      }, 5000); // Poll every 5 seconds
-
-      return () => clearInterval(pollInterval);
-    }
-  }, [pendingAgreement?.id, pendingAgreement?.paymentLink, charge]);
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, [pendingAgreement?.id, pendingAgreement?.paymentLink]);
 
   const handlePayNow = async () => {
     setIsGeneratingLink(true);
@@ -735,6 +748,79 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
       setError('Failed to generate payment link. Please try again.');
     } finally {
       setIsGeneratingLink(false);
+    }
+  };
+
+  // Handler to verify payment by calling the webhook endpoint (for testing)
+  const handleVerifyPayment = async () => {
+    if (!charge?.id || !pendingAgreement?.id) {
+      setError('No charge or agreement ID found');
+      return;
+    }
+
+    setIsVerifying(true);
+    setError(null);
+
+    try {
+      // First, refetch the charge to get the latest data (including paymentIntentId if set after checkout)
+      console.log('[PaymentStep] Refetching charge to get latest payment intent ID...');
+      const charges = await getChargesForAgreement(pendingAgreement.id);
+      const latestCharge = charges.find(c => c.id === charge.id) || charges[0];
+      
+      if (!latestCharge) {
+        setError('Charge not found');
+        setIsVerifying(false);
+        return;
+      }
+
+      // Update local state with latest charge data
+      setCharge(latestCharge);
+
+      // Use the payment intent ID from the latest charge
+      const paymentIntentId = latestCharge.paymentIntentId;
+      if (!paymentIntentId) {
+        setError('No payment intent ID found. Please click "Pay" first, complete payment in Stripe, then verify.');
+        setIsVerifying(false);
+        return;
+      }
+      console.log('[PaymentStep] Verifying payment for payment intent:', paymentIntentId);
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const response = await fetch(`${apiUrl}/webhooks/stripe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: 'evt_test',
+          type: 'payment_intent.succeeded',
+          data: {
+            object: {
+              id: paymentIntentId,
+            },
+          },
+        }),
+      });
+
+      if (response.ok) {
+        console.log('[PaymentStep] Payment verification successful');
+        // Refetch charges to update state
+        const updatedCharges = await getChargesForAgreement(pendingAgreement.id);
+        const updatedCharge = updatedCharges.find(c => c.id === charge.id) || updatedCharges[0];
+        if (updatedCharge) {
+          setCharge(updatedCharge);
+        }
+        // If payment is now complete, it will show in the UI
+      } else {
+        const errorText = await response.text();
+        console.error('[PaymentStep] Payment verification failed:', errorText);
+        setError(`Verification failed: ${response.status}`);
+      }
+    } catch (err) {
+      console.error('[PaymentStep] Failed to verify payment:', err);
+      setError('Failed to verify payment. Please try again.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -822,6 +908,24 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
               </>
             )}
           </button>
+
+          {/* Verify Payment Button (for testing - calls webhook) */}
+          {charge && (
+            <button
+              onClick={handleVerifyPayment}
+              disabled={isVerifying}
+              className="flex w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white py-2 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-40"
+            >
+              {isVerifying ? (
+                <>
+                  <SpinnerGap weight="bold" className="h-3 w-3 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                'Verify Payment'
+              )}
+            </button>
+          )}
         </>
       ) : (
         // No charge or payment link found - waiting for strategist
@@ -838,30 +942,7 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
 
       {/* Navigation Buttons */}
       <div className="mt-8 flex flex-col gap-3">
-        {/* Skip button for testing (marks todo as complete) */}
-        {!isPaymentComplete && (charge || pendingAgreement?.paymentLink) && (
-          <button
-            onClick={async () => {
-              setIsSkipping(true);
-              try {
-                // Mark the Pay todo as completed so strategist sees it
-                const result = await markOnboardingTodosComplete();
-                console.log('[Onboarding] Skipped payment, todos marked complete:', result);
-                onContinue();
-              } catch (err) {
-                console.error('Failed to skip payment:', err);
-                setError('Failed to skip. Please try again.');
-              } finally {
-                setIsSkipping(false);
-              }
-            }}
-            disabled={isSkipping}
-            className="w-full rounded-md border border-amber-200 bg-amber-50 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-40"
-          >
-            {isSkipping ? 'Skipping...' : '⚠️ Skip payment (testing only)'}
-          </button>
-        )}
-        
+
         <div className="flex gap-3">
           {!isFirst && !isPaymentComplete && (
             <button
@@ -894,19 +975,7 @@ function CompleteStep({ dashboardData }: { dashboardData: ClientDashboardData | 
   const [isFinishing, setIsFinishing] = useState(false);
   const strategist = dashboardData?.strategist;
 
-  const handleGoToDashboard = async () => {
-    setIsFinishing(true);
-    try {
-      // Mark sign + pay todos as completed in backend
-      const result = await markOnboardingTodosComplete();
-      console.log('[Onboarding] Todos marked complete:', result);
-    } catch (error) {
-      console.error('[Onboarding] Failed to mark todos complete:', error);
-    }
-    // Mark onboarding as complete in localStorage (fallback)
-    localStorage.setItem('ariex_onboarding_complete', 'true');
-    router.push('/client/home');
-  };
+
 
   return (
     <div className="flex flex-col items-center gap-6 text-center">
@@ -945,7 +1014,7 @@ function CompleteStep({ dashboardData }: { dashboardData: ClientDashboardData | 
 
       {/* Go to Dashboard Button */}
       <button
-        onClick={handleGoToDashboard}
+        onClick={()=> console.log('Go to Dashboard clicked')}
         disabled={isFinishing}
         className="w-full rounded-md border border-zinc-200 bg-white py-3 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 disabled:opacity-40"
       >
@@ -1064,13 +1133,6 @@ function OnboardingContent() {
       setIsLoading(false);
       // Remove the query param from URL
       window.history.replaceState({}, '', '/client/onboarding');
-      
-      // Mark todos as complete in background
-      markOnboardingTodosComplete().then(result => {
-        console.log('[Onboarding] Auto-marked todos complete after payment:', result);
-      }).catch(err => {
-        console.error('[Onboarding] Failed to auto-mark todos:', err);
-      });
     } else if (paymentStatus === 'cancel') {
       console.log('[Onboarding] Payment cancelled, staying on payment step');
       cameFromPayment.current = true;

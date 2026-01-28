@@ -3,14 +3,11 @@
 import { createEnvelopeWithCeremony } from '@/lib/signature/signatureapi';
 import {
   createAgreement,
-  createTodoList,
-  createTodo,
   createDocument,
   confirmDocumentUpload,
   getClientById,
   getCurrentUser,
   getDownloadUrl,
-  createCharge,
   attachContract,
   updateDocumentAgreement,
   updateAgreementStatus,
@@ -300,82 +297,13 @@ export async function sendAgreementToClient(params: {
     }
 
     // ========================================================================
-    // STEP 4b: Create a charge for the agreement (for Stripe payments)
-    // Creates a pending charge that will be used when strategist sends payment link
+    // NOTE: Charge and Todos are NOT created here anymore
+    // - Charge is created when strategist clicks "Send payment link" (after signing)
+    // - Todos are created when strategist clicks "Request documents" (after payment)
     // ========================================================================
-    console.log('[Agreements] Step 4b: Creating charge for agreement');
-    try {
-      const charge = await createCharge({
-        agreementId: agreement.id,
-        amount: price,
-        currency: 'usd',
-        description: `Onboarding Fee - ${agreementTitle}`,
-      });
-      if (charge) {
-        console.log('[Agreements] Charge created:', charge.id);
-      }
-    } catch (chargeError) {
-      // Don't fail the whole flow if charge creation fails
-      // The strategist can create a charge later when sending payment link
-      console.error('[Agreements] Failed to create charge (continuing anyway):', chargeError);
-    }
 
     // ========================================================================
-    // STEP 5: Create todo list and signing todo
-    // ========================================================================
-    console.log('[Agreements] Step 5: Creating todo list');
-    const todoList = await createTodoList({
-      name: 'Contract Documents',
-      agreementId: agreement.id,
-    });
-
-    if (!todoList) {
-      return { success: false, error: 'Failed to create todo list' };
-    }
-    console.log('[Agreements] Todo list created:', todoList.id);
-
-    console.log('[Agreements] Step 6: Creating default todos (sign + pay)');
-    const signingTodo = await createTodo({
-      title: 'Sign service agreement',
-      description: `Please review and sign the ${agreementTitle}.`,
-      todoListId: todoList.id,
-    });
-
-    if (!signingTodo) {
-      return { success: false, error: 'Failed to create signing todo' };
-    }
-    console.log('[Agreements] Signing todo created:', signingTodo.id);
-
-    // Create payment todo
-    const paymentTodo = await createTodo({
-      title: 'Pay',
-      description: `Complete the onboarding payment of $${price}.`,
-      todoListId: todoList.id,
-    });
-
-    if (!paymentTodo) {
-      return { success: false, error: 'Failed to create payment todo' };
-    }
-    console.log('[Agreements] Payment todo created:', paymentTodo.id);
-
-    // ========================================================================
-    // STEP 7: Create custom todos if any
-    // ========================================================================
-    for (const todo of todos) {
-      try {
-        await createTodo({
-          title: todo.title,
-          description: todo.description,
-          todoListId: todoList.id,
-        });
-        console.log('[Agreements] Created custom todo:', todo.title);
-      } catch (e) {
-        console.error('[Agreements] Failed to create custom todo:', todo.title, e);
-      }
-    }
-
-    // ========================================================================
-    // STEP 8: Update agreement status to PENDING_SIGNATURE
+    // STEP 5: Update agreement status to PENDING_SIGNATURE
     // ========================================================================
     try {
       await updateAgreementStatus(agreement.id, AgreementStatus.PENDING_SIGNATURE);

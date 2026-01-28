@@ -491,88 +491,7 @@ export async function getDocumentDownloadUrl(fileIdOrDocId: string): Promise<str
   }
 }
 
-// ============================================================================
-// Todos API
-// ============================================================================
 
-/**
- * Get all todos for current client
- */
-export async function getClientTodos(): Promise<ClientTodo[]> {
-  try {
-    const todos = await apiRequest<ClientTodo[]>('/todos');
-    // console.log('[ClientAPI] getClientTodos:', todos);
-    return Array.isArray(todos) ? todos : [];
-  } catch (error) {
-    // console.error('[ClientAPI] Failed to get todos:', error);
-    return [];
-  }
-}
-
-/**
- * Update todo status (mark as complete)
- */
-export async function updateTodoStatus(
-  todoId: string,
-  status: 'pending' | 'in_progress' | 'completed'
-): Promise<ClientTodo | null> {
-  try {
-    const todo = await apiRequest<ClientTodo>(`/todos/${todoId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ status }),
-    });
-    return todo;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Mark onboarding todos (Sign + Pay) as completed
- * Called after client finishes onboarding flow
- */
-export async function markOnboardingTodosComplete(): Promise<{ success: boolean; error?: string }> {
-  try {
-    const agreements = await getClientAgreements();
-    if (!agreements || agreements.length === 0) {
-      return { success: false, error: 'No agreements found' };
-    }
-
-    const serviceAgreement = agreements[0];
-    const todos = serviceAgreement?.todoLists?.flatMap(list => list.todos || []) || [];
-
-    const signTodo = todos.find(t => 
-      t.title.toLowerCase().includes('sign') && t.title.toLowerCase().includes('agreement')
-    );
-    const payTodo = todos.find(t => 
-      t.title.toLowerCase() === 'pay' || t.title.toLowerCase().includes('payment')
-    );
-
-    let signUpdated = false;
-    let payUpdated = false;
-
-    if (signTodo && signTodo.status !== 'completed') {
-      const result = await updateTodoStatus(signTodo.id, 'completed');
-      signUpdated = !!result;
-    } else if (signTodo?.status === 'completed') {
-      signUpdated = true;
-    }
-
-    if (payTodo && payTodo.status !== 'completed') {
-      const result = await updateTodoStatus(payTodo.id, 'completed');
-      payUpdated = !!result;
-    } else if (payTodo?.status === 'completed') {
-      payUpdated = true;
-    }
-
-    return { 
-      success: signUpdated || payUpdated,
-      error: (!signUpdated && !payUpdated) ? 'No todos were updated' : undefined
-    };
-  } catch {
-    return { success: false, error: 'Failed to update todos' };
-  }
-}
 
 /**
  * Sync agreement signature status from SignatureAPI
@@ -658,19 +577,6 @@ export async function syncAgreementSignatureStatus(agreementId: string): Promise
         }
       }
 
-      // Mark sign todo as complete
-      const todos = agreement.todoLists?.flatMap(list => list.todos || []) || [];
-      const signTodo = todos.find(t => 
-        t.title.toLowerCase().includes('sign') && t.title.toLowerCase().includes('agreement')
-      );
-      if (signTodo && signTodo.status !== 'completed') {
-        try {
-          await updateTodoStatus(signTodo.id, 'completed');
-        } catch {
-          // Ignore
-        }
-      }
-
       const success = documentSignSuccess || agreementUpdateSuccess;
       console.log(`✅ Sync: ${success ? '✓' : '✗'} agreement=${agreementId}`);
 
@@ -700,6 +606,8 @@ export interface ClientCharge {
   status: 'pending' | 'paid' | 'cancelled' | 'failed';
   description?: string;
   paymentLink?: string;
+  paymentIntentId?: string;
+  checkoutSessionId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -732,8 +640,24 @@ export async function updateAgreementStatus(
 export async function getChargesForAgreement(agreementId: string): Promise<ClientCharge[]> {
   try {
     console.log('[ClientAPI] Fetching charges for agreement:', agreementId);
-    const charges = await apiRequest<ClientCharge[]>(`/charges/agreement/${agreementId}`);
-    console.log('[ClientAPI] Charges response:', JSON.stringify(charges, null, 2));
+    const rawCharges = await apiRequest<any[]>(`/charges/agreement/${agreementId}`);
+    console.log('[ClientAPI] Charges response:', JSON.stringify(rawCharges, null, 2));
+    
+    // Map backend fields to frontend interface
+    const charges: ClientCharge[] = rawCharges.map(c => ({
+      id: c.id,
+      agreementId: c.agreementId,
+      amount: c.amountCents || c.amount || 0,
+      currency: c.currency || 'usd',
+      status: c.status,
+      description: c.description,
+      paymentLink: c.paymentLink,
+      paymentIntentId: c.stripePaymentIntentId || c.paymentIntentId,
+      checkoutSessionId: c.stripeCheckoutSessionId || c.checkoutSessionId,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    }));
+    
     return charges;
   } catch (err) {
     console.error('[ClientAPI] Failed to fetch charges:', err);
@@ -799,12 +723,11 @@ export async function getClientDashboardData(): Promise<ClientDashboardData | nu
     }
 
     // Fetch all data in parallel
-    const [user, profile, agreements, documents, todos] = await Promise.all([
+    const [user, profile, agreements, documents] = await Promise.all([
       getCurrentClientUser(),
       getClientProfile(),
       getClientAgreements(),
       getClientDocuments(),
-      getClientTodos(),
     ]);
 
     if (!user) {
@@ -838,7 +761,7 @@ export async function getClientDashboardData(): Promise<ClientDashboardData | nu
       strategist,
       agreements,
       documents,
-      todos,
+      todos: [], // Todos removed - always empty
     };
   } catch {
     return null;

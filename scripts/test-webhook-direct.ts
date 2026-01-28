@@ -8,14 +8,12 @@
  *   pnpm tsx scripts/test-webhook-direct.ts
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://qt4pgrsacn.us-east-2.awsapprunner.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL 
 
 // Known agreement from your database
 const TEST_DATA = {
   agreementId: '09691c2a-e28f-4465-b25a-0b28d2f165a3',
   documentId: '691c450e-cd05-436f-8055-20cfb690faea',
-  // Find the "Sign service agreement" todo ID from the todoLists
-  todoId: '0cb296bf-933c-4bd6-bf81-ed09ce710c80', // "Sign service agreement" todo
 };
 
 async function apiRequest(endpoint: string, options: RequestInit = {}) {
@@ -44,20 +42,6 @@ async function testDocumentSigned() {
   // Try POST /documents/{id}/sign
   const result = await apiRequest(`/documents/${TEST_DATA.documentId}/sign`, {
     method: 'POST',
-  });
-  
-  return result.ok;
-}
-
-async function testTodoCompleted() {
-  console.log('\n========================================');
-  console.log('Testing: Mark Todo as Completed');
-  console.log('========================================');
-  
-  // Try PUT /todos/{id}
-  const result = await apiRequest(`/todos/${TEST_DATA.todoId}`, {
-    method: 'PUT',
-    body: JSON.stringify({ status: 'completed' }),
   });
   
   return result.ok;
@@ -113,12 +97,10 @@ async function main() {
   console.log('\nTest Data:');
   console.log(`  Agreement ID: ${TEST_DATA.agreementId}`);
   console.log(`  Document ID:  ${TEST_DATA.documentId}`);
-  console.log(`  Todo ID:      ${TEST_DATA.todoId}`);
   console.log(`  API URL:      ${API_URL}`);
 
   const results = {
     document: await testDocumentSigned(),
-    todo: await testTodoCompleted(),
     agreement: await testAgreementSigned(),
   };
 
@@ -126,10 +108,9 @@ async function main() {
   console.log('RESULTS SUMMARY');
   console.log('========================================');
   console.log(`Document signed:    ${results.document ? '✅' : '❌'}`);
-  console.log(`Todo completed:     ${results.todo ? '✅' : '❌'}`);
   console.log(`Agreement ACTIVE:   ${results.agreement ? '✅' : '❌'}`);
   
-  if (results.document && results.todo && results.agreement) {
+  if (results.document && results.agreement) {
     console.log('\n🎉 All tests passed! The webhook should work correctly.');
   } else {
     console.log('\n⚠️  Some tests failed. Check the API endpoints above.');

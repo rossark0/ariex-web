@@ -383,46 +383,6 @@ export async function listTodoLists(): Promise<any[]> {
 }
 
 // ============================================================================
-// Todos API
-// ============================================================================
-
-/**
- * List todos
- */
-export async function listTodos(): Promise<ApiTodo[]> {
-  try {
-    const todos = await apiRequest<ApiTodo[]>('/todos');
-    return todos;
-  } catch (error) {
-    console.error('[API] Failed to list todos:', error);
-    return [];
-  }
-}
-
-/**
- * Create a todo in a todo list
- * @see https://qt4pgrsacn.us-east-2.awsapprunner.com/api#/Todos/TodoController_create
- */
-export async function createTodo(data: {
-  title: string;
-  description?: string;
-  todoListId: string;
-}): Promise<ApiTodo | null> {
-  try {
-    console.log('[API] createTodo request:', JSON.stringify(data, null, 2));
-    const todo = await apiRequest<ApiTodo>('/todos', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-    console.log('[API] createTodo response:', JSON.stringify(todo, null, 2));
-    return todo;
-  } catch (error) {
-    console.error('[API] Failed to create todo:', error);
-    return null;
-  }
-}
-
-// ============================================================================
 // Documents API (with S3 upload)
 // ============================================================================
 
@@ -943,27 +903,6 @@ export async function markDocumentSigned(documentId: string): Promise<boolean> {
 }
 
 /**
- * Update todo status
- * PUT /todos/{id}
- */
-export async function updateTodoStatus(
-  todoId: string,
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
-): Promise<boolean> {
-  try {
-    await apiRequest(`/todos/${todoId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ status }),
-    });
-    console.log('[API] Todo status updated:', todoId, status);
-    return true;
-  } catch (error) {
-    console.error('[API] Failed to update todo status:', error);
-    return false;
-  }
-}
-
-/**
  * Get all agreements (for webhook to find by envelope ID)
  */
 export async function listAgreements(): Promise<ApiAgreement[]> {
@@ -1080,20 +1019,25 @@ export async function createCharge(data: {
   try {
     // Convert amount (dollars) to amountCents
     const amountCents = Math.round(data.amount * 100);
-    console.log('[API] Creating charge:', { agreementId: data.agreementId, amount: data.amount, amountCents });
+    
+    const requestBody = {
+      agreementId: data.agreementId,
+      amountCents: amountCents,
+      currency: data.currency || 'usd',
+      description: data.description,
+    };
+    
+    console.log('🔵 [API] Creating charge - Request body:', JSON.stringify(requestBody, null, 2));
+    
     const charge = await apiRequest<Charge>('/charges', {
       method: 'POST',
-      body: JSON.stringify({
-        agreementId: data.agreementId,
-        amountCents: amountCents,
-        currency: data.currency || 'usd',
-        description: data.description,
-      }),
+      body: JSON.stringify(requestBody),
     });
-    console.log('[API] Charge created:', charge.id);
+    
+    console.log('🔵 [API] Charge created - Response:', JSON.stringify(charge, null, 2));
     return charge;
   } catch (error) {
-    console.error('[API] Failed to create charge:', error);
+    console.error('🔵 [API] Failed to create charge:', error);
     throw error;
   }
 }

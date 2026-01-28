@@ -3,7 +3,7 @@ import { Webhook } from 'standardwebhooks';
 import type { SignatureWebhookEvent } from '@/lib/signature/signatureapi';
 
 const WEBHOOK_SECRET = process.env.SIGNATURE_WEBHOOK_SECRET || '';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://qt4pgrsacn.us-east-2.awsapprunner.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL 
 
 // ============================================================================
 // Internal API Helpers (use service account or API key for webhook context)
@@ -154,40 +154,12 @@ async function findAgreementByEnvelopeId(
 }
 
 /**
- * Get document ID and todo ID from agreement
- * - documentId comes from agreement.contractDocumentId
- * - todoId is the "Sign service agreement" todo
+ * Get document ID from agreement
  */
-async function getDocumentAndTodoFromAgreement(agreement: AgreementWithMetadata): Promise<{
-  documentId: string | null;
-  todoId: string | null;
-}> {
-  try {
-    // Document ID comes from the agreement's contractDocumentId
-    const documentId = agreement.contractDocumentId || null;
-
-    // Find the "Sign service agreement" todo
-    let todoId: string | null = null;
-    if (agreement.todoLists) {
-      for (const todoList of agreement.todoLists) {
-        for (const todo of todoList.todos) {
-          // Match by title (case-insensitive)
-          if (todo.title.toLowerCase().includes('sign') && 
-              todo.title.toLowerCase().includes('agreement')) {
-            todoId = todo.id;
-            break;
-          }
-        }
-        if (todoId) break;
-      }
-    }
-
-    console.log(`[Webhook] Found documentId: ${documentId}, todoId: ${todoId}`);
-    return { documentId, todoId };
-  } catch (error) {
-    console.error(`[Webhook] Error getting document/todo:`, error);
-    return { documentId: null, todoId: null };
-  }
+function getDocumentIdFromAgreement(agreement: AgreementWithMetadata): string | null {
+  const documentId = agreement.contractDocumentId || null;
+  console.log(`[Webhook] Found documentId: ${documentId}`);
+  return documentId;
 }
 
 // ============================================================================
@@ -197,14 +169,6 @@ async function getDocumentAndTodoFromAgreement(agreement: AgreementWithMetadata)
 async function markDocumentSigned(documentId: string): Promise<boolean> {
   const result = await webhookApiRequest(`/documents/${documentId}/sign`, {
     method: 'POST',
-  });
-  return result !== null;
-}
-
-async function markTodoCompleted(todoId: string): Promise<boolean> {
-  const result = await webhookApiRequest(`/todos/${todoId}`, {
-    method: 'PUT',
-    body: JSON.stringify({ status: 'completed' }),
   });
   return result !== null;
 }
@@ -398,19 +362,13 @@ export async function POST(req: NextRequest) {
       }
       console.log('[Webhook] ✓ Found agreement:', agreement.id, agreement.name);
 
-      // Get document and todo from the agreement
-      const { documentId, todoId } = await getDocumentAndTodoFromAgreement(agreement);
+      // Get document ID from the agreement
+      const documentId = getDocumentIdFromAgreement(agreement);
       
       // Update document signed status
       if (documentId) {
         const docSuccess = await markDocumentSigned(documentId);
         console.log('[Webhook] Document signed:', documentId, docSuccess ? '✓' : '✗');
-      }
-      
-      // Update todo status
-      if (todoId) {
-        const todoSuccess = await markTodoCompleted(todoId);
-        console.log('[Webhook] Todo completed:', todoId, todoSuccess ? '✓' : '✗');
       }
 
       // Mark agreement as ACTIVE (signed) - not COMPLETED yet (needs payment)

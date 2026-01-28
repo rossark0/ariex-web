@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
 import AppLayout from '@/components/layout/app-layout';
 import { House, Upload, FileText, CreditCard } from '@phosphor-icons/react';
 import { useAuth } from '@/contexts/auth/AuthStore';
-import { getFullUserProfile } from '@/contexts/auth/data/mock-users';
-import type { FullClientMock } from '@/lib/mocks/client-full';
+import { getClientAgreements } from '@/lib/api/client.api';
+import { isAgreementSigned, isAgreementPaid } from '@/types/agreement';
 
 const navItems = [
   { href: '/client/home', label: 'Home', icon: House },
@@ -16,69 +16,79 @@ const navItems = [
   { href: '/client/payments', label: 'Payments', icon: CreditCard },
 ];
 
-/**
- * Check if client needs to complete onboarding
- * Returns true if any of these steps are incomplete:
- * - Sign agreement
- * - Payment
- */
-function needsOnboarding(clientData: FullClientMock | null): boolean {
-  // Check if onboarding was already completed (mock localStorage flag)
-  if (typeof window !== 'undefined' && localStorage.getItem('ariex_onboarding_complete') === 'true') {
-    return false;
-  }
-
-  if (!clientData) return true;
-
-  const agreementTask = clientData.onboardingTasks.find(t => t.type === 'sign_agreement');
-  const paymentTask = clientData.onboardingTasks.find(t => t.type === 'pay_initial');
-
-  // Check if agreement is not signed
-  const agreementNotSigned = agreementTask?.status !== 'completed';
-  
-  // Check if payment is not completed
-  const paymentNotCompleted = paymentTask?.status !== 'completed';
-
-  return agreementNotSigned || paymentNotCompleted;
-}
-
 export default function ClientAppLayout({ children }: { children: React.ReactNode }) {
   useRoleRedirect(['CLIENT', 'ADMIN']);
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
   const [isChecking, setIsChecking] = useState(true);
+  const hasCheckedRef = useRef(false);
+  const isOnboardingPage = pathname.startsWith('/client/onboarding');
 
   useEffect(() => {
-    if (!user) {
+    // Skip entirely for onboarding pages - they handle their own logic
+    if (isOnboardingPage) {
       setIsChecking(false);
       return;
     }
 
+    // Prevent multiple checks
+    if (hasCheckedRef.current) {
+      return;
+    }
+
+    // Wait for user to be available
+    if (!user) {
+      return;
+    }
+
     // Only check onboarding for CLIENT role users
-    // ADMIN users viewing client pages should not be redirected to onboarding
     if (user.role !== 'CLIENT') {
       setIsChecking(false);
       return;
     }
 
-    // Skip redirect if already on onboarding page
-    if (pathname.startsWith('/client/onboarding')) {
-      setIsChecking(false);
-      return;
-    }
+    // Mark as checked immediately to prevent re-runs
+    hasCheckedRef.current = true;
 
-    const clientData = getFullUserProfile(user) as FullClientMock | null;
+    async function checkOnboardingStatus() {
+      try {
+        console.log('[ClientLayout] Checking onboarding status...');
+        const agreements = await getClientAgreements();
+        
+        // No agreements = needs onboarding
+        if (!agreements || agreements.length === 0) {
+          console.log('[ClientLayout] No agreements found, redirecting to onboarding');
+          router.replace('/client/onboarding');
+          return;
+        }
 
-    if (needsOnboarding(clientData)) {
-      router.replace('/client/onboarding');
-    } else {
-      setIsChecking(false);
+        const serviceAgreement = agreements[0];
+        const isSigned = isAgreementSigned(serviceAgreement.status);
+        const isPaid = isAgreementPaid(serviceAgreement.status);
+        
+        console.log('[ClientLayout] Agreement status:', serviceAgreement.status, '| Signed:', isSigned, '| Paid:', isPaid);
+        
+        // Redirect to onboarding if NOT signed OR NOT paid
+        if (!isSigned || !isPaid) {
+          console.log('[ClientLayout] Onboarding incomplete, redirecting');
+          router.replace('/client/onboarding');
+          return;
+        }
+        
+        // All good, client can access the dashboard
+        setIsChecking(false);
+      } catch (error) {
+        console.error('[ClientLayout] Failed to check onboarding status:', error);
+        setIsChecking(false);
+      }
     }
-  }, [user, pathname, router]);
+    
+    checkOnboardingStatus();
+  }, [user, isOnboardingPage, router]);
 
   // If on onboarding page, render children directly (layout handles itself)
-  if (pathname.startsWith('/client/onboarding')) {
+  if (isOnboardingPage) {
     return <>{children}</>;
   }
 

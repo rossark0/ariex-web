@@ -237,6 +237,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
 
   // Agreement state
   const [agreements, setAgreements] = useState<ApiAgreement[]>([]);
+  const [isLoadingAgreements, setIsLoadingAgreements] = useState(true);
   const [isSendingAgreement, setIsSendingAgreement] = useState(false);
   const [agreementError, setAgreementError] = useState<string | null>(null);
   const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
@@ -246,6 +247,8 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const [isSendingPayment, setIsSendingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState(499);
+  const [existingCharge, setExistingCharge] = useState<{ id: string; paymentLink?: string; status: string } | null>(null);
+  const [isLoadingCharges, setIsLoadingCharges] = useState(true);
 
   // SignatureAPI sync state - tracks actual envelope status from SignatureAPI
   const [envelopeStatuses, setEnvelopeStatuses] = useState<Record<string, string>>({});
@@ -301,6 +304,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
   // Load agreements from backend
   useEffect(() => {
     async function loadAgreements() {
+      setIsLoadingAgreements(true);
       try {
         const data = await listClientAgreements(params.clientId);
         console.log('[Page] Loaded agreements:', data);
@@ -323,6 +327,8 @@ export default function StrategistClientDetailPage({ params }: Props) {
         setAgreements(data);
       } catch (error) {
         console.error('[Page] Failed to load agreements:', error);
+      } finally {
+        setIsLoadingAgreements(false);
       }
     }
     if (params.clientId) loadAgreements();
@@ -376,6 +382,37 @@ export default function StrategistClientDetailPage({ params }: Props) {
 
     syncEnvelopeStatuses();
   }, [agreements, params.clientId]);
+
+  // Fetch charges for the signed agreement (to check if payment link exists)
+  useEffect(() => {
+    async function fetchCharges() {
+      setIsLoadingCharges(true);
+      
+      // Find signed agreement
+      const signed = agreements.find(a => isAgreementSigned(a.status));
+      if (!signed) {
+        setExistingCharge(null);
+        setIsLoadingCharges(false);
+        return;
+      }
+
+      try {
+        const charges = await getChargesForAgreement(signed.id);
+        console.log('🔵 [STRATEGIST] Fetched charges for agreement:', signed.id, charges);
+        
+        // Get pending charge or most recent
+        const pendingCharge = charges.find(c => c.status === 'pending') || charges[0];
+        setExistingCharge(pendingCharge || null);
+      } catch (error) {
+        console.error('[Page] Failed to fetch charges:', error);
+        setExistingCharge(null);
+      } finally {
+        setIsLoadingCharges(false);
+      }
+    }
+
+    fetchCharges();
+  }, [agreements]);
 
   // Handler for sending agreement from Agreement Sheet
   const handleSendAgreement = async (data: AgreementSendData) => {
@@ -478,11 +515,10 @@ export default function StrategistClientDetailPage({ params }: Props) {
     a => isAgreementSigned(a.status)
   ) || (hasAgreementSigned ? activeAgreement : null);
   
-  // Payment status based on new enum
-  const hasPaymentSent = signedAgreement && (
-    signedAgreement.status === AgreementStatus.PENDING_PAYMENT || 
-    !!signedAgreement.paymentLink
-  );
+  // Payment status - check from API (source of truth)
+  // hasPaymentSent = charge exists (fetched from /charges/agreement/{id})
+  // If a charge exists, payment link was already sent
+  const hasPaymentSent = !!existingCharge;
   const hasPaymentReceived = signedAgreement && isAgreementPaid(signedAgreement.status);
 
   // Document todos from agreement (excluding the signing and payment todos)
@@ -520,7 +556,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
     setIsPaymentModalOpen(true);
   };
 
-  // Handler for sending payment link (called from modal)
+  // Handler for sending payment link (called from modal) - creates charge + payment link
   const handleSendPaymentLink = async () => {
     if (isSendingPayment || !signedAgreement) return;
 
@@ -528,33 +564,26 @@ export default function StrategistClientDetailPage({ params }: Props) {
     setPaymentError(null);
 
     try {
-      // Check if a charge already exists for this agreement
-      const existingCharges = await getChargesForAgreement(signedAgreement.id);
-      let charge: typeof existingCharges[number] | null = existingCharges.find(c => c.status === 'pending') || null;
+      // Step 1: Create charge (use paymentAmount from modal)
+      console.log('[Payment] Creating charge for agreement:', signedAgreement.id);
+      const newCharge = await createCharge({
+        agreementId: signedAgreement.id,
+        amount: paymentAmount,
+        currency: 'usd',
+        description: `Onboarding Fee - ${signedAgreement.name}`,
+      });
 
-      // Step 1: Create charge if none exists (use paymentAmount from modal)
-      if (!charge) {
-        console.log('[Payment] Creating charge for agreement:', signedAgreement.id);
-        const newCharge = await createCharge({
-          agreementId: signedAgreement.id,
-          amount: paymentAmount,
-          currency: 'usd',
-          description: `Onboarding Fee - ${signedAgreement.name}`,
-        });
-
-        if (!newCharge) {
-          setPaymentError('Failed to create payment charge');
-          return;
-        }
-        charge = newCharge;
-        console.log('[Payment] Charge created:', charge.id);
+      if (!newCharge) {
+        setPaymentError('Failed to create payment charge');
+        return;
       }
+      console.log('[Payment] Charge created:', newCharge.id);
 
       // Step 2: Generate Stripe checkout URL
-      console.log('[Payment] Generating payment link for charge:', charge.id);
+      console.log('[Payment] Generating payment link for charge:', newCharge.id);
       let generatedPaymentLink: string | null = null;
       try {
-        generatedPaymentLink = await generatePaymentLink(charge.id);
+        generatedPaymentLink = await generatePaymentLink(newCharge.id);
       } catch (linkError) {
         console.error('[Payment] Error generating payment link:', linkError);
         setPaymentError(`Failed to generate payment link: ${linkError instanceof Error ? linkError.message : 'Unknown error'}`);
@@ -576,8 +605,10 @@ export default function StrategistClientDetailPage({ params }: Props) {
 
       if (success) {
         console.log('[Payment] Payment link attached to agreement');
-        // 🔵 Debug: Log payment link sent
         logAgreementStatus('strategist', signedAgreement.id, AgreementStatus.PENDING_PAYMENT, 'Payment link sent');
+        
+        // Update existing charge state with the new payment link
+        setExistingCharge({ ...newCharge, paymentLink: generatedPaymentLink });
         
         // Close modal and reload agreements
         setIsPaymentModalOpen(false);
@@ -588,6 +619,59 @@ export default function StrategistClientDetailPage({ params }: Props) {
       }
     } catch (error) {
       console.error('Failed to send payment link:', error);
+      setPaymentError(error instanceof Error ? error.message : 'An unexpected error occurred');
+    } finally {
+      setIsSendingPayment(false);
+    }
+  };
+
+  // Handler for sending payment reminder - only regenerates payment link for existing charge
+  const handleSendPaymentReminder = async () => {
+    if (isSendingPayment || !signedAgreement || !existingCharge) return;
+
+    setIsSendingPayment(true);
+    setPaymentError(null);
+
+    try {
+      // Generate new Stripe checkout URL for existing charge
+      console.log('[Payment Reminder] Generating new payment link for existing charge:', existingCharge.id);
+      let generatedPaymentLink: string | null = null;
+      try {
+        generatedPaymentLink = await generatePaymentLink(existingCharge.id);
+      } catch (linkError) {
+        console.error('[Payment Reminder] Error generating payment link:', linkError);
+        setPaymentError(`Failed to generate payment link: ${linkError instanceof Error ? linkError.message : 'Unknown error'}`);
+        return;
+      }
+
+      if (!generatedPaymentLink) {
+        console.error('[Payment Reminder] Payment link is null');
+        setPaymentError('Failed to generate payment link - no URL returned');
+        return;
+      }
+      console.log('[Payment Reminder] Payment link generated:', generatedPaymentLink);
+
+      // Update payment link on agreement
+      const success = await attachPayment(signedAgreement.id, {
+        amount: typeof existingCharge.amount === 'number' ? existingCharge.amount : paymentAmount,
+        paymentLink: generatedPaymentLink,
+      });
+
+      if (success) {
+        console.log('[Payment Reminder] Payment link updated on agreement');
+        logAgreementStatus('strategist', signedAgreement.id, AgreementStatus.PENDING_PAYMENT, 'Payment reminder sent');
+        
+        // Update existing charge state with the new payment link
+        setExistingCharge({ ...existingCharge, paymentLink: generatedPaymentLink });
+        
+        // Reload agreements
+        const data = await listClientAgreements(params.clientId);
+        setAgreements(data);
+      } else {
+        setPaymentError('Failed to update payment link on agreement');
+      }
+    } catch (error) {
+      console.error('Failed to send payment reminder:', error);
       setPaymentError(error instanceof Error ? error.message : 'An unexpected error occurred');
     } finally {
       setIsSendingPayment(false);
@@ -810,7 +894,16 @@ export default function StrategistClientDetailPage({ params }: Props) {
                 - Zinc button = follow-up action (strategist already acted, waiting on client)
                 ═══════════════════════════════════════════════════════════════
             */}
-            {(() => {
+            {/* Loading state for Activity */}
+            {(isLoadingAgreements || isLoadingCharges) ? (
+              <div className="mb-6">
+                <h2 className="mb-4 text-base font-medium text-zinc-900">Activity</h2>
+                <div className="flex items-center justify-center py-12">
+                  <SpinnerGap className="h-6 w-6 animate-spin text-emerald-500" />
+                </div>
+              </div>
+            ) : (
+            (() => {
               // Uses step variables computed at component level (step2Complete, step3Complete, etc.)
               // Step 1 is always complete
               const step1Complete = true;
@@ -922,17 +1015,27 @@ export default function StrategistClientDetailPage({ params }: Props) {
                                 ? `Due ${formatDate(payment.dueDate)}`
                                 : formatDate(client.user.createdAt)}
                           </span>
-                          {/* Button: emerald if strategist needs to act, zinc if already acted (reminder) */}
+                          {/* Button: emerald if strategist needs to act (send payment link), zinc if reminder */}
                           {step2Complete && !step3Complete && (
                             <button
-                              onClick={handleOpenPaymentModal}
+                              onClick={step3Sent ? handleSendPaymentReminder : handleOpenPaymentModal}
+                              disabled={isSendingPayment}
                               className={`mt-2 flex w-fit items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${
                                 step3Sent
                                   ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
                                   : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                              }`}
+                              } ${isSendingPayment ? 'cursor-not-allowed opacity-50' : ''}`}
                             >
-                              {step3Sent ? 'Send reminder' : 'Send payment link'}
+                              {isSendingPayment ? (
+                                <>
+                                  <SpinnerGap className="h-3 w-3 animate-spin" />
+                                  Sending...
+                                </>
+                              ) : step3Sent ? (
+                                'Send reminder'
+                              ) : (
+                                'Send payment link'
+                              )}
                             </button>
                           )}
                           {paymentError && (
@@ -1092,7 +1195,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
                   </div>
                 </div>
               );
-            })()}
+            })())}
 
             <div>
               <div className="flex w-full items-center justify-between">
