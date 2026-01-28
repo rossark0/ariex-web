@@ -87,7 +87,7 @@ function ClientCard({ client }: { client: ApiClient }) {
   const description =
     client.clientProfile?.city && client.clientProfile?.state
       ? `Based in ${client.clientProfile.city}, ${client.clientProfile.state}`
-      : 'Tax strategy client';
+      : 'Client';
 
   return (
     <div

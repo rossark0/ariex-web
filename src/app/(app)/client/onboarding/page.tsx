@@ -3,7 +3,14 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth/AuthStore';
-import { Check, SpinnerGap, CreditCard, ArrowSquareOut, Warning, FilePdf } from '@phosphor-icons/react';
+import {
+  Check,
+  SpinnerGap,
+  CreditCard,
+  ArrowSquareOut,
+  Warning,
+  FilePdf,
+} from '@phosphor-icons/react';
 import Image from 'next/image';
 import {
   getClientDashboardData,
@@ -17,9 +24,9 @@ import {
   type ClientAgreement,
   type ClientCharge,
 } from '@/lib/api/client.api';
-import { 
-  AgreementStatus, 
-  isAgreementSigned, 
+import {
+  AgreementStatus,
+  isAgreementSigned,
   isAgreementPaid,
   logAgreements,
   logAgreementStatus,
@@ -85,7 +92,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Form state - initialize with existing data (only fields the API supports)
   const [formData, setFormData] = useState({
     phoneNumber: profile?.phoneNumber || profile?.phone || '',
@@ -118,7 +125,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
     try {
       // Build update payload - only include changed/filled fields
       const updateData: Record<string, unknown> = {};
-      
+
       if (formData.phoneNumber) updateData.phoneNumber = formData.phoneNumber;
       if (formData.address) updateData.address = formData.address;
       if (formData.businessName) updateData.businessName = formData.businessName;
@@ -127,7 +134,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
       // Only call API if there's data to update
       if (Object.keys(updateData).length > 0) {
         const updatedProfile = await updateClientProfile(updateData);
-        
+
         if (updatedProfile && dashboardData && onProfileUpdate) {
           // Update the dashboard data with new profile
           onProfileUpdate({
@@ -158,7 +165,9 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
               {(user?.fullName || user?.name || user?.email)?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div>
-              <p className="text-sm font-medium text-zinc-900">{user?.fullName || user?.name || 'N/A'}</p>
+              <p className="text-sm font-medium text-zinc-900">
+                {user?.fullName || user?.name || 'N/A'}
+              </p>
               <p className="text-xs text-zinc-500">{user?.email || 'N/A'}</p>
             </div>
           </div>
@@ -235,9 +244,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
       </div>
 
       {/* Error message */}
-      {error && (
-        <p className="mt-4 text-sm text-red-600">{error}</p>
-      )}
+      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       {/* Navigation Buttons */}
       <div className="mt-8 flex gap-3">
@@ -271,7 +278,14 @@ interface AgreementStepProps extends StepProps {
   onAgreementSigned?: () => void;
 }
 
-function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardData, onAgreementSigned }: AgreementStepProps) {
+function AgreementStep({
+  onContinue,
+  onBack,
+  isFirst,
+  pendingAgreement,
+  dashboardData,
+  onAgreementSigned,
+}: AgreementStepProps) {
   const [signingInProgress, setSigningInProgress] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [signatureVerified, setSignatureVerified] = useState(false);
@@ -281,7 +295,8 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Check if agreement is already signed (using helper function)
-  const isAgreementAlreadySigned = signatureVerified || 
+  const isAgreementAlreadySigned =
+    signatureVerified ||
     (pendingAgreement?.status && isAgreementSigned(pendingAgreement.status)) ||
     !!pendingAgreement?.signedAt;
 
@@ -290,12 +305,12 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
   useEffect(() => {
     async function fetchDocumentUrl() {
       setIsLoadingDocument(true);
-      
+
       console.log('[AgreementStep] Starting document fetch...');
       console.log('[AgreementStep] pendingAgreement:', pendingAgreement);
       console.log('[AgreementStep] isAgreementAlreadySigned:', isAgreementAlreadySigned);
       console.log('[AgreementStep] dashboardData.documents:', dashboardData?.documents);
-      
+
       try {
         // If agreement is signed, try to get the signed document URL
         // Uses S3 first (if stored by webhook), then falls back to SignatureAPI
@@ -316,7 +331,7 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
         // First try direct file ID from agreement
         let fileId = pendingAgreement?.contractFileId || pendingAgreement?.contractDocumentId;
         console.log('[AgreementStep] Direct fileId from agreement:', fileId);
-        
+
         // If no direct file ID, look for AGREEMENT type document in dashboard documents
         if (!fileId && dashboardData?.documents) {
           console.log('[AgreementStep] Searching documents for AGREEMENT type...');
@@ -326,14 +341,19 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
           console.log('[AgreementStep] Found agreementDoc:', agreementDoc);
           if (agreementDoc?.fileId) {
             fileId = agreementDoc.fileId;
-            console.log('[AgreementStep] Found agreement document:', agreementDoc.id, 'fileId:', fileId);
+            console.log(
+              '[AgreementStep] Found agreement document:',
+              agreementDoc.id,
+              'fileId:',
+              fileId
+            );
           } else if (agreementDoc?.id) {
             // Try using document ID directly
             fileId = agreementDoc.id;
             console.log('[AgreementStep] Using document ID as fileId:', fileId);
           }
         }
-        
+
         if (!fileId) {
           console.log('[AgreementStep] No document file ID found');
           setIsLoadingDocument(false);
@@ -366,14 +386,14 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
   // Check signature status with the API
   const handleCheckSignatureStatus = async () => {
     if (!pendingAgreement?.id) return;
-    
+
     setIsCheckingStatus(true);
     setStatusMessage(null);
-    
+
     try {
       const result = await syncAgreementSignatureStatus(pendingAgreement.id);
       console.log('[AgreementStep] Signature status check result:', result);
-      
+
       if (result.status === 'signed' || result.status === 'completed') {
         setSignatureVerified(true);
         setStatusMessage('Agreement signed successfully! Click Continue to proceed.');
@@ -381,9 +401,17 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
         onAgreementSigned?.();
       } else if (result.status === 'in_progress') {
         // Envelope is in progress - signing may still be happening
-        setStatusMessage('Signing in progress. If you completed signing, please wait a moment and try again.');
-      } else if (result.status === 'pending' || result.status === 'sent' || result.status === 'processing') {
-        setStatusMessage('Signature not yet complete. Please finish signing the agreement in the other tab.');
+        setStatusMessage(
+          'Signing in progress. If you completed signing, please wait a moment and try again.'
+        );
+      } else if (
+        result.status === 'pending' ||
+        result.status === 'sent' ||
+        result.status === 'processing'
+      ) {
+        setStatusMessage(
+          'Signature not yet complete. Please finish signing the agreement in the other tab.'
+        );
       } else if (result.error) {
         setStatusMessage(`Error: ${result.error}`);
       } else {
@@ -413,7 +441,10 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
           </div>
           <h3 className="mb-1 text-sm font-medium text-zinc-900">Agreement Signed</h3>
           <p className="text-xs text-zinc-500">
-            Signed{pendingAgreement?.signedAt ? ` on ${new Date(pendingAgreement.signedAt).toLocaleDateString()}` : ''}
+            Signed
+            {pendingAgreement?.signedAt
+              ? ` on ${new Date(pendingAgreement.signedAt).toLocaleDateString()}`
+              : ''}
           </p>
         </div>
 
@@ -455,11 +486,7 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
             </div>
           ) : documentUrl ? (
             <div className="overflow-hidden rounded-md border border-zinc-200 bg-white">
-              <iframe
-                src={documentUrl}
-                className="h-80 w-full"
-                title="Agreement Document"
-              />
+              <iframe src={documentUrl} className="h-80 w-full" title="Agreement Document" />
               <div className="flex items-center justify-between border-t border-zinc-200 bg-zinc-50 px-4 py-2">
                 <span className="text-xs text-zinc-500">Agreement PDF</span>
                 <a
@@ -531,11 +558,7 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
           </div>
         ) : documentUrl ? (
           <div className="overflow-hidden rounded-md border border-zinc-200 bg-white">
-            <iframe
-              src={documentUrl}
-              className="h-80 w-full"
-              title="Agreement Document"
-            />
+            <iframe src={documentUrl} className="h-80 w-full" title="Agreement Document" />
             <div className="flex items-center justify-between border-t border-zinc-200 bg-zinc-50 px-4 py-2">
               <span className="text-xs text-zinc-500">Agreement PDF</span>
               <a
@@ -561,18 +584,21 @@ function AgreementStep({ onContinue, onBack, isFirst, pendingAgreement, dashboar
       {signingInProgress && (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3">
           <p className="text-center text-xs text-amber-700">
-            A new tab has opened for signing. After signing, click &ldquo;Check Status&rdquo; below to verify.
+            A new tab has opened for signing. After signing, click &ldquo;Check Status&rdquo; below
+            to verify.
           </p>
         </div>
       )}
 
       {/* Status Message */}
       {statusMessage && (
-        <div className={`rounded-md px-4 py-3 text-center text-xs ${
-          signatureVerified 
-            ? 'border border-emerald-200 bg-emerald-50 text-emerald-700' 
-            : 'border border-zinc-200 bg-zinc-50 text-zinc-600'
-        }`}>
+        <div
+          className={`rounded-md px-4 py-3 text-center text-xs ${
+            signatureVerified
+              ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border border-zinc-200 bg-zinc-50 text-zinc-600'
+          }`}
+        >
           {statusMessage}
         </div>
       )}
@@ -639,7 +665,13 @@ interface PaymentStepProps extends StepProps {
   pendingAgreement: ClientAgreement | null;
 }
 
-function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardData }: PaymentStepProps) {
+function PaymentStep({
+  onContinue,
+  onBack,
+  isFirst,
+  pendingAgreement,
+  dashboardData,
+}: PaymentStepProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
@@ -665,7 +697,7 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
   useEffect(() => {
     // Prevent duplicate fetches
     if (hasFetchedRef.current) return;
-    
+
     async function fetchCharges() {
       if (!pendingAgreement?.id) {
         console.log('[PaymentStep] No pending agreement ID');
@@ -729,12 +761,12 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
         paymentUrl = await generatePaymentLink(charge.id, {
           customerEmail: clientEmail,
         });
-      } 
+      }
       // Otherwise, use the payment link from the agreement if available
       else if (pendingAgreement?.paymentLink) {
         paymentUrl = pendingAgreement.paymentLink;
       }
-      
+
       if (paymentUrl) {
         // Mark onboarding progress in localStorage before redirect
         localStorage.setItem('ariex_payment_initiated', 'true');
@@ -766,7 +798,7 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
       console.log('[PaymentStep] Refetching charge to get latest payment intent ID...');
       const charges = await getChargesForAgreement(pendingAgreement.id);
       const latestCharge = charges.find(c => c.id === charge.id) || charges[0];
-      
+
       if (!latestCharge) {
         setError('Charge not found');
         setIsVerifying(false);
@@ -779,7 +811,9 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
       // Use the payment intent ID from the latest charge
       const paymentIntentId = latestCharge.paymentIntentId;
       if (!paymentIntentId) {
-        setError('No payment intent ID found. Please click "Pay" first, complete payment in Stripe, then verify.');
+        setError(
+          'No payment intent ID found. Please click "Pay" first, complete payment in Stripe, then verify.'
+        );
         setIsVerifying(false);
         return;
       }
@@ -827,7 +861,9 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-xs text-zinc-400 uppercase font-medium">Loading payment information...</p>
+        <p className="text-xs font-medium text-zinc-400 uppercase">
+          Loading payment information...
+        </p>
       </div>
     );
   }
@@ -873,7 +909,7 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
         // Has charge or payment link - show pay button
         <>
           <div className="py-4">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="mb-4 flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100">
                 <CreditCard weight="duotone" className="h-4 w-4 text-zinc-600" />
               </div>
@@ -883,15 +919,13 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
               </div>
             </div>
             <p className="text-xs text-zinc-500">
-              Click the button below to complete your payment securely via Stripe. 
-              You will be redirected to a secure checkout page.
+              Click the button below to complete your payment securely via Stripe. You will be
+              redirected to a secure checkout page.
             </p>
           </div>
 
           {/* Error Message */}
-          {error && (
-            <p className="text-sm text-red-600">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
           {/* Pay Button */}
           <button
@@ -935,14 +969,14 @@ function PaymentStep({ onContinue, onBack, isFirst, pendingAgreement, dashboardD
           </div>
           <p className="text-sm font-medium text-zinc-900">Waiting for payment link</p>
           <p className="mt-1 text-xs text-zinc-500">
-            Your strategist is setting up the payment. You&apos;ll receive an email when it&apos;s ready.
+            Your strategist is setting up the payment. You&apos;ll receive an email when it&apos;s
+            ready.
           </p>
         </div>
       )}
 
       {/* Navigation Buttons */}
       <div className="mt-8 flex flex-col gap-3">
-
         <div className="flex gap-3">
           {!isFirst && !isPaymentComplete && (
             <button
@@ -974,8 +1008,6 @@ function CompleteStep({ dashboardData }: { dashboardData: ClientDashboardData | 
   const router = useRouter();
   const [isFinishing, setIsFinishing] = useState(false);
   const strategist = dashboardData?.strategist;
-
-
 
   return (
     <div className="flex flex-col items-center gap-6 text-center">
@@ -1014,7 +1046,7 @@ function CompleteStep({ dashboardData }: { dashboardData: ClientDashboardData | 
 
       {/* Go to Dashboard Button */}
       <button
-        onClick={()=> console.log('Go to Dashboard clicked')}
+        onClick={() => router.push('/client/home')}
         disabled={isFinishing}
         className="w-full rounded-md border border-zinc-200 bg-white py-3 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 disabled:opacity-40"
       >
@@ -1035,7 +1067,7 @@ interface StepIndicatorProps {
 
 function StepIndicator({ currentStep, steps }: StepIndicatorProps) {
   return (
-    <div className="flex items-center -translate-y-5 justify-center gap-1.5">
+    <div className="flex -translate-y-5 items-center justify-center gap-1.5">
       {steps.map((step, index) => (
         <div
           key={step.id}
@@ -1056,7 +1088,7 @@ function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, logout } = useAuth();
-  
+
   // 🟣 Debug: Log page mount
   useEffect(() => {
     console.log('\n🟣🟣🟣 CLIENT ONBOARDING PAGE LOADED 🟣🟣🟣');
@@ -1085,7 +1117,7 @@ function OnboardingContent() {
       setIsLoading(false); // Stop loading immediately
       // Remove the query param from URL (use shallow to avoid re-render)
       window.history.replaceState({}, '', '/client/onboarding');
-      
+
       // Sync signature status with backend (since webhook requires auth and may fail)
       // This ensures document, todo, and agreement are updated
       (async () => {
@@ -1095,15 +1127,20 @@ function OnboardingContent() {
           const pendingAgreement = data?.agreements?.find(
             a => a.status === AgreementStatus.DRAFT && a.signatureCeremonyUrl
           );
-          
+
           if (pendingAgreement) {
             console.log('[Onboarding] Syncing signature for agreement:', pendingAgreement.id);
             const result = await syncAgreementSignatureStatus(pendingAgreement.id);
             console.log('[Onboarding] Signature sync result:', result);
-            
+
             // 🟣 Debug: Log agreement signed
-            logAgreementStatus('client', pendingAgreement.id, AgreementStatus.PENDING_PAYMENT, 'Agreement signed, awaiting payment');
-            
+            logAgreementStatus(
+              'client',
+              pendingAgreement.id,
+              AgreementStatus.PENDING_PAYMENT,
+              'Agreement signed, awaiting payment'
+            );
+
             // Refresh dashboard data after sync
             const refreshedData = await getClientDashboardData();
             setDashboardData(refreshedData);
@@ -1125,9 +1162,14 @@ function OnboardingContent() {
         a => a.status === AgreementStatus.PENDING_PAYMENT
       );
       if (pendingPaymentAgreement) {
-        logAgreementStatus('client', pendingPaymentAgreement.id, AgreementStatus.PENDING_TODOS_COMPLETION, 'Payment completed');
+        logAgreementStatus(
+          'client',
+          pendingPaymentAgreement.id,
+          AgreementStatus.PENDING_TODOS_COMPLETION,
+          'Payment completed'
+        );
       }
-      
+
       cameFromPayment.current = true;
       setCurrentStep(3); // Go to complete step (index 3)
       setIsLoading(false);
@@ -1153,27 +1195,29 @@ function OnboardingContent() {
         }
         const data = await getClientDashboardData();
         setDashboardData(data);
-        
+
         // 🟣 Debug: Log agreements for client
         if (data?.agreements) {
-          logAgreements('client', data.agreements.map(a => ({ 
-            id: a.id, 
-            status: a.status as AgreementStatus, 
-            name: a.name 
-          })), 'Onboarding data loaded');
+          logAgreements(
+            'client',
+            data.agreements.map(a => ({
+              id: a.id,
+              status: a.status as AgreementStatus,
+              name: a.name,
+            })),
+            'Onboarding data loaded'
+          );
         }
 
         // Only auto-navigate if not coming from signing or payment redirect
         if (!cameFromSigning.current && !cameFromPayment.current) {
           // Check if agreement is signed (using new status enum)
-          const signedAgreement = data?.agreements.find(
-            a => isAgreementSigned(a.status)
-          );
-          
+          const signedAgreement = data?.agreements.find(a => isAgreementSigned(a.status));
+
           if (signedAgreement) {
             // Check if payment is complete using helper
             const isPaid = isAgreementPaid(signedAgreement.status);
-            
+
             if (isPaid) {
               setCurrentStep(3); // Go to complete step
             } else {
@@ -1199,17 +1243,12 @@ function OnboardingContent() {
   // 3. Finally, fallback to any signed agreement
   const pendingAgreement =
     // Priority 1: Agreement awaiting payment
-    dashboardData?.agreements.find(
-      a => a.status === AgreementStatus.PENDING_PAYMENT
-    ) ||
+    dashboardData?.agreements.find(a => a.status === AgreementStatus.PENDING_PAYMENT) ||
     // Priority 2: Agreement awaiting signature
-    dashboardData?.agreements.find(
-      a => a.status === AgreementStatus.PENDING_SIGNATURE
-    ) || 
+    dashboardData?.agreements.find(a => a.status === AgreementStatus.PENDING_SIGNATURE) ||
     // Priority 3: Any agreement that's been signed (beyond PENDING_SIGNATURE)
-    dashboardData?.agreements.find(
-      a => isAgreementSigned(a.status)
-    ) || null;
+    dashboardData?.agreements.find(a => isAgreementSigned(a.status)) ||
+    null;
 
   const handleNext = () => {
     if (currentStep < STEPS.length - 1) {
@@ -1232,7 +1271,7 @@ function OnboardingContent() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-white">
-        <p className="text-xs text-zinc-400 uppercase font-medium">Loading...</p>
+        <p className="text-xs font-medium text-zinc-400 uppercase">Loading...</p>
       </div>
     );
   }
@@ -1336,7 +1375,7 @@ export default function ClientOnboardingPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen flex-col items-center justify-center bg-white">
-          <p className="text-xs text-zinc-400 uppercase font-medium">Loading...</p>
+          <p className="text-xs font-medium text-zinc-400 uppercase">Loading...</p>
         </div>
       }
     >

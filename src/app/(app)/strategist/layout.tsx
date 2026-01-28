@@ -70,7 +70,7 @@ export default function StrategistLayout({ children }: { children: React.ReactNo
       <div className="flex min-h-screen items-center justify-center bg-zinc-50">
         <div className="flex items-center gap-2 text-zinc-500">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600" />
-          <span className="text-sm">Loading...</span>
+          {/* <span className="text-sm">Loading...</span> */}
         </div>
       </div>
     );

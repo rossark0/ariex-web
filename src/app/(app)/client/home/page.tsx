@@ -316,13 +316,15 @@ export default function ClientDashboardPage() {
   const signingTodos = agreementTodos.filter(
     todo => todo.title.toLowerCase().includes('sign')
   );
+  // Document todos = exclude sign and pay todos
   const documentTodos = agreementTodos.filter(
-    todo => !todo.title.toLowerCase().includes('sign')
+    todo => !todo.title.toLowerCase().includes('sign') && 
+            !todo.title.toLowerCase().includes('pay')
   );
   const completedDocTodos = documentTodos.filter(
     todo => todo.status === 'completed' || todo.document?.uploadStatus === 'FILE_UPLOADED'
   );
-  const hasAnyTodos = agreementTodos.length > 0;
+  const hasDocTodos = documentTodos.length > 0;
 
   // Find strategy document
   const strategyDoc = documents.find(d => d.type === 'strategy' || d.category === 'strategy');
@@ -352,16 +354,23 @@ export default function ClientDashboardPage() {
   // Agreement is signed if SignatureAPI says so OR backend says so
   const step2Complete = envelopeIsCompleted || backendSaysSignedOrComplete || documentSaysSigned;
   
-  // Payment: only show as sent/complete if agreement is signed
-  const step3Sent = step2Complete && (!!serviceAgreement?.paymentRef || !!serviceAgreement?.paymentAmount || serviceAgreement?.paymentStatus);
-  const step3Complete = serviceAgreement?.paymentStatus === 'paid';
+  // Payment: use AgreementStatus - PENDING_PAYMENT means payment was sent
+  // Also check paymentLink exists as a secondary indicator
+  const step3Sent = step2Complete && (
+    serviceAgreement?.status === AgreementStatus.PENDING_PAYMENT ||
+    isAgreementPaid(serviceAgreement?.status as AgreementStatus) ||
+    !!serviceAgreement?.paymentLink
+  );
+  const step3Complete = isAgreementPaid(serviceAgreement?.status as AgreementStatus) || serviceAgreement?.paymentStatus === 'paid';
   
-  // Documents: show if agreement is signed OR if there are document todos
-  const hasDocTodos = documentTodos.length > 0;
-  const step4Sent = step2Complete || hasDocTodos;
-  const step4Complete = hasDocTodos ? completedDocTodos.length >= documentTodos.length : uploadedDocs.length > 0;
-  const step5Sent = strategyDoc?.signatureStatus === 'SENT';
-  const step5Complete = strategyDoc?.signatureStatus === 'SIGNED';
+  // Documents: show based on PENDING_TODOS_COMPLETION status or if there are document todos
+  // Only consider complete if there are todos AND they're all done
+  const step4Sent = step3Complete || serviceAgreement?.status === AgreementStatus.PENDING_TODOS_COMPLETION || hasDocTodos;
+  const step4Complete = hasDocTodos && completedDocTodos.length >= documentTodos.length;
+  
+  // Strategy: use PENDING_STRATEGY or PENDING_STRATEGY_REVIEW
+  const step5Sent = serviceAgreement?.status === AgreementStatus.PENDING_STRATEGY_REVIEW || strategyDoc?.signatureStatus === 'SENT';
+  const step5Complete = serviceAgreement?.status === AgreementStatus.COMPLETED || strategyDoc?.signatureStatus === 'SIGNED';
 
   const paymentAmount = serviceAgreement?.paymentAmount || serviceAgreement?.price || 499;
 
@@ -592,11 +601,11 @@ export default function ClientDashboardPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-zinc-900">
                         {step4Complete
-                          ? `Documents uploaded · ${hasDocTodos ? `${completedDocTodos.length}/${documentTodos.length}` : `${uploadedDocs.length} files`}`
+                          ? `Documents uploaded · ${completedDocTodos.length}/${documentTodos.length}`
                           : hasDocTodos
                             ? `Documents pending · ${completedDocTodos.length}/${documentTodos.length} uploaded`
                             : step4Sent
-                              ? 'Waiting for document upload'
+                              ? 'Waiting for document requests'
                               : 'Documents'}
                       </span>
                     </div>
@@ -606,17 +615,17 @@ export default function ClientDashboardPage() {
                         : hasDocTodos
                           ? 'Please upload the requested documents'
                           : step4Sent
-                            ? 'Please upload W-2s, 1099s, and relevant tax documents'
+                            ? 'Your strategist will request documents when needed'
                             : 'You will be notified when documents are needed'}
                     </span>
                       <span className="mt-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                       {formatDate(createdAt)}
                     </span>
-                    {/* Show ALL agreement todos */}
-                    {hasAnyTodos && agreementTodos.length > 0 && (
+                    {/* Show document todos from agreement */}
+                    {hasDocTodos && documentTodos.length > 0 && (
                       <div className="mt-3 flex flex-col gap-1.5 w-full">
-                        <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-1">Your tasks</span>
-                        {agreementTodos.map(todo => {
+                        <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-1">Requested documents</span>
+                        {documentTodos.map(todo => {
                           const isCompleted = todo.status === 'completed' || todo.document?.uploadStatus === 'FILE_UPLOADED';
                           return (
                             <div key={todo.id} className="flex items-center gap-2 text-xs">
