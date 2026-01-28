@@ -663,6 +663,8 @@ function AgreementStep({
 
 interface PaymentStepProps extends StepProps {
   pendingAgreement: ClientAgreement | null;
+  autoVerify?: boolean; // Trigger auto-verification on mount
+  setShouldAutoVerify?: (value: boolean) => void;
 }
 
 function PaymentStep({
@@ -671,6 +673,8 @@ function PaymentStep({
   isFirst,
   pendingAgreement,
   dashboardData,
+  autoVerify = false,
+  setShouldAutoVerify,
 }: PaymentStepProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
@@ -680,6 +684,21 @@ function PaymentStep({
   const [error, setError] = useState<string | null>(null);
   const hasFetchedRef = useRef(false);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Auto-verification state
+  const [isAutoVerifying, setIsAutoVerifying] = useState(autoVerify);
+  const [verifyCountdown, setVerifyCountdown] = useState(5);
+  const [verifyAttempts, setVerifyAttempts] = useState(0);
+  const autoVerifyRef = useRef(autoVerify);
+  const chargeRef = useRef(charge);
+  const onContinueRef = useRef(onContinue);
+  const verifyAttemptsRef = useRef(verifyAttempts);
+  const MAX_VERIFY_ATTEMPTS = 10; // Max 10 attempts (~30 seconds)
+  
+  // Keep refs in sync
+  useEffect(() => { chargeRef.current = charge; }, [charge]);
+  useEffect(() => { onContinueRef.current = onContinue; }, [onContinue]);
+  useEffect(() => { verifyAttemptsRef.current = verifyAttempts; }, [verifyAttempts]);
 
   // Get client email for Stripe checkout pre-fill
   const clientEmail = dashboardData?.user?.email;
@@ -749,6 +768,109 @@ function PaymentStep({
     };
   }, [pendingAgreement?.id, pendingAgreement?.paymentLink]);
 
+  // Auto-verification after returning from Stripe
+  useEffect(() => {
+    if (!isAutoVerifying || !pendingAgreement?.id) return;
+    
+    // Countdown timer
+    const countdownInterval = setInterval(() => {
+      setVerifyCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // After countdown, start verification polling
+    const verifyTimeout = setTimeout(async () => {
+      const attemptVerification = async () => {
+        if (verifyAttemptsRef.current >= MAX_VERIFY_ATTEMPTS) {
+          console.log('[PaymentStep] Max verification attempts reached');
+          setIsAutoVerifying(false);
+          setError('Could not confirm payment automatically. Click "Verify Payment" to try again.');
+          return;
+        }
+
+        setVerifyAttempts(prev => prev + 1);
+        console.log(`[PaymentStep] Auto-verify attempt ${verifyAttemptsRef.current + 1}/${MAX_VERIFY_ATTEMPTS}`);
+
+        try {
+          // Refetch charges to check status
+          const charges = await getChargesForAgreement(pendingAgreement.id);
+          const latestCharge = charges.find(c => c.id === chargeRef.current?.id) || charges[0];
+          
+          if (latestCharge) {
+            setCharge(latestCharge);
+            chargeRef.current = latestCharge;
+            
+            // If already paid, we're done!
+            if (latestCharge.status === 'paid') {
+              console.log('[PaymentStep] Payment confirmed!');
+              setIsAutoVerifying(false);
+              // Auto-continue after a brief moment
+              setTimeout(() => onContinueRef.current(), 1000);
+              return;
+            }
+
+            // Try to trigger the webhook
+            const checkoutSessionId = latestCharge.checkoutSessionId;
+            if (checkoutSessionId) {
+              console.log('[PaymentStep] Calling webhook with checkout session:', checkoutSessionId);
+              const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+              await fetch(`${apiUrl}/webhooks/stripe`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  id: 'evt_test_checkout_session_completed',
+                  object: 'event',
+                  type: 'checkout.session.completed',
+                  data: {
+                    object: {
+                      id: checkoutSessionId,
+                      object: 'checkout.session',
+                      payment_status: 'paid',
+                    },
+                  },
+                }),
+              });
+              
+              // Wait a bit and check again
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              const recheckCharges = await getChargesForAgreement(pendingAgreement.id);
+              const recheckCharge = recheckCharges.find(c => c.id === latestCharge.id) || recheckCharges[0];
+              
+              if (recheckCharge) {
+                setCharge(recheckCharge);
+                chargeRef.current = recheckCharge;
+                if (recheckCharge.status === 'paid') {
+                  console.log('[PaymentStep] Payment confirmed after webhook!');
+                  setIsAutoVerifying(false);
+                  setTimeout(() => onContinueRef.current(), 1000);
+                  return;
+                }
+              }
+            }
+          }
+
+          // Not yet paid, try again in 3 seconds
+          setTimeout(attemptVerification, 3000);
+        } catch (err) {
+          console.error('[PaymentStep] Auto-verify error:', err);
+          setTimeout(attemptVerification, 3000);
+        }
+      };
+
+      attemptVerification();
+    }, 5000); // Start after 5 second countdown
+
+    return () => {
+      clearInterval(countdownInterval);
+      clearTimeout(verifyTimeout);
+    };
+  }, [isAutoVerifying, pendingAgreement?.id]);
+
   const handlePayNow = async () => {
     setIsGeneratingLink(true);
     setError(null);
@@ -808,16 +930,17 @@ function PaymentStep({
       // Update local state with latest charge data
       setCharge(latestCharge);
 
-      // Use the payment intent ID from the latest charge
-      const paymentIntentId = latestCharge.paymentIntentId;
-      if (!paymentIntentId) {
-        setError(
-          'No payment intent ID found. Please click "Pay" first, complete payment in Stripe, then verify.'
-        );
+      console.log('[PaymentStep] Verifying payment for charge:', latestCharge.id);
+      console.log('[PaymentStep] Full charge data:', JSON.stringify(latestCharge, null, 2));
+
+      // Use checkout session ID from the charge
+      const checkoutSessionId = latestCharge.checkoutSessionId;
+      if (!checkoutSessionId) {
+        setError('No checkout session ID found. Please click "Pay" first to create a checkout session.');
         setIsVerifying(false);
         return;
       }
-      console.log('[PaymentStep] Verifying payment for payment intent:', paymentIntentId);
+      console.log('[PaymentStep] Using checkout session ID:', checkoutSessionId);
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const response = await fetch(`${apiUrl}/webhooks/stripe`, {
@@ -826,11 +949,14 @@ function PaymentStep({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          id: 'evt_test',
-          type: 'payment_intent.succeeded',
+          id: 'evt_test_checkout_session_completed',
+          object: 'event',
+          type: 'checkout.session.completed',
           data: {
             object: {
-              id: paymentIntentId,
+              id: checkoutSessionId,
+              object: 'checkout.session',
+              payment_status: 'paid',
             },
           },
         }),
@@ -857,6 +983,43 @@ function PaymentStep({
       setIsVerifying(false);
     }
   };
+
+  // Auto-verifying UI - show countdown and progress
+  if (isAutoVerifying) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-6 py-12">
+        {/* Animated spinner */}
+        <div className="relative">
+          <div className="h-16 w-16 rounded-full border-4 border-zinc-200"></div>
+          <div className="absolute inset-0 h-16 w-16 animate-spin rounded-full border-4 border-transparent border-t-emerald-500"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-lg font-bold text-zinc-700">
+              {verifyCountdown > 0 ? verifyCountdown : <SpinnerGap weight="bold" className="h-6 w-6 animate-spin text-emerald-500" />}
+            </span>
+          </div>
+        </div>
+        
+        <div className="text-center">
+          <p className="text-sm font-medium text-zinc-900">
+            {verifyCountdown > 0 ? 'Confirming your payment...' : 'Verifying with payment system...'}
+          </p>
+          <p className="mt-1 text-xs text-zinc-500">
+            {verifyCountdown > 0 
+              ? `Starting in ${verifyCountdown}s`
+              : `Attempt ${verifyAttempts}/${MAX_VERIFY_ATTEMPTS}`}
+          </p>
+        </div>
+
+        {/* Cancel auto-verify button */}
+        <button
+          onClick={() => setIsAutoVerifying(false)}
+          className="text-xs text-zinc-400 hover:text-zinc-600 underline"
+        >
+          Cancel and verify manually
+        </button>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -1102,6 +1265,7 @@ function OnboardingContent() {
   const [currentStep, setCurrentStep] = useState(0);
   const [dashboardData, setDashboardData] = useState<ClientDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [shouldAutoVerify, setShouldAutoVerify] = useState(false);
 
   // Track if we came from signing or payment to prevent race conditions
   const cameFromSigning = useRef(false);
@@ -1156,22 +1320,11 @@ function OnboardingContent() {
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
     if (paymentStatus === 'success') {
-      console.log('[Onboarding] Payment successful, going to complete step');
-      // 🟣 Debug: Log payment complete
-      const pendingPaymentAgreement = dashboardData?.agreements?.find(
-        a => a.status === AgreementStatus.PENDING_PAYMENT
-      );
-      if (pendingPaymentAgreement) {
-        logAgreementStatus(
-          'client',
-          pendingPaymentAgreement.id,
-          AgreementStatus.PENDING_TODOS_COMPLETION,
-          'Payment completed'
-        );
-      }
-
+      console.log('[Onboarding] Payment success redirect - staying on payment step for auto-verification');
+      
       cameFromPayment.current = true;
-      setCurrentStep(3); // Go to complete step (index 3)
+      setShouldAutoVerify(true); // Trigger auto-verification in PaymentStep
+      setCurrentStep(2); // Stay on payment step (index 2) for auto-verification
       setIsLoading(false);
       // Remove the query param from URL
       window.history.replaceState({}, '', '/client/onboarding');
@@ -1344,6 +1497,8 @@ function OnboardingContent() {
               isFirst={currentStep === 0}
               isLast={currentStep === STEPS.length - 1}
               pendingAgreement={pendingAgreement}
+              autoVerify={shouldAutoVerify}
+              setShouldAutoVerify={setShouldAutoVerify}
             />
           )}
           {currentStepData.id === 'complete' && <CompleteStep dashboardData={dashboardData} />}
