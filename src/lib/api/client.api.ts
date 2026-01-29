@@ -270,22 +270,37 @@ function parseSignatureMetadata(description: string | undefined): {
  */
 export async function getClientAgreements(): Promise<ClientAgreement[]> {
   try {
+    const userId = await getCurrentUserId();
     const rawAgreements = await apiRequest<any[]>('/agreements');
-    console.log('[ClientAPI] Raw agreements from backend:', JSON.stringify(rawAgreements?.map(a => ({
+    
+    // Filter agreements to only those belonging to this client
+    // Check clientId field OR todoLists.assignedToId
+    const clientAgreements = rawAgreements?.filter(a => {
+      // Direct clientId match
+      if (a.clientId === userId) return true;
+      // Check if any todoList is assigned to this user
+      if (a.todoLists?.some((list: any) => list.assignedToId === userId)) return true;
+      // For agreements without todoLists, check if status suggests it belongs to user
+      // (This is a fallback - ideally backend should have proper clientId)
+      return false;
+    }) || [];
+    
+    console.log('[ClientAPI] Logged in user:', userId);
+    console.log('[ClientAPI] Raw agreements from backend:', rawAgreements?.length, '-> filtered for client:', clientAgreements.length);
+    console.log('[ClientAPI] Client agreements:', JSON.stringify(clientAgreements?.map(a => ({
       id: a.id,
       name: a.name,
       status: a.status,
-      paymentLink: a.paymentLink,
-      paymentStatus: a.paymentStatus,
+      todoLists: a.todoLists?.length || 0,
     })), null, 2));
 
-    if (!Array.isArray(rawAgreements)) {
+    if (!Array.isArray(clientAgreements) || clientAgreements.length === 0) {
       return [];
     }
 
     // Map backend agreement format to client format
     const agreements: ClientAgreement[] = await Promise.all(
-      rawAgreements.map(async a => {
+      clientAgreements.map(async a => {
         // Use backend status directly (new enum-based status)
         const status = a.status as AgreementStatus;
 
@@ -888,4 +903,76 @@ function calculateOnboardingStatus(data: ClientDashboardData): OnboardingStatus 
   }
 
   return status;
+}
+
+// ============================================================================
+// Document Upload for Todo
+// ============================================================================
+
+/**
+ * Upload document for a todo
+ * Creates document, uploads to S3, and confirms upload
+ */
+export async function uploadDocumentForTodo(data: {
+  todoId: string;
+  agreementId: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  fileContent: string; // Base64 encoded file content
+}): Promise<{ success: boolean; documentId?: string; error?: string }> {
+  try {
+    console.log('[ClientAPI] Uploading document for todo:', { todoId: data.todoId, fileName: data.fileName });
+
+    // 1. Create document with todoId to get presigned upload URL
+    const createResult = await apiRequest<{
+      id: string;
+      uploadUrl: string;
+      files: Array<{ id: string }>;
+    }>('/documents', {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'KYC',
+        fileName: data.fileName,
+        mimeType: data.mimeType,
+        size: data.size,
+        todoId: data.todoId,
+        agreementId: data.agreementId,
+      }),
+    });
+
+    console.log('[ClientAPI] Document created:', createResult.id);
+
+    // 2. Upload file to S3 using presigned URL
+    const fileBuffer = Buffer.from(data.fileContent, 'base64');
+    const uploadResponse = await fetch(createResult.uploadUrl, {
+      method: 'PUT',
+      body: fileBuffer,
+      headers: {
+        'Content-Type': data.mimeType,
+      },
+    });
+
+    if (!uploadResponse.ok) {
+      console.error('[ClientAPI] S3 upload failed:', uploadResponse.status);
+      return { success: false, error: 'Failed to upload file to storage' };
+    }
+
+    console.log('[ClientAPI] File uploaded to S3');
+
+    // 3. Confirm upload
+    await apiRequest(`/documents/${createResult.id}/confirm-file`, {
+      method: 'POST',
+    });
+
+    console.log('[ClientAPI] Upload confirmed');
+
+    return { success: true, documentId: createResult.id };
+  } catch (error) {
+    console.error('[ClientAPI] Failed to upload document:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to upload document' 
+    };
+  }
 }

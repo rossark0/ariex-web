@@ -3,6 +3,7 @@
 import { API_URL } from '@/lib/cognito-config';
 import { cookies } from 'next/headers';
 import { AgreementStatus } from '@/types/agreement';
+import { AcceptanceStatus } from '@/types/document';
 
 // ============================================================================
 // Types
@@ -75,10 +76,13 @@ export interface ApiTodo {
     id: string;
     signedStatus: 'WAITING_SIGNED' | 'SIGNED';
     uploadStatus: 'WAITING_UPLOAD' | 'FILE_UPLOADED' | 'FILE_DELETED';
+    acceptanceStatus?: AcceptanceStatus;
     files?: Array<{
       id: string;
       originalName: string;
       downloadUrl?: string;
+      mimeType?: string;
+      size?: number;
     }>;
   };
   createdAt: string;
@@ -1163,5 +1167,135 @@ export async function getAgreementEnvelopeStatus(agreementId: string, envelopeId
   } catch (error) {
     console.error('[StrategistAPI] Failed to get envelope status:', error);
     return { status: null, error: 'Failed to check envelope status' };
+  }
+}
+
+// ============================================================================
+// Document Request Flow
+// ============================================================================
+
+/**
+ * Create document request (TodoList + Todos)
+ * Creates a todo list with multiple todos for document requests
+ */
+export async function createDocumentRequest(data: {
+  agreementId: string;
+  clientId: string;
+  documentNames: string[];
+}): Promise<{ todoListId: string; todos: ApiTodo[] } | null> {
+  try {
+    console.log('[API] Creating document request:', data);
+    
+    // 1. Create TodoList
+    // Note: When agreementId is provided, the backend automatically assigns the client
+    // from the agreement, so we should NOT send assignedToId
+    const todoList = await apiRequest<ApiTodoList>('/todo-lists', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'Document Requests',
+        agreementId: data.agreementId,
+        // assignedToId is auto-assigned from agreement by backend
+      }),
+    });
+    console.log('[API] TodoList created:', todoList.id);
+
+    // 2. Create Todos for each document name
+    const todos: ApiTodo[] = [];
+    for (const title of data.documentNames) {
+      const todo = await apiRequest<ApiTodo>('/todos', {
+        method: 'POST',
+        body: JSON.stringify({
+          title,
+          todoListId: todoList.id,
+        }),
+      });
+      todos.push(todo);
+      console.log('[API] Todo created:', todo.id, '-', title);
+    }
+
+    return { todoListId: todoList.id, todos };
+  } catch (error) {
+    console.error('[API] Failed to create document request:', error);
+    return null;
+  }
+}
+
+/**
+ * Update document acceptance status
+ * PATCH /documents/{id}
+ */
+export async function updateDocumentAcceptance(
+  documentId: string,
+  acceptanceStatus: AcceptanceStatus
+): Promise<boolean> {
+  try {
+    console.log('[API] Updating document acceptance:', { documentId, acceptanceStatus });
+    await apiRequest(`/documents/${documentId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ acceptanceStatus }),
+    });
+    console.log('[API] Document acceptance updated');
+    return true;
+  } catch (error) {
+    console.error('[API] Failed to update document acceptance:', error);
+    return false;
+  }
+}
+
+/**
+ * Update todo status
+ * PATCH /todos/{id}
+ */
+export async function updateTodoStatus(
+  todoId: string,
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+): Promise<boolean> {
+  try {
+    console.log('[API] Updating todo status:', { todoId, status });
+    await apiRequest(`/todos/${todoId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    console.log('[API] Todo status updated');
+    return true;
+  } catch (error) {
+    console.error('[API] Failed to update todo status:', error);
+    return false;
+  }
+}
+
+/**
+ * Delete a todo
+ * DELETE /todos/{id}
+ */
+export async function deleteTodo(todoId: string): Promise<boolean> {
+  try {
+    console.log('[API] Deleting todo:', todoId);
+    
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      throw new Error('Not authenticated');
+    }
+    
+    const response = await fetch(`${API_URL}/todos/${todoId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    
+    console.log('[API] Delete response status:', response.status);
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Delete failed' }));
+      throw new Error(error.message || 'Delete failed');
+    }
+    
+    console.log('[API] Todo deleted');
+    return true;
+  } catch (error) {
+    console.error('[API] Failed to delete todo:', error);
+    return false;
   }
 }

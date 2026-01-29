@@ -15,9 +15,11 @@ import {
   generatePaymentLink,
   attachPayment,
   getChargesForAgreement,
+  deleteTodo,
 } from '@/lib/api/strategist.api';
 import { sendAgreementToClient } from '@/lib/api/agreements.actions';
 import { AgreementSheet, type AgreementSendData } from '@/components/agreements/agreement-sheet';
+import { RequestDocumentsModal } from '@/components/documents/request-documents-modal';
 import {
   CLIENT_STATUS_CONFIG,
   type ClientStatusKey,
@@ -56,7 +58,7 @@ import {
   Buildings,
 } from '@phosphor-icons/react/dist/ssr';
 import { useRouter } from 'next/navigation';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 
 interface Props {
   params: { clientId: string };
@@ -169,8 +171,7 @@ function groupDocumentsByDate(
 function LoadingState() {
   return (
     <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
-      <SpinnerGap className="h-8 w-8 animate-spin text-zinc-400" />
-      <p className="text-sm text-zinc-500">Loading client details...</p>
+      <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
     </div>
   );
 }
@@ -249,6 +250,13 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const [paymentAmount, setPaymentAmount] = useState(499);
   const [existingCharge, setExistingCharge] = useState<{ id: string; paymentLink?: string; status: string } | null>(null);
   const [isLoadingCharges, setIsLoadingCharges] = useState(true);
+
+  // Document request state
+  const [isRequestDocsModalOpen, setIsRequestDocsModalOpen] = useState(false);
+
+  // Delete todo state
+  const [deletingTodoId, setDeletingTodoId] = useState<string | null>(null);
+  const [todoToDelete, setTodoToDelete] = useState<{ id: string; title: string } | null>(null);
 
   // SignatureAPI sync state - tracks actual envelope status from SignatureAPI
   const [envelopeStatuses, setEnvelopeStatuses] = useState<Record<string, string>>({});
@@ -488,8 +496,17 @@ export default function StrategistClientDetailPage({ params }: Props) {
     }
   };
 
-  // Get the active agreement (most recent)
-  const activeAgreement = agreements[0];
+  // Get the most recent agreement (by createdAt date)
+  const sortedAgreements = [...agreements].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  const activeAgreement = sortedAgreements[0];
+  
+  // Debug: Log which agreement is active
+  if (activeAgreement) {
+    const todoCount = activeAgreement.todoLists?.flatMap(l => l.todos || []).length || 0;
+    console.log('[StrategistClient] Active agreement:', activeAgreement.id, 'status:', activeAgreement.status, 'created:', activeAgreement.createdAt, 'total todos:', todoCount);
+  }
 
   // Compute all todos from agreement first (needed for status checks)
   const allTodos =
@@ -1082,7 +1099,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
                                 return (
                                   <div
                                     key={todo.id}
-                                    className="flex items-center gap-2 text-xs"
+                                    className="group flex items-center gap-2 text-xs"
                                   >
                                     {isCompleted ? (
                                       <CheckIcon
@@ -1119,6 +1136,21 @@ export default function StrategistClientDetailPage({ params }: Props) {
                                         </a>
                                       )}
                                     </div>
+                                    {/* Delete button - only show if not completed */}
+                                    {!isCompleted && (
+                                      <button
+                                        onClick={() => setTodoToDelete({ id: todo.id, title: todo.title })}
+                                        disabled={deletingTodoId === todo.id}
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-50 text-zinc-400 hover:text-red-500 disabled:opacity-50"
+                                        title="Delete request"
+                                      >
+                                        {deletingTodoId === todo.id ? (
+                                          <SpinnerGap className="h-3 w-3 animate-spin" />
+                                        ) : (
+                                          <XIcon weight="bold" className="h-3 w-3" />
+                                        )}
+                                      </button>
+                                    )}
                                   </div>
                                 );
                               })}
@@ -1127,16 +1159,17 @@ export default function StrategistClientDetailPage({ params }: Props) {
                           <span className="mt-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                             {formatDate(docsTask?.updatedAt || client.user.createdAt)}
                           </span>
-                          {/* Button only shows if agreement is signed (step3 complete) */}
+                          {/* Button: Request documents or Add more */}
                           {hasAgreementSigned && !hasAllDocumentsUploaded && (
                             <button
+                              onClick={() => setIsRequestDocsModalOpen(true)}
                               className={`mt-2 w-fit rounded px-2 py-1 text-xs font-semibold ${
                                 hasDocumentsRequested
                                   ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
                                   : 'bg-emerald-600 text-white hover:bg-emerald-700'
                               }`}
                             >
-                              {hasDocumentsRequested ? 'Send reminder' : 'Request documents'}
+                              {hasDocumentsRequested ? 'Add more documents' : 'Request documents'}
                             </button>
                           )}
                         </div>
@@ -1428,6 +1461,73 @@ export default function StrategistClientDetailPage({ params }: Props) {
                     <CreditCard className="h-4 w-4" />
                     Send Payment Link
                   </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Request Documents Modal */}
+      {activeAgreement && (
+        <RequestDocumentsModal
+          isOpen={isRequestDocsModalOpen}
+          onClose={() => setIsRequestDocsModalOpen(false)}
+          agreementId={activeAgreement.id}
+          clientId={params.clientId}
+          clientName={client?.user.name || 'Client'}
+          onSuccess={async () => {
+            // Reload agreements to get updated todos
+            const data = await listClientAgreements(params.clientId);
+            setAgreements(data);
+          }}
+        />
+      )}
+
+      {/* Delete Todo Confirmation Dialog */}
+      {todoToDelete && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            onClick={() => !deletingTodoId && setTodoToDelete(null)}
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          />
+          {/* Dialog */}
+          <div className="relative z-10 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-zinc-900">Delete Document Request</h3>
+            <p className="mt-2 text-sm text-zinc-600">
+              Are you sure you want to delete the request for <strong>&quot;{todoToDelete.title}&quot;</strong>? This action cannot be undone.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setTodoToDelete(null)}
+                disabled={!!deletingTodoId}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setDeletingTodoId(todoToDelete.id);
+                  const success = await deleteTodo(todoToDelete.id);
+                  if (success) {
+                    // Refresh agreements
+                    const data = await listClientAgreements(params.clientId);
+                    setAgreements(data);
+                  }
+                  setDeletingTodoId(null);
+                  setTodoToDelete(null);
+                }}
+                disabled={!!deletingTodoId}
+                className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deletingTodoId ? (
+                  <>
+                    <SpinnerGap className="h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
                 )}
               </button>
             </div>

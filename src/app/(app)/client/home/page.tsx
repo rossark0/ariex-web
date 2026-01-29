@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { FileIcon, Check, SpinnerGap } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { EmptyDocumentsIllustration } from '@/components/ui/empty-documents-illustration';
-import { useState, useEffect, useRef } from 'react';
+import { TodoUploadItem } from '@/components/documents/todo-upload-item';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   getClientDashboardData,
   syncAgreementSignatureStatus,
@@ -168,51 +169,52 @@ export default function ClientDashboardPage() {
           return;
         }
 
+        // DISABLED: Signature sync - uncomment when needed
         // Sync signature status from SignatureAPI for ALL agreements
         // This is needed because the webhook may fail to update the backend
         let syncedStatuses: Record<string, string> = {};
         
-        if (hasAgreements && !hasSyncedRef.current) {
-          hasSyncedRef.current = true;
-          
-          const statuses: Record<string, string> = {};
-          let needsRefresh = false;
-          
-          // Check ALL agreements, not just the first one
-          for (const agreement of data.agreements) {
-            if (agreement?.signatureEnvelopeId) {
-              console.log('[ClientDashboard] Checking envelope status for agreement:', agreement.id);
-              
-              const syncResult = await syncAgreementSignatureStatus(agreement.id);
-              console.log('[ClientDashboard] Sync result:', syncResult);
-              
-              if (syncResult.status) {
-                // Store status - 'signed' means completed
-                statuses[agreement.id] = syncResult.status === 'signed' ? 'completed' : syncResult.status;
-                
-                if (syncResult.status === 'signed') {
-                  needsRefresh = true;
-                }
-              }
-            }
-          }
-          
-          if (Object.keys(statuses).length > 0) {
-            setEnvelopeStatuses(statuses);
-            syncedStatuses = statuses;
-          }
-          
-          // Refresh data if any agreement was synced as signed
-          if (needsRefresh) {
-            console.log('[ClientDashboard] Agreement synced as signed - refreshing data');
-            const refreshedData = await getClientDashboardData();
-            if (refreshedData) {
-              setDashboardData(refreshedData);
-              // Use refreshed data for access check below
-              data.agreements = refreshedData.agreements;
-            }
-          }
-        }
+        // if (hasAgreements && !hasSyncedRef.current) {
+        //   hasSyncedRef.current = true;
+        //   
+        //   const statuses: Record<string, string> = {};
+        //   let needsRefresh = false;
+        //   
+        //   // Check ALL agreements, not just the first one
+        //   for (const agreement of data.agreements) {
+        //     if (agreement?.signatureEnvelopeId) {
+        //       console.log('[ClientDashboard] Checking envelope status for agreement:', agreement.id);
+        //       
+        //       const syncResult = await syncAgreementSignatureStatus(agreement.id);
+        //       console.log('[ClientDashboard] Sync result:', syncResult);
+        //       
+        //       if (syncResult.status) {
+        //         // Store status - 'signed' means completed
+        //         statuses[agreement.id] = syncResult.status === 'signed' ? 'completed' : syncResult.status;
+        //         
+        //         if (syncResult.status === 'signed') {
+        //           needsRefresh = true;
+        //         }
+        //       }
+        //     }
+        //   }
+        //   
+        //   if (Object.keys(statuses).length > 0) {
+        //     setEnvelopeStatuses(statuses);
+        //     syncedStatuses = statuses;
+        //   }
+        //   
+        //   // Refresh data if any agreement was synced as signed
+        //   if (needsRefresh) {
+        //     console.log('[ClientDashboard] Agreement synced as signed - refreshing data');
+        //     const refreshedData = await getClientDashboardData();
+        //     if (refreshedData) {
+        //       setDashboardData(refreshedData);
+        //       // Use refreshed data for access check below
+        //       data.agreements = refreshedData.agreements;
+        //     }
+        //   }
+        // }
 
         // ============================================================================
         // ACCESS CONTROL: Client must have signed agreement AND paid to access /home
@@ -255,6 +257,21 @@ export default function ClientDashboardPage() {
       fetchData();
     }
   }, [user, router]);
+
+  // Refresh dashboard data (used after document upload)
+  const refreshDashboard = useCallback(async () => {
+    try {
+      const data = await getClientDashboardData();
+      if (data) {
+        setDashboardData(data);
+        // Debug: Log the todos after refresh
+        const todos = data.agreements?.[0]?.todoLists?.flatMap(list => list.todos || []) || [];
+        console.log('[ClientDashboard] Dashboard refreshed - todos:', JSON.stringify(todos, null, 2));
+      }
+    } catch (err) {
+      console.error('[ClientDashboard] Failed to refresh:', err);
+    }
+  }, []);
 
   // Loading state
   if (isLoading) {
@@ -300,18 +317,22 @@ export default function ClientDashboardPage() {
   const businessName = profile?.businessName;
   const createdAt = new Date(clientUser.createdAt);
 
-  // Find the most relevant service agreement
-  // Priority: 1) Signed/completed agreement, 2) Most recent agreement
-  // Check both backend status AND envelope status from SignatureAPI
-  const serviceAgreement = agreements.length > 0 
-    ? agreements.find(a => 
-        isAgreementSigned(a.status) || 
-        envelopeStatuses[a.id] === 'completed'
-      ) || agreements[0]
-    : null;
+  // Find the most recent agreement (by createdAt date)
+  const sortedAgreements = [...agreements].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  const serviceAgreement = sortedAgreements[0] || null;
+  
+  // Debug: Log which agreement is being used
+  if (serviceAgreement) {
+    const todoCount = serviceAgreement.todoLists?.flatMap(l => l.todos || []).length || 0;
+    console.log('[ClientDashboard] Using agreement:', serviceAgreement.id, 'status:', serviceAgreement.status, 'created:', serviceAgreement.createdAt, 'total todos:', todoCount);
+  }
 
   // Extract ALL todos from agreement
   const agreementTodos = serviceAgreement?.todoLists?.flatMap(list => list.todos || []) || [];
+  console.log('[ClientDashboard] Agreement todos:', agreementTodos.length, agreementTodos.map(t => ({ id: t.id, title: t.title })));
+  
   // Separate signing todos from document/other todos
   const signingTodos = agreementTodos.filter(
     todo => todo.title.toLowerCase().includes('sign')
@@ -621,36 +642,21 @@ export default function ClientDashboardPage() {
                       <span className="mt-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                       {formatDate(createdAt)}
                     </span>
-                    {/* Show document todos from agreement */}
-                    {hasDocTodos && documentTodos.length > 0 && (
-                      <div className="mt-3 flex flex-col gap-1.5 w-full">
-                        <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-1">Requested documents</span>
-                        {documentTodos.map(todo => {
-                          const isCompleted = todo.status === 'completed' || todo.document?.uploadStatus === 'FILE_UPLOADED';
-                          return (
-                            <div key={todo.id} className="flex items-center gap-2 text-xs">
-                              {isCompleted ? (
-                                <Check weight="bold" className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-                              ) : (
-                                <div className="h-3.5 w-3.5 shrink-0 rounded-full border border-zinc-300" />
-                              )}
-                              <span className={isCompleted ? 'text-zinc-500 line-through' : 'text-zinc-700'}>
-                                {todo.title}
-                              </span>
-                            </div>
-                          );
-                        })}
+                    {/* Show document todos from agreement with upload functionality */}
+                    {hasDocTodos && documentTodos.length > 0 && serviceAgreement && (
+                      <div className="mt-3 flex flex-col gap-2 w-full">
+                        <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-1">
+                          Requested documents ({completedDocTodos.length}/{documentTodos.length})
+                        </span>
+                        {documentTodos.map(todo => (
+                          <TodoUploadItem
+                            key={todo.id}
+                            todo={todo}
+                            agreementId={serviceAgreement.id}
+                            onUploadComplete={refreshDashboard}
+                          />
+                        ))}
                       </div>
-                    )}
-                  
-                    {/* Show button only if agreement signed AND docs not complete */}
-                    {step2Complete && !step4Complete && (
-                      <button 
-                        onClick={() => window.location.href = '/client/documents'}
-                        className="mt-2 w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
-                      >
-                        Upload documents
-                      </button>
                     )}
                   </div>
                 </div>

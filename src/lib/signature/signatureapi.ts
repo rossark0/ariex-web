@@ -413,10 +413,10 @@ export async function getEnvelopeDetails(envelopeId: string): Promise<SignatureA
       method: 'GET',
     });
 
-    console.log('[SignatureAPI] Envelope details:', JSON.stringify(envelope, null, 2));
+    // console.log('[SignatureAPI] Envelope details:', JSON.stringify(envelope, null, 2));
     return envelope;
   } catch (error) {
-    console.error('[SignatureAPI] Failed to get envelope details:', error);
+    // console.error('[SignatureAPI] Failed to get envelope details:', error);
     return null;
   }
 }
