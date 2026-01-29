@@ -56,6 +56,14 @@ function formatRelativeTime(date: Date | string): string {
   const diffMs = now.getTime() - dateObj.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
+  // Handle future dates
+  if (diffDays < 0) {
+    return dateObj.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
   // If today, show time
   if (diffDays === 0) {
     return dateObj.toLocaleTimeString('en-US', {
@@ -158,6 +166,11 @@ export default function ClientDashboardPage() {
             status: a.status as AgreementStatus, 
             name: a.name 
           })), 'Home dashboard loaded');
+          
+          // 🟣 Debug: Log each agreement status individually
+          data.agreements.forEach(a => {
+            console.log(`🟣 [CLIENT] Agreement "${a.name}" status: ${a.status}`);
+          });
         }
         
         // If no agreements exist, redirect to onboarding
@@ -331,7 +344,11 @@ export default function ClientDashboardPage() {
 
   // Extract ALL todos from agreement
   const agreementTodos = serviceAgreement?.todoLists?.flatMap(list => list.todos || []) || [];
-  console.log('[ClientDashboard] Agreement todos:', agreementTodos.length, agreementTodos.map(t => ({ id: t.id, title: t.title })));
+  console.log('[ClientDashboard] Agreement todos:', agreementTodos.length);
+  // Log each todo with its document status
+  agreementTodos.forEach(t => {
+    console.log('[ClientDashboard] Todo:', t.id, t.title, 'status:', t.status, 'document:', t.document ? { uploadStatus: t.document.uploadStatus, files: t.document.files?.length } : 'none');
+  });
   
   // Separate signing todos from document/other todos
   const signingTodos = agreementTodos.filter(
@@ -653,6 +670,7 @@ export default function ClientDashboardPage() {
                             key={todo.id}
                             todo={todo}
                             agreementId={serviceAgreement.id}
+                            strategistId={strategist?.id || serviceAgreement.strategistId || ''}
                             onUploadComplete={refreshDashboard}
                           />
                         ))}

@@ -21,7 +21,7 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
   // ALL HOOKS MUST BE CALLED AT THE TOP (Rules of Hooks)
   // ============================================================================
   const pathname = usePathname();
-  const { isSidebarCollapsed, selectedCount, onClearSelection } = useUiStore();
+  const { isSidebarCollapsed, selectedCount, onClearSelection, onDownloadSelection, isDownloadingSelection } = useUiStore();
   const { user } = useAuth();
 
   // Mobile detection (below lg breakpoint - 1024px)
@@ -120,6 +120,8 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
             <AiFloatingChatbot
               selectedCount={selectedCount}
               onClearSelection={onClearSelection ?? undefined}
+              onDownload={onDownloadSelection ?? undefined}
+              isDownloading={isDownloadingSelection}
               contextType={getContextType()}
             />
           ) : null}

@@ -55,6 +55,12 @@ export interface ApiDocument {
   signatureStatus?: string;
   signedAt?: string;
   fileId?: string;
+  description?: string;
+  uploadedBy?: string;
+  uploadedByName?: string;
+  category?: string;
+  mimeType?: string;
+  size?: number;
 }
 
 export interface ApiPayment {
@@ -308,6 +314,34 @@ export async function listDocuments(): Promise<ApiDocument[]> {
 }
 
 /**
+ * List documents for a specific client
+ * @see https://qt4pgrsacn.us-east-2.awsapprunner.com/api#/Documents
+ */
+export async function listClientDocuments(clientId: string): Promise<ApiDocument[]> {
+  try {
+    const documents = await apiRequest<ApiDocument[]>(`/documents?clientId=${clientId}`);
+    return documents;
+  } catch (error) {
+    console.error('[API] Failed to list client documents:', error);
+    return [];
+  }
+}
+
+/**
+ * List documents for a specific agreement
+ * @see https://qt4pgrsacn.us-east-2.awsapprunner.com/api#/Documents
+ */
+export async function listAgreementDocuments(agreementId: string): Promise<ApiDocument[]> {
+  try {
+    const documents = await apiRequest<ApiDocument[]>(`/documents?agreementId=${agreementId}`);
+    return documents;
+  } catch (error) {
+    console.error('[API] Failed to list agreement documents:', error);
+    return [];
+  }
+}
+
+/**
  * Get document by ID
  */
 export async function getDocumentById(documentId: string): Promise<ApiDocument | null> {
@@ -531,10 +565,16 @@ export async function confirmUpload(fileIdOrDocId: string): Promise<boolean> {
  */
 export async function getDownloadUrl(documentId: string): Promise<string | null> {
   try {
+    console.log('[API] Getting download URL for document:', documentId);
     const doc = await apiRequest<{
-      files: Array<{ downloadUrl?: string }>;
+      id: string;
+      files?: Array<{ downloadUrl?: string; id?: string; key?: string }>;
     }>(`/documents/${documentId}`);
-    return doc.files?.[0]?.downloadUrl || null;
+    console.log('[API] Document response:', JSON.stringify(doc, null, 2));
+    
+    const downloadUrl = doc.files?.[0]?.downloadUrl || null;
+    console.log('[API] Download URL:', downloadUrl);
+    return downloadUrl;
   } catch (error) {
     console.error('[API] Failed to get download URL:', error);
     return null;
@@ -651,11 +691,13 @@ export async function createClient(data: CreateClientData): Promise<ApiClient | 
 
 /**
  * List all agreements for a client (includes todoLists with todos)
+ * Fetches documents filtered by agreementId and merges into todos
  */
 export async function listClientAgreements(clientId: string): Promise<ApiAgreement[]> {
   try {
-    // The API returns agreements with nested todoLists and todos
+    // Fetch agreements first
     const agreements = await apiRequest<ApiAgreement[]>('/agreements');
+    
     console.log('[API] All agreements:', agreements.length);
     console.log('[API] Filtering for clientId:', clientId);
 
@@ -670,12 +712,47 @@ export async function listClientAgreements(clientId: string): Promise<ApiAgreeme
 
     console.log('[API] Client agreements after filter:', clientAgreements.length);
 
-    // Parse embedded signature metadata from description to extract envelope IDs
-    // The metadata is embedded as: __SIGNATURE_METADATA__:{json}
-    const enrichedAgreements = clientAgreements.map(a => {
+    // For each agreement, fetch documents filtered by agreementId and merge into todos
+    const enrichedAgreements = await Promise.all(clientAgreements.map(async (a) => {
+      // Fetch documents for this specific agreement
+      const documents = await apiRequest<StrategistDocument[]>(`/documents?agreementId=${a.id}`).catch(() => []);
+      console.log('[API] Documents for agreement', a.id, ':', documents.length);
+      
+      // Build lookup by todoId
+      const documentsByTodoId = new Map<string, StrategistDocument>();
+      for (const doc of documents) {
+        if (doc.todoId) {
+          documentsByTodoId.set(doc.todoId, doc);
+          console.log('[API] Document', doc.id, 'has todoId:', doc.todoId);
+        }
+      }
+      
+      // Merge documents into todos
+      if (a.todoLists) {
+        for (const todoList of a.todoLists) {
+          if (todoList.todos) {
+            for (const todo of todoList.todos) {
+              const matchingDoc = documentsByTodoId.get(todo.id);
+              if (matchingDoc) {
+                todo.document = {
+                  id: matchingDoc.id,
+                  signedStatus: 'WAITING_SIGNED',
+                  uploadStatus: matchingDoc.uploadStatus || 'FILE_UPLOADED',
+                  acceptanceStatus: matchingDoc.acceptanceStatus,
+                  files: matchingDoc.files,
+                };
+                console.log('[API] ✅ Merged document into todo:', todo.id, todo.title, 'acceptanceStatus:', matchingDoc.acceptanceStatus);
+              } else {
+                console.log('[API] ❌ No document for todo:', todo.id, todo.title);
+              }
+            }
+          }
+        }
+      }
+      
       if (a.signatureEnvelopeId) {
         console.log('[API] Agreement', a.id, 'already has envelopeId:', a.signatureEnvelopeId);
-        return a; // Already has envelope ID
+        return a;
       }
       
       console.log('[API] Agreement', a.id, 'description:', a.description?.substring(0, 200));
@@ -697,10 +774,8 @@ export async function listClientAgreements(clientId: string): Promise<ApiAgreeme
         console.log('[API] No metadata found in agreement', a.id, 'description');
       }
       return a;
-    });
+    }));
 
-    // The /agreements endpoint already returns nested todoLists with todos
-    // No need to fetch them separately
     return enrichedAgreements;
   } catch (error) {
     console.error(
@@ -1297,5 +1372,56 @@ export async function deleteTodo(todoId: string): Promise<boolean> {
   } catch (error) {
     console.error('[API] Failed to delete todo:', error);
     return false;
+  }
+}
+
+// ============================================================================
+// Document Management for Strategist
+// ============================================================================
+
+interface StrategistDocument {
+  id: string;
+  name?: string;
+  type: string;
+  todoId?: string;
+  uploadStatus?: 'WAITING_UPLOAD' | 'FILE_UPLOADED' | 'FILE_DELETED';
+  acceptanceStatus?: AcceptanceStatus;
+  files?: Array<{
+    id: string;
+    originalName: string;
+    downloadUrl?: string;
+    mimeType?: string;
+    size?: number;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Get all documents (strategist can see all)
+ * Used to merge documents into todos since backend doesn't include document relation
+ */
+export async function getAllDocuments(): Promise<StrategistDocument[]> {
+  try {
+    const documents = await apiRequest<StrategistDocument[]>('/documents');
+    console.log('[API] getAllDocuments count:', documents?.length || 0);
+    // Log first few documents with their todoId field for debugging
+    documents?.slice(0, 5).forEach(doc => {
+      console.log('[API] Document sample:', JSON.stringify({
+        id: doc.id,
+        type: doc.type,
+        todoId: doc.todoId,
+        todo: (doc as any).todo,
+        uploadStatus: doc.uploadStatus,
+        acceptanceStatus: doc.acceptanceStatus,
+      }));
+    });
+    // Count documents with todoId
+    const withTodoId = documents?.filter(d => d.todoId) || [];
+    console.log('[API] Documents with todoId:', withTodoId.length, 'of', documents?.length || 0);
+    return Array.isArray(documents) ? documents : [];
+  } catch (error) {
+    console.error('[API] Failed to get documents:', error);
+    return [];
   }
 }

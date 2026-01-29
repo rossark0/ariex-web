@@ -11,8 +11,10 @@ import {
   User,
   ClipboardIcon,
   PaperclipIcon,
+  DownloadSimple,
 } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { EmptyMessagesIllustration } from '@/components/ui/empty-messages-illustration';
 import { MarkdownContent } from '@/components/ui/markdown-content';
 import { MiniDocumentStack, MiniPaymentStack, MiniFileStack } from '@/components/ui/mini-document-illustration';
@@ -21,12 +23,16 @@ import { useUiStore, type AiMessage } from '@/contexts/ui/UiStore';
 interface AiFloatingChatbotProps {
   selectedCount?: number;
   onClearSelection?: () => void;
+  onDownload?: () => void;
+  isDownloading?: boolean;
   contextType?: string;
 }
 
 export function AiFloatingChatbot({
   selectedCount = 0,
   onClearSelection,
+  onDownload,
+  isDownloading = false,
   contextType = 'item',
 }: AiFloatingChatbotProps) {
   const {
@@ -172,13 +178,29 @@ export function AiFloatingChatbot({
               </button>
             </div>
 
-            {/* Add to folder button */}
+            {/* Ask Ariex button */}
             <button
               onClick={handleAskAriex}
               className="flex cursor-pointer items-center gap-1.5 rounded-full border border-zinc-200 bg-white py-1.5 pr-3 pl-3 text-sm font-medium text-teal-600 shadow-lg transition-colors hover:bg-teal-50"
             >
               <span>Ask Ariex</span>
             </button>
+
+            {/* Download button - shows when onDownload handler is provided */}
+            {onDownload && (
+              <button
+                onClick={onDownload}
+                disabled={isDownloading}
+                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-zinc-200 bg-white py-1.5 pr-3 pl-2 text-sm font-medium text-zinc-700 shadow-lg transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isDownloading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <DownloadSimple weight="bold" className="h-4 w-4" />
+                )}
+                <span>{isDownloading ? 'Downloading...' : 'Download'}</span>
+              </button>
+            )}
           </div>
         </div>
       )}

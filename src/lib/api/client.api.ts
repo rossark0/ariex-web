@@ -4,6 +4,7 @@ import { API_URL } from '@/lib/cognito-config';
 import { cookies } from 'next/headers';
 import { getEnvelopeDetails, createEmbeddedCeremonyUrl, getRecentEnvelopeForEmail, createCeremonyForRecipient, getSignedDocumentUrl } from '@/lib/signature/signatureapi';
 import { AgreementStatus, isAgreementSigned, isAgreementPaid } from '@/types/agreement';
+import { AcceptanceStatus } from '@/types/document';
 
 // ============================================================================
 // Types
@@ -63,6 +64,7 @@ export interface ClientAgreement {
   type?: string;
   status: AgreementStatus;
   price?: string | number;
+  strategistId?: string;
   signatureEnvelopeId?: string;
   signatureRecipientId?: string;
   signatureCeremonyUrl?: string;
@@ -108,6 +110,14 @@ export interface ClientDocument {
   status: string;
   signatureStatus?: 'PENDING' | 'SENT' | 'SIGNED' | 'DECLINED';
   fileId?: string;
+  todoId?: string; // Link to todo if document was uploaded for a todo
+  uploadStatus?: 'WAITING_UPLOAD' | 'FILE_UPLOADED' | 'FILE_DELETED';
+  acceptanceStatus?: AcceptanceStatus; // Strategist accept/decline status
+  files?: Array<{
+    id: string;
+    originalName: string;
+    downloadUrl?: string;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -293,6 +303,15 @@ export async function getClientAgreements(): Promise<ClientAgreement[]> {
       status: a.status,
       todoLists: a.todoLists?.length || 0,
     })), null, 2));
+    
+    // Debug: Log todos with their document status
+    clientAgreements.forEach(a => {
+      a.todoLists?.forEach((list: any) => {
+        list.todos?.forEach((todo: any) => {
+          console.log('[ClientAPI] Todo raw data:', todo.id, todo.title, 'status:', todo.status, 'document:', JSON.stringify(todo.document || 'NONE'));
+        });
+      });
+    });
 
     if (!Array.isArray(clientAgreements) || clientAgreements.length === 0) {
       return [];
@@ -372,6 +391,7 @@ export async function getClientAgreements(): Promise<ClientAgreement[]> {
           description: signatureData.cleanDescription, // Use clean description without metadata
           status,
           price: a.price,
+          strategistId: a.strategistId,
           signatureEnvelopeId: envelopeId,
           signatureRecipientId: recipientId,
           signatureCeremonyUrl: ceremonyUrl,
@@ -431,7 +451,13 @@ export async function getAgreementStatus(agreementId: string): Promise<{ status:
 export async function getClientDocuments(): Promise<ClientDocument[]> {
   try {
     const documents = await apiRequest<ClientDocument[]>('/documents');
-    // console.log('[ClientAPI] getClientDocuments:', documents);
+    console.log('[ClientAPI] getClientDocuments:', JSON.stringify(documents?.map(d => ({
+      id: d.id,
+      name: d.name,
+      type: d.type,
+      todoId: d.todoId || 'NONE',
+      uploadStatus: d.uploadStatus,
+    })), null, 2));
     return Array.isArray(documents) ? documents : [];
   } catch {
     return [];
@@ -770,6 +796,41 @@ export async function getClientDashboardData(): Promise<ClientDashboardData | nu
       }
     }
 
+    // =========================================================================
+    // MERGE documents into todos
+    // The backend doesn't include document relation on todos when fetching
+    // agreements, so we merge them here based on todoId
+    // =========================================================================
+    const documentsByTodoId = new Map<string, ClientDocument>();
+    for (const doc of documents) {
+      if (doc.todoId) {
+        documentsByTodoId.set(doc.todoId, doc);
+      }
+    }
+
+    // Attach documents to todos in agreements
+    for (const agreement of agreements) {
+      if (agreement.todoLists) {
+        for (const todoList of agreement.todoLists) {
+          if (todoList.todos) {
+            for (const todo of todoList.todos) {
+              const matchingDoc = documentsByTodoId.get(todo.id);
+              if (matchingDoc) {
+                // Attach document info to todo (including acceptanceStatus)
+                todo.document = {
+                  id: matchingDoc.id,
+                  uploadStatus: matchingDoc.uploadStatus,
+                  acceptanceStatus: matchingDoc.acceptanceStatus,
+                  files: matchingDoc.files,
+                };
+                console.log('[ClientAPI] Merged document into todo:', todo.id, todo.title, 'uploadStatus:', matchingDoc.uploadStatus, 'acceptanceStatus:', matchingDoc.acceptanceStatus);
+              }
+            }
+          }
+        }
+      }
+    }
+
     return {
       user,
       profile,
@@ -912,40 +973,71 @@ function calculateOnboardingStatus(data: ClientDashboardData): OnboardingStatus 
 /**
  * Upload document for a todo
  * Creates document, uploads to S3, and confirms upload
+ * If existingDocumentId is provided (re-upload after decline), replaces the file instead
  */
 export async function uploadDocumentForTodo(data: {
   todoId: string;
   agreementId: string;
+  strategistId: string;
   fileName: string;
   mimeType: string;
   size: number;
   fileContent: string; // Base64 encoded file content
+  existingDocumentId?: string; // For re-upload after decline
 }): Promise<{ success: boolean; documentId?: string; error?: string }> {
   try {
-    console.log('[ClientAPI] Uploading document for todo:', { todoId: data.todoId, fileName: data.fileName });
-
-    // 1. Create document with todoId to get presigned upload URL
-    const createResult = await apiRequest<{
-      id: string;
-      uploadUrl: string;
-      files: Array<{ id: string }>;
-    }>('/documents', {
-      method: 'POST',
-      body: JSON.stringify({
-        type: 'KYC',
-        fileName: data.fileName,
-        mimeType: data.mimeType,
-        size: data.size,
-        todoId: data.todoId,
-        agreementId: data.agreementId,
-      }),
+    console.log('[ClientAPI] Uploading document for todo:', { 
+      todoId: data.todoId, 
+      fileName: data.fileName,
+      strategistId: data.strategistId,
+      isReupload: !!data.existingDocumentId 
     });
 
-    console.log('[ClientAPI] Document created:', createResult.id);
+    let documentId: string;
+    let uploadUrl: string;
+
+    if (data.existingDocumentId) {
+      // Re-upload: Replace file on existing document
+      console.log('[ClientAPI] Re-uploading to existing document:', data.existingDocumentId);
+      const replaceResult = await apiRequest<{
+        uploadUrl: string;
+      }>(`/documents/${data.existingDocumentId}/replace-file`, {
+        method: 'POST',
+        body: JSON.stringify({
+          fileName: data.fileName,
+          mimeType: data.mimeType,
+          size: data.size,
+        }),
+      });
+      documentId = data.existingDocumentId;
+      uploadUrl = replaceResult.uploadUrl;
+      console.log('[ClientAPI] Got replace URL for document:', documentId);
+    } else {
+      // New upload: Create document with todoId
+      const createResult = await apiRequest<{
+        id: string;
+        uploadUrl: string;
+        files: Array<{ id: string }>;
+      }>('/documents', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'KYC',
+          fileName: data.fileName,
+          mimeType: data.mimeType,
+          size: data.size,
+          todoId: data.todoId,
+          agreementId: data.agreementId,
+          strategistId: data.strategistId,
+        }),
+      });
+      documentId = createResult.id;
+      uploadUrl = createResult.uploadUrl;
+      console.log('[ClientAPI] Document created:', documentId);
+    }
 
     // 2. Upload file to S3 using presigned URL
     const fileBuffer = Buffer.from(data.fileContent, 'base64');
-    const uploadResponse = await fetch(createResult.uploadUrl, {
+    const uploadResponse = await fetch(uploadUrl, {
       method: 'PUT',
       body: fileBuffer,
       headers: {
@@ -961,13 +1053,26 @@ export async function uploadDocumentForTodo(data: {
     console.log('[ClientAPI] File uploaded to S3');
 
     // 3. Confirm upload
-    await apiRequest(`/documents/${createResult.id}/confirm-file`, {
+    await apiRequest(`/documents/${documentId}/confirm-file`, {
       method: 'POST',
     });
 
     console.log('[ClientAPI] Upload confirmed');
 
-    return { success: true, documentId: createResult.id };
+    // 4. If this was a re-upload, reset acceptance status to REQUEST_STRATEGIST_ACCEPTANCE
+    if (data.existingDocumentId) {
+      try {
+        await apiRequest(`/documents/${documentId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ acceptanceStatus: 'REQUEST_STRATEGIST_ACCEPTANCE' }),
+        });
+        console.log('[ClientAPI] Set acceptance status to REQUEST_STRATEGIST_ACCEPTANCE after re-upload');
+      } catch (e) {
+        console.log('[ClientAPI] Could not set acceptance status (backend may handle it)');
+      }
+    }
+
+    return { success: true, documentId };
   } catch (error) {
     console.error('[ClientAPI] Failed to upload document:', error);
     return { 

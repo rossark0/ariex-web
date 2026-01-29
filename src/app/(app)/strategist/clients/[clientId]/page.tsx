@@ -1,37 +1,42 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useUiStore } from '@/contexts/ui/UiStore';
-import { StrategySheet } from '@/components/strategy/strategy-sheet';
 import { Button } from '@/components/ui/button';
 import { getFullClientById, FullClientMock } from '@/lib/mocks/client-full';
 import {
   getClientById,
   type ApiClient,
   type ApiAgreement,
+  type ApiDocument,
   listClientAgreements,
+  listAgreementDocuments,
   getAgreementEnvelopeStatus,
+  getDownloadUrl,
   createCharge,
   generatePaymentLink,
   attachPayment,
   getChargesForAgreement,
   deleteTodo,
+  updateDocumentAcceptance,
+  updateAgreementStatus,
 } from '@/lib/api/strategist.api';
 import { sendAgreementToClient } from '@/lib/api/agreements.actions';
+import { sendStrategyToClient, completeAgreement } from '@/lib/api/strategies.actions';
 import { AgreementSheet, type AgreementSendData } from '@/components/agreements/agreement-sheet';
+import { StrategySheet, type StrategySendData } from '@/components/strategy/strategy-sheet';
 import { RequestDocumentsModal } from '@/components/documents/request-documents-modal';
+import { EmptyDocumentsIllustration } from '@/components/ui/empty-documents-illustration';
+import { CLIENT_STATUS_CONFIG, type ClientStatusKey } from '@/lib/client-status';
 import {
-  CLIENT_STATUS_CONFIG,
-  type ClientStatusKey,
-} from '@/lib/client-status';
-import { 
-  AgreementStatus, 
-  isAgreementSigned, 
-  isAgreementPaid, 
+  AgreementStatus,
+  isAgreementSigned,
+  isAgreementPaid,
   areTodosCompleted,
   logAgreements,
   logAgreementStatus,
 } from '@/types/agreement';
+import { AcceptanceStatus } from '@/types/document';
 import {
   ArrowLeftIcon,
   BuildingsIcon,
@@ -95,9 +100,16 @@ function getInitials(name: string | null): string {
 function formatRelativeTime(date: Date): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  // Handle future dates or same day
+  if (diffDays < 0) {
+    // Future date - just show the date
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+  }
 
   // If today, show time
   if (diffDays === 0) {
@@ -125,16 +137,14 @@ function formatRelativeTime(date: Date): string {
   });
 }
 
-function groupDocumentsByDate(
-  documents: (typeof import('@/lib/mocks/client-full').fullClientMocks)[0]['documents']
-) {
+function groupDocumentsByDate(documents: ApiDocument[]) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
 
-  const groups: { label: string; documents: typeof documents }[] = [];
+  const groups: { label: string; documents: ApiDocument[] }[] = [];
 
   const todayDocs = documents.filter(d => {
     const docDate = new Date(d.createdAt);
@@ -225,7 +235,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [apiClient, setApiClient] = useState<ApiClient | null>(null);
-  
+
   // 🔵 Debug: Log page mount
   useEffect(() => {
     console.log('\n🔵🔵🔵 STRATEGIST PAGE LOADED 🔵🔵🔵');
@@ -234,7 +244,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const [client, setClient] = useState<FullClientMock | null>(null);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [isStrategySheetOpen, setIsStrategySheetOpen] = useState(false);
-  const { setSelection } = useUiStore();
+  const { setSelection, setDownloadingSelection } = useUiStore();
 
   // Agreement state
   const [agreements, setAgreements] = useState<ApiAgreement[]>([]);
@@ -248,7 +258,11 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const [isSendingPayment, setIsSendingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState(499);
-  const [existingCharge, setExistingCharge] = useState<{ id: string; paymentLink?: string; status: string } | null>(null);
+  const [existingCharge, setExistingCharge] = useState<{
+    id: string;
+    paymentLink?: string;
+    status: string;
+  } | null>(null);
   const [isLoadingCharges, setIsLoadingCharges] = useState(true);
 
   // Document request state
@@ -257,6 +271,26 @@ export default function StrategistClientDetailPage({ params }: Props) {
   // Delete todo state
   const [deletingTodoId, setDeletingTodoId] = useState<string | null>(null);
   const [todoToDelete, setTodoToDelete] = useState<{ id: string; title: string } | null>(null);
+
+  // Document acceptance state
+  const [acceptingDocId, setAcceptingDocId] = useState<string | null>(null);
+  const [decliningDocId, setDecliningDocId] = useState<string | null>(null);
+
+  // Client documents from API
+  const [clientDocuments, setClientDocuments] = useState<ApiDocument[]>([]);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(true);
+  const [viewingDocId, setViewingDocId] = useState<string | null>(null);
+  const [isDownloadingSelected, setIsDownloadingSelected] = useState(false);
+
+  // Advance to strategy state
+  const [isAdvancingToStrategy, setIsAdvancingToStrategy] = useState(false);
+
+  // Strategy sending state
+  const [isSendingStrategy, setIsSendingStrategy] = useState(false);
+  const [strategyError, setStrategyError] = useState<string | null>(null);
+
+  // Complete agreement state
+  const [isCompletingAgreement, setIsCompletingAgreement] = useState(false);
 
   // SignatureAPI sync state - tracks actual envelope status from SignatureAPI
   const [envelopeStatuses, setEnvelopeStatuses] = useState<Record<string, string>>({});
@@ -304,10 +338,41 @@ export default function StrategistClientDetailPage({ params }: Props) {
     });
   };
 
+  // Handle downloading selected documents
+  const handleDownloadSelected = useCallback(async () => {
+    console.log('[UI] Downloading selected documents:', Array.from(selectedDocs));
+    setIsDownloadingSelected(true);
+    setDownloadingSelection(true);
+    try {
+      for (const docId of selectedDocs) {
+        try {
+          console.log('[UI] Fetching download URL for:', docId);
+          const url = await getDownloadUrl(docId);
+          console.log('[UI] Got URL:', url);
+          if (url) {
+            // Open download in new tab
+            window.open(url, '_blank');
+          } else {
+            console.error('[UI] No download URL returned for:', docId);
+          }
+        } catch (error) {
+          console.error('Failed to download document:', docId, error);
+        }
+      }
+    } finally {
+      setIsDownloadingSelected(false);
+      setDownloadingSelection(false);
+    }
+  }, [selectedDocs, setDownloadingSelection]);
+
   // Sync selection state with UI store
   useEffect(() => {
-    setSelection(selectedDocs.size, () => setSelectedDocs(new Set()));
-  }, [selectedDocs.size, setSelection]);
+    setSelection(
+      selectedDocs.size, 
+      () => setSelectedDocs(new Set()),
+      selectedDocs.size > 0 ? handleDownloadSelected : null
+    );
+  }, [selectedDocs.size, setSelection, handleDownloadSelected]);
 
   // Load agreements from backend
   useEffect(() => {
@@ -324,14 +389,23 @@ export default function StrategistClientDetailPage({ params }: Props) {
           '[Page] Todos:',
           data.flatMap(a => a.todoLists?.flatMap(tl => tl.todos || []) || [])
         );
-        
+
         // 🔵 Debug: Log agreements for strategist
-        logAgreements('strategist', data.map(a => ({ 
-          id: a.id, 
-          status: a.status as AgreementStatus, 
-          name: a.name 
-        })), `Client ${params.clientId}`);
+        logAgreements(
+          'strategist',
+          data.map(a => ({
+            id: a.id,
+            status: a.status as AgreementStatus,
+            name: a.name,
+          })),
+          `Client ${params.clientId}`
+        );
         
+        // 🔵 Debug: Log each agreement status individually
+        data.forEach(a => {
+          console.log(`🔵 [STRATEGIST] Agreement "${a.name}" status: ${a.status}`);
+        });
+
         setAgreements(data);
       } catch (error) {
         console.error('[Page] Failed to load agreements:', error);
@@ -342,6 +416,31 @@ export default function StrategistClientDetailPage({ params }: Props) {
     if (params.clientId) loadAgreements();
   }, [params.clientId]);
 
+  // Load documents for the first/active agreement
+  useEffect(() => {
+    async function loadDocuments() {
+      // Find the first agreement to load documents for
+      const activeAgreement = agreements[0];
+      if (!activeAgreement) {
+        setIsLoadingDocuments(false);
+        return;
+      }
+      
+      setIsLoadingDocuments(true);
+      try {
+        const docs = await listAgreementDocuments(activeAgreement.id);
+        setClientDocuments(docs);
+      } catch (error) {
+        console.error('[Page] Failed to load documents:', error);
+      } finally {
+        setIsLoadingDocuments(false);
+      }
+    }
+    if (agreements.length > 0) {
+      loadDocuments();
+    }
+  }, [agreements]);
+
   // Sync envelope statuses from SignatureAPI (the SOURCE OF TRUTH for signatures)
   // This is needed because the webhook may fail to update the backend
   useEffect(() => {
@@ -350,11 +449,11 @@ export default function StrategistClientDetailPage({ params }: Props) {
       hasSyncedEnvelopesRef.current = true;
 
       const statuses: Record<string, string> = {};
-      
+
       for (const agreement of agreements) {
         // Get envelope ID from agreement
         const envelopeId = agreement.signatureEnvelopeId;
-        
+
         if (envelopeId) {
           console.log('[Page] Checking envelope status via server action:', envelopeId);
           try {
@@ -362,10 +461,15 @@ export default function StrategistClientDetailPage({ params }: Props) {
             if (result.status) {
               statuses[agreement.id] = result.status;
               console.log('[Page] Envelope', envelopeId, 'status:', result.status);
-              
+
               // 🔵 Debug: Log envelope status
-              logAgreementStatus('strategist', agreement.id, agreement.status as AgreementStatus, `Envelope: ${result.status}`);
-              
+              logAgreementStatus(
+                'strategist',
+                agreement.id,
+                agreement.status as AgreementStatus,
+                `Envelope: ${result.status}`
+              );
+
               // If completed, reload agreements to get updated backend status
               if (result.status === 'completed') {
                 console.log('[Page] Envelope completed - will reload agreements');
@@ -376,10 +480,10 @@ export default function StrategistClientDetailPage({ params }: Props) {
           }
         }
       }
-      
+
       if (Object.keys(statuses).length > 0) {
         setEnvelopeStatuses(statuses);
-        
+
         // Reload agreements if any envelope was completed (backend might have been updated)
         if (Object.values(statuses).some(s => s === 'completed')) {
           const data = await listClientAgreements(params.clientId);
@@ -395,7 +499,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
   useEffect(() => {
     async function fetchCharges() {
       setIsLoadingCharges(true);
-      
+
       // Find signed agreement
       const signed = agreements.find(a => isAgreementSigned(a.status));
       if (!signed) {
@@ -407,7 +511,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
       try {
         const charges = await getChargesForAgreement(signed.id);
         console.log('🔵 [STRATEGIST] Fetched charges for agreement:', signed.id, charges);
-        
+
         // Get pending charge or most recent
         const pendingCharge = charges.find(c => c.status === 'pending') || charges[0];
         setExistingCharge(pendingCharge || null);
@@ -443,9 +547,14 @@ export default function StrategistClientDetailPage({ params }: Props) {
       if (result.success) {
         // 🔵 Debug: Log agreement sent
         if (result.agreementId) {
-          logAgreementStatus('strategist', result.agreementId, AgreementStatus.PENDING_SIGNATURE, 'Agreement sent to client');
+          logAgreementStatus(
+            'strategist',
+            result.agreementId,
+            AgreementStatus.PENDING_SIGNATURE,
+            'Agreement sent to client'
+          );
         }
-        
+
         // Store ceremony URL in localStorage for client to retrieve
         // (Backend doesn't store this field yet)
         if (result.agreementId && result.ceremonyUrl) {
@@ -496,42 +605,202 @@ export default function StrategistClientDetailPage({ params }: Props) {
     }
   };
 
+  // Handler for accepting a document
+  const handleAcceptDocument = async (documentId: string) => {
+    setAcceptingDocId(documentId);
+    try {
+      const success = await updateDocumentAcceptance(
+        documentId,
+        AcceptanceStatus.ACCEPTED_BY_STRATEGIST
+      );
+      if (success) {
+        // Reload agreements to get updated state
+        const data = await listClientAgreements(params.clientId);
+        setAgreements(data);
+      }
+    } catch (error) {
+      console.error('Failed to accept document:', error);
+    } finally {
+      setAcceptingDocId(null);
+    }
+  };
+
+  // Handler for declining a document
+  const handleDeclineDocument = async (documentId: string) => {
+    setDecliningDocId(documentId);
+    try {
+      const success = await updateDocumentAcceptance(
+        documentId,
+        AcceptanceStatus.REJECTED_BY_STRATEGIST
+      );
+      if (success) {
+        // Reload agreements to get updated state
+        const data = await listClientAgreements(params.clientId);
+        setAgreements(data);
+      }
+    } catch (error) {
+      console.error('Failed to decline document:', error);
+    } finally {
+      setDecliningDocId(null);
+    }
+  };
+
   // Get the most recent agreement (by createdAt date)
-  const sortedAgreements = [...agreements].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  const sortedAgreements = [...agreements].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
   const activeAgreement = sortedAgreements[0];
-  
+
   // Debug: Log which agreement is active
   if (activeAgreement) {
     const todoCount = activeAgreement.todoLists?.flatMap(l => l.todos || []).length || 0;
-    console.log('[StrategistClient] Active agreement:', activeAgreement.id, 'status:', activeAgreement.status, 'created:', activeAgreement.createdAt, 'total todos:', todoCount);
+    console.log(
+      '[StrategistClient] Active agreement:',
+      activeAgreement.id,
+      'status:',
+      activeAgreement.status,
+      'created:',
+      activeAgreement.createdAt,
+      'total todos:',
+      todoCount
+    );
   }
 
   // Compute all todos from agreement first (needed for status checks)
-  const allTodos =
-    activeAgreement?.todoLists?.flatMap(list => list.todos || []) || [];
+  const allTodos = activeAgreement?.todoLists?.flatMap(list => list.todos || []) || [];
 
   // Compute agreement status from real data using new AgreementStatus enum
-  // 
+  //
   // Status Flow:
   // DRAFT -> PENDING_SIGNATURE -> PENDING_PAYMENT -> PENDING_TODOS_COMPLETION -> PENDING_STRATEGY -> COMPLETED
   //
   const hasAgreementSent = agreements.some(
     a => a.status !== AgreementStatus.DRAFT && a.status !== AgreementStatus.CANCELLED
   );
-  
+
   // Check SignatureAPI envelope status (the REAL source of truth for signature)
-  const envelopeIsCompleted = activeAgreement && envelopeStatuses[activeAgreement.id] === 'completed';
-  
+  const envelopeIsCompleted =
+    activeAgreement && envelopeStatuses[activeAgreement.id] === 'completed';
+
   // Agreement is signed if status is beyond PENDING_SIGNATURE
-  const hasAgreementSigned = agreements.some(a => isAgreementSigned(a.status)) || envelopeIsCompleted;
+  const hasAgreementSigned =
+    agreements.some(a => isAgreementSigned(a.status)) || envelopeIsCompleted;
 
   // Get the active agreement for payment (signed or in payment flow)
-  const signedAgreement = agreements.find(
-    a => isAgreementSigned(a.status)
-  ) || (hasAgreementSigned ? activeAgreement : null);
-  
+  const signedAgreement =
+    agreements.find(a => isAgreementSigned(a.status)) ||
+    (hasAgreementSigned ? activeAgreement : null);
+
+  // Handler for advancing agreement to PENDING_STRATEGY status
+  const handleAdvanceToStrategy = async () => {
+    if (!signedAgreement) return;
+    
+    setIsAdvancingToStrategy(true);
+    try {
+      console.log('🔵 [STRATEGIST] Advancing agreement to PENDING_STRATEGY:', signedAgreement.id);
+      const success = await updateAgreementStatus(signedAgreement.id, AgreementStatus.PENDING_STRATEGY);
+      
+      if (success) {
+        console.log('🔵 [STRATEGIST] Agreement advanced to PENDING_STRATEGY');
+        logAgreementStatus(
+          'strategist',
+          signedAgreement.id,
+          AgreementStatus.PENDING_STRATEGY,
+          'All documents accepted - ready for strategy'
+        );
+        
+        // Reload agreements to get updated state
+        const data = await listClientAgreements(params.clientId);
+        setAgreements(data);
+      } else {
+        console.error('🔵 [STRATEGIST] Failed to advance agreement to PENDING_STRATEGY');
+      }
+    } catch (error) {
+      console.error('Failed to advance to strategy:', error);
+    } finally {
+      setIsAdvancingToStrategy(false);
+    }
+  };
+
+  // Handler for sending strategy to client for signature
+  const handleSendStrategy = async (data: StrategySendData) => {
+    if (!signedAgreement || !apiClient) return;
+    
+    setIsSendingStrategy(true);
+    setStrategyError(null);
+    
+    try {
+      console.log('🔵 [STRATEGIST] Sending strategy to client:', signedAgreement.id);
+      
+      const result = await sendStrategyToClient({
+        agreementId: signedAgreement.id,
+        clientId: apiClient.id,
+        clientName: apiClient.name || apiClient.fullName || apiClient.email.split('@')[0],
+        clientEmail: apiClient.email,
+        strategistName: 'Ariex Tax Strategist', // Server will override with actual user
+        data,
+      });
+      
+      if (result.success) {
+        console.log('🔵 [STRATEGIST] Strategy sent successfully');
+        logAgreementStatus(
+          'strategist',
+          signedAgreement.id,
+          AgreementStatus.PENDING_STRATEGY_REVIEW,
+          'Strategy sent to client for signature'
+        );
+        
+        // Close the strategy sheet
+        setIsStrategySheetOpen(false);
+        
+        // Reload agreements to get updated state
+        const updatedAgreements = await listClientAgreements(params.clientId);
+        setAgreements(updatedAgreements);
+      } else {
+        console.error('🔵 [STRATEGIST] Failed to send strategy:', result.error);
+        setStrategyError(result.error || 'Failed to send strategy');
+      }
+    } catch (error) {
+      console.error('Failed to send strategy:', error);
+      setStrategyError(error instanceof Error ? error.message : 'Failed to send strategy');
+    } finally {
+      setIsSendingStrategy(false);
+    }
+  };
+
+  // Handler for completing agreement after strategy is signed
+  const handleCompleteAgreement = async () => {
+    if (!signedAgreement) return;
+    
+    setIsCompletingAgreement(true);
+    
+    try {
+      console.log('🔵 [STRATEGIST] Completing agreement:', signedAgreement.id);
+      
+      const result = await completeAgreement(signedAgreement.id);
+      
+      if (result.success) {
+        console.log('🔵 [STRATEGIST] Agreement completed successfully');
+        logAgreementStatus(
+          'strategist',
+          signedAgreement.id,
+          AgreementStatus.COMPLETED,
+          'Agreement completed - all steps finished'
+        );
+        
+        // Reload agreements to get updated state
+        const updatedAgreements = await listClientAgreements(params.clientId);
+        setAgreements(updatedAgreements);
+      } else {
+        console.error('🔵 [STRATEGIST] Failed to complete agreement:', result.error);
+      }
+    } catch (error) {
+      console.error('Failed to complete agreement:', error);
+    } finally {
+      setIsCompletingAgreement(false);
+    }
+  };
+
   // Payment status - check from API (source of truth)
   // hasPaymentSent = charge exists (fetched from /charges/agreement/{id})
   // If a charge exists, payment link was already sent
@@ -542,20 +811,23 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const documentTodos = allTodos.filter(
     todo => !todo.title.toLowerCase().includes('sign') && todo.title.toLowerCase() !== 'pay'
   );
-  const completedDocTodos = documentTodos.filter(
-    todo =>
-      todo.status === 'completed' ||
-      todo.document?.uploadStatus === 'FILE_UPLOADED'
+  const uploadedDocTodos = documentTodos.filter(
+    todo => todo.status === 'completed' || todo.document?.uploadStatus === 'FILE_UPLOADED'
+  );
+  const acceptedDocTodos = documentTodos.filter(
+    todo => todo.document?.acceptanceStatus === AcceptanceStatus.ACCEPTED_BY_STRATEGIST
   );
   const totalDocTodos = documentTodos.length;
-  const completedDocCount = completedDocTodos.length;
+  const uploadedDocCount = uploadedDocTodos.length;
+  const acceptedDocCount = acceptedDocTodos.length;
   const hasDocumentsRequested = totalDocTodos > 0;
-  const hasAllDocumentsUploaded = totalDocTodos > 0 && completedDocCount >= totalDocTodos;
+  const hasAllDocumentsUploaded = totalDocTodos > 0 && uploadedDocCount >= totalDocTodos;
+  const hasAllDocumentsAccepted = totalDocTodos > 0 && acceptedDocCount >= totalDocTodos;
 
   // Initialize payment amount from agreement metadata when modal opens
   const handleOpenPaymentModal = () => {
     if (!signedAgreement) return;
-    
+
     // Get agreement price from description metadata or use default
     let agreementAmount = 499;
     const metadataMatch = signedAgreement.description?.match(/__SIGNATURE_METADATA__:([\s\S]+)$/);
@@ -567,7 +839,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
         // Use default
       }
     }
-    
+
     setPaymentAmount(agreementAmount);
     setPaymentError(null);
     setIsPaymentModalOpen(true);
@@ -603,7 +875,9 @@ export default function StrategistClientDetailPage({ params }: Props) {
         generatedPaymentLink = await generatePaymentLink(newCharge.id);
       } catch (linkError) {
         console.error('[Payment] Error generating payment link:', linkError);
-        setPaymentError(`Failed to generate payment link: ${linkError instanceof Error ? linkError.message : 'Unknown error'}`);
+        setPaymentError(
+          `Failed to generate payment link: ${linkError instanceof Error ? linkError.message : 'Unknown error'}`
+        );
         return;
       }
 
@@ -622,11 +896,16 @@ export default function StrategistClientDetailPage({ params }: Props) {
 
       if (success) {
         console.log('[Payment] Payment link attached to agreement');
-        logAgreementStatus('strategist', signedAgreement.id, AgreementStatus.PENDING_PAYMENT, 'Payment link sent');
-        
+        logAgreementStatus(
+          'strategist',
+          signedAgreement.id,
+          AgreementStatus.PENDING_PAYMENT,
+          'Payment link sent'
+        );
+
         // Update existing charge state with the new payment link
         setExistingCharge({ ...newCharge, paymentLink: generatedPaymentLink });
-        
+
         // Close modal and reload agreements
         setIsPaymentModalOpen(false);
         const data = await listClientAgreements(params.clientId);
@@ -651,13 +930,18 @@ export default function StrategistClientDetailPage({ params }: Props) {
 
     try {
       // Generate new Stripe checkout URL for existing charge
-      console.log('[Payment Reminder] Generating new payment link for existing charge:', existingCharge.id);
+      console.log(
+        '[Payment Reminder] Generating new payment link for existing charge:',
+        existingCharge.id
+      );
       let generatedPaymentLink: string | null = null;
       try {
         generatedPaymentLink = await generatePaymentLink(existingCharge.id);
       } catch (linkError) {
         console.error('[Payment Reminder] Error generating payment link:', linkError);
-        setPaymentError(`Failed to generate payment link: ${linkError instanceof Error ? linkError.message : 'Unknown error'}`);
+        setPaymentError(
+          `Failed to generate payment link: ${linkError instanceof Error ? linkError.message : 'Unknown error'}`
+        );
         return;
       }
 
@@ -676,11 +960,16 @@ export default function StrategistClientDetailPage({ params }: Props) {
 
       if (success) {
         console.log('[Payment Reminder] Payment link updated on agreement');
-        logAgreementStatus('strategist', signedAgreement.id, AgreementStatus.PENDING_PAYMENT, 'Payment reminder sent');
-        
+        logAgreementStatus(
+          'strategist',
+          signedAgreement.id,
+          AgreementStatus.PENDING_PAYMENT,
+          'Payment reminder sent'
+        );
+
         // Update existing charge state with the new payment link
         setExistingCharge({ ...existingCharge, paymentLink: generatedPaymentLink });
-        
+
         // Reload agreements
         const data = await listClientAgreements(params.clientId);
         setAgreements(data);
@@ -730,32 +1019,41 @@ export default function StrategistClientDetailPage({ params }: Props) {
   // ============================================================================
   // 5-STEP TIMELINE COMPLETION STATES (computed from REAL API data)
   // ============================================================================
-  
+
   // Step 1: Account always created
   const step1Complete = true;
-  
+
   // Step 2: Agreement - Use REAL agreement status from API
   // Backend statuses: DRAFT (sent but not signed), ACTIVE (signed), COMPLETED
   const step2Sent = hasAgreementSent; // Agreement has been sent (DRAFT, ACTIVE, or COMPLETED)
   const step2Complete = hasAgreementSigned; // Agreement has been signed (ACTIVE or COMPLETED)
-  
+
   // Step 3: Payment - Use REAL payment status from API
   const step3Sent = step2Complete && (hasPaymentSent || hasPaymentReceived);
   const step3Complete = hasPaymentReceived;
-  
-  // Step 4: Documents - Use REAL document upload status from API
+
+  // Step 4: Documents - Use REAL document acceptance status from API
+  // Documents are "complete" only when ALL are ACCEPTED by strategist
   const step4Sent = step3Complete || hasDocumentsRequested;
-  const step4Complete = hasAllDocumentsUploaded;
-  
+  const step4Complete = hasAllDocumentsAccepted;
+
   // Step 5: Strategy - Check if strategy document exists and is signed
   const strategyDoc = client.documents.find(
     d => d.category === 'contract' && d.originalName.toLowerCase().includes('strategy')
   );
-  const step5Sent = step4Complete && (strategyDoc?.signatureStatus === 'SENT' || strategyDoc?.signatureStatus === 'SIGNED');
+  const step5Sent =
+    step4Complete &&
+    (strategyDoc?.signatureStatus === 'SENT' || strategyDoc?.signatureStatus === 'SIGNED');
   const step5Complete = strategyDoc?.signatureStatus === 'SIGNED';
 
   // Compute status key from real data
-  type StatusKey = 'awaiting_agreement' | 'awaiting_payment' | 'awaiting_documents' | 'ready_for_strategy' | 'awaiting_signature' | 'active';
+  type StatusKey =
+    | 'awaiting_agreement'
+    | 'awaiting_payment'
+    | 'awaiting_documents'
+    | 'ready_for_strategy'
+    | 'awaiting_signature'
+    | 'active';
   let statusKey: StatusKey;
   if (!step2Complete) statusKey = 'awaiting_agreement';
   else if (!step3Complete) statusKey = 'awaiting_payment';
@@ -763,7 +1061,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
   else if (step5Complete) statusKey = 'active';
   else if (step5Sent) statusKey = 'awaiting_signature';
   else statusKey = 'ready_for_strategy';
-  
+
   const statusConfig = CLIENT_STATUS_CONFIG[statusKey];
 
   // Additional data for timeline display
@@ -825,10 +1123,10 @@ export default function StrategistClientDetailPage({ params }: Props) {
               </div>
 
               <button
-                disabled={!step4Complete}
-                onClick={() => step4Complete && setIsStrategySheetOpen(true)}
+                disabled={signedAgreement?.status !== AgreementStatus.PENDING_STRATEGY}
+                onClick={() => signedAgreement?.status === AgreementStatus.PENDING_STRATEGY && setIsStrategySheetOpen(true)}
                 className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-sm font-medium transition-colors ${
-                  step4Complete
+                  signedAgreement?.status === AgreementStatus.PENDING_STRATEGY
                     ? 'cursor-pointer border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600'
                     : 'cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400'
                 }`}
@@ -912,7 +1210,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
                 ═══════════════════════════════════════════════════════════════
             */}
             {/* Loading state for Activity */}
-            {(isLoadingAgreements || isLoadingCharges) ? (
+            {isLoadingAgreements || isLoadingCharges ? (
               <div className="mb-6">
                 <h2 className="mb-4 text-base font-medium text-zinc-900">Activity</h2>
                 <div className="flex items-center justify-center py-12">
@@ -920,352 +1218,495 @@ export default function StrategistClientDetailPage({ params }: Props) {
                 </div>
               </div>
             ) : (
-            (() => {
-              // Uses step variables computed at component level (step2Complete, step3Complete, etc.)
-              // Step 1 is always complete
-              const step1Complete = true;
-              const uploadedCount = client.documents.filter(d => d.category !== 'contract').length;
+              (() => {
+                // Uses step variables computed at component level (step2Complete, step3Complete, etc.)
+                // Step 1 is always complete
+                const step1Complete = true;
+                const uploadedCount = client.documents.filter(
+                  d => d.category !== 'contract'
+                ).length;
 
-              return (
-                <div className="mb-6">
-                  <h2 className="mb-4 text-base font-medium text-zinc-900">Activity</h2>
-                  <div className="relative pl-6">
-                    <div className="flex flex-col gap-0">
-                      {/* Step 1: Account Created - Always complete */}
-                      <div className="relative flex gap-4 pb-6">
-                        <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
-                          <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                return (
+                  <div className="mb-6">
+                    <h2 className="mb-4 text-base font-medium text-zinc-900">Activity</h2>
+                    <div className="relative pl-6">
+                      <div className="flex flex-col gap-0">
+                        {/* Step 1: Account Created - Always complete */}
+                        <div className="relative flex gap-4 pb-6">
+                          <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
+                            <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                          </div>
+                          {/* Line to next step - emerald if step 1 complete (always) */}
+                          <div className="absolute top-5 bottom-2 -left-[19px] w-[2px] bg-emerald-200" />
+                          <div className="flex flex-1 flex-col">
+                            <span className="font-medium text-zinc-900">
+                              Account created for {client.profile.businessName || client.user.name}
+                            </span>
+                            <span className="text-sm text-zinc-500">
+                              Client onboarding initiated by strategist
+                            </span>
+                            <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                              {formatDate(client.user.createdAt)} · Created by Alex Morgan
+                            </span>
+                          </div>
                         </div>
-                        {/* Line to next step - emerald if step 1 complete (always) */}
-                        <div className="absolute top-5 bottom-2 -left-[19px] w-[2px] bg-emerald-200" />
-                        <div className="flex flex-1 flex-col">
-                          <span className="font-medium text-zinc-900">
-                            Account created for {client.profile.businessName || client.user.name}
-                          </span>
-                          <span className="text-sm text-zinc-500">
-                            Client onboarding initiated by strategist
-                          </span>
-                          <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                            {formatDate(client.user.createdAt)} · Created by Alex Morgan
-                          </span>
-                        </div>
-                      </div>
 
-                      {/* Step 2: Agreement Phase */}
-                      <div className="relative flex gap-4 pb-6">
-                        <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
+                        {/* Step 2: Agreement Phase */}
+                        <div className="relative flex gap-4 pb-6">
+                          <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
+                            <div
+                              className={`h-2 w-2 rounded-full ${hasAgreementSent || hasAgreementSigned ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                            />
+                          </div>
+                          {/* Line to next step - emerald only if step 2 complete */}
                           <div
-                            className={`h-2 w-2 rounded-full ${hasAgreementSent || hasAgreementSigned ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                            className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${hasAgreementSigned ? 'bg-emerald-200' : 'bg-zinc-200'}`}
                           />
+                          <div className="flex flex-1 flex-col">
+                            <span className="font-medium text-zinc-900">
+                              {hasAgreementSigned
+                                ? 'Service agreement signed'
+                                : hasAgreementSent
+                                  ? 'Agreement sent for signature'
+                                  : 'Agreement pending'}
+                            </span>
+                            <span className="text-sm text-zinc-500">
+                              {hasAgreementSigned
+                                ? 'Ariex Service Agreement 2024 was signed '
+                                : hasAgreementSent
+                                  ? 'Waiting for client to review and sign'
+                                  : 'Send service agreement to client'}
+                            </span>
+                            <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                              {formatDate(agreementTask?.updatedAt || client.user.createdAt)}
+                            </span>
+                            {/* Button: emerald if strategist needs to act, zinc if already acted (resend) */}
+                            {step1Complete && !hasAgreementSigned && (
+                              <button
+                                onClick={() => setIsAgreementModalOpen(true)}
+                                className={`mt-2 flex w-fit items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${
+                                  hasAgreementSent
+                                    ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                                    : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                }`}
+                              >
+                                {hasAgreementSent ? 'Resend agreement' : 'Send agreement'}
+                              </button>
+                            )}
+                            {agreementError && (
+                              <span className="mt-1 text-xs text-red-500">{agreementError}</span>
+                            )}
+                          </div>
                         </div>
-                        {/* Line to next step - emerald only if step 2 complete */}
-                        <div
-                          className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${hasAgreementSigned ? 'bg-emerald-200' : 'bg-zinc-200'}`}
-                        />
-                        <div className="flex flex-1 flex-col">
-                          <span className="font-medium text-zinc-900">
-                            {hasAgreementSigned
-                              ? 'Service agreement signed'
-                              : hasAgreementSent
-                                ? 'Agreement sent for signature'
-                                : 'Agreement pending'}
-                          </span>
-                          <span className="text-sm text-zinc-500">
-                            {hasAgreementSigned
-                              ? 'Ariex Service Agreement 2024 was signed '
-                              : hasAgreementSent
-                                ? 'Waiting for client to review and sign'
-                                : 'Send service agreement to client'}
-                          </span>
-                          <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                            {formatDate(agreementTask?.updatedAt || client.user.createdAt)}
-                          </span>
-                          {/* Button: emerald if strategist needs to act, zinc if already acted (resend) */}
-                          {step1Complete && !hasAgreementSigned && (
-                            <button
-                              onClick={() => setIsAgreementModalOpen(true)}
-                              className={`mt-2 flex w-fit items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${
-                                hasAgreementSent
-                                  ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                              }`}
-                            >
-                              {hasAgreementSent ? 'Resend agreement' : 'Send agreement'}
-                            </button>
-                          )}
-                          {agreementError && (
-                            <span className="mt-1 text-xs text-red-500">{agreementError}</span>
-                          )}
-                        </div>
-                      </div>
 
-                      {/* Step 3: Payment Phase */}
-                      <div className="relative flex gap-4 pb-6">
-                        <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
+                        {/* Step 3: Payment Phase */}
+                        <div className="relative flex gap-4 pb-6">
+                          <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
+                            <div
+                              className={`h-2 w-2 rounded-full ${step3Sent || step3Complete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                            />
+                          </div>
+                          {/* Line to next step - emerald only if step 3 complete */}
                           <div
-                            className={`h-2 w-2 rounded-full ${step3Sent || step3Complete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                            className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${step3Complete ? 'bg-emerald-200' : 'bg-zinc-200'}`}
                           />
+                          <div className="flex flex-1 flex-col">
+                            <span className="font-medium text-zinc-900">
+                              {step3Complete
+                                ? `Payment received · ${formatCurrency(payment?.amount || 499)}`
+                                : step3Sent
+                                  ? `Payment pending · ${formatCurrency(payment?.amount || 499)}`
+                                  : 'Payment link pending'}
+                            </span>
+                            <span className="text-sm text-zinc-500">
+                              {step3Complete
+                                ? `${payment?.description || 'Onboarding Fee'} via ${payment?.paymentMethod || 'Stripe'}`
+                                : step3Sent
+                                  ? 'Awaiting payment via Stripe link'
+                                  : 'Send payment link to client'}
+                            </span>
+                            <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                              {payment?.paidAt
+                                ? formatDate(payment.paidAt)
+                                : payment?.dueDate
+                                  ? `Due ${formatDate(payment.dueDate)}`
+                                  : formatDate(client.user.createdAt)}
+                            </span>
+                            {/* Button: emerald if strategist needs to act (send payment link), zinc if reminder */}
+                            {step2Complete && !step3Complete && (
+                              <button
+                                onClick={
+                                  step3Sent ? handleSendPaymentReminder : handleOpenPaymentModal
+                                }
+                                disabled={isSendingPayment}
+                                className={`mt-2 flex w-fit items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${
+                                  step3Sent
+                                    ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                                    : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                } ${isSendingPayment ? 'cursor-not-allowed opacity-50' : ''}`}
+                              >
+                                {isSendingPayment ? (
+                                  <>
+                                    <SpinnerGap className="h-3 w-3 animate-spin" />
+                                    Sending...
+                                  </>
+                                ) : step3Sent ? (
+                                  'Send reminder'
+                                ) : (
+                                  'Send payment link'
+                                )}
+                              </button>
+                            )}
+                            {paymentError && (
+                              <span className="mt-1 text-xs text-red-500">{paymentError}</span>
+                            )}
+                          </div>
                         </div>
-                        {/* Line to next step - emerald only if step 3 complete */}
-                        <div
-                          className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${step3Complete ? 'bg-emerald-200' : 'bg-zinc-200'}`}
-                        />
-                        <div className="flex flex-1 flex-col">
-                          <span className="font-medium text-zinc-900">
-                            {step3Complete
-                              ? `Payment received · ${formatCurrency(payment?.amount || 499)}`
-                              : step3Sent
-                                ? `Payment pending · ${formatCurrency(payment?.amount || 499)}`
-                                : 'Payment link pending'}
-                          </span>
-                          <span className="text-sm text-zinc-500">
-                            {step3Complete
-                              ? `${payment?.description || 'Onboarding Fee'} via ${payment?.paymentMethod || 'Stripe'}`
-                              : step3Sent
-                                ? 'Awaiting payment via Stripe link'
-                                : 'Send payment link to client'}
-                          </span>
-                          <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                            {payment?.paidAt
-                              ? formatDate(payment.paidAt)
-                              : payment?.dueDate
-                                ? `Due ${formatDate(payment.dueDate)}`
-                                : formatDate(client.user.createdAt)}
-                          </span>
-                          {/* Button: emerald if strategist needs to act (send payment link), zinc if reminder */}
-                          {step2Complete && !step3Complete && (
-                            <button
-                              onClick={step3Sent ? handleSendPaymentReminder : handleOpenPaymentModal}
-                              disabled={isSendingPayment}
-                              className={`mt-2 flex w-fit items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${
-                                step3Sent
-                                  ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                              } ${isSendingPayment ? 'cursor-not-allowed opacity-50' : ''}`}
-                            >
-                              {isSendingPayment ? (
-                                <>
-                                  <SpinnerGap className="h-3 w-3 animate-spin" />
-                                  Sending...
-                                </>
-                              ) : step3Sent ? (
-                                'Send reminder'
-                              ) : (
-                                'Send payment link'
-                              )}
-                            </button>
-                          )}
-                          {paymentError && (
-                            <span className="mt-1 text-xs text-red-500">{paymentError}</span>
-                          )}
-                        </div>
-                      </div>
 
-                      {/* Step 4: Documents Phase (driven by agreement todos) */}
-                      <div className="relative flex gap-4 pb-6">
-                        <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
+                        {/* Step 4: Documents Phase (driven by agreement todos) */}
+                        <div className="relative flex gap-4 pb-6">
+                          <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
+                            <div
+                              className={`h-2 w-2 rounded-full ${hasDocumentsRequested || hasAllDocumentsUploaded ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                            />
+                          </div>
+                          {/* Line to next step - emerald only if all docs uploaded */}
                           <div
-                            className={`h-2 w-2 rounded-full ${hasDocumentsRequested || hasAllDocumentsUploaded ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                            className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${hasAllDocumentsAccepted ? 'bg-emerald-200' : 'bg-zinc-200'}`}
                           />
-                        </div>
-                        {/* Line to next step - emerald only if all docs uploaded */}
-                        <div
-                          className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${hasAllDocumentsUploaded ? 'bg-emerald-200' : 'bg-zinc-200'}`}
-                        />
-                        <div className="flex flex-1 flex-col">
-                          <span className="font-medium text-zinc-900">
-                            {hasAllDocumentsUploaded
-                              ? `Documents uploaded · ${completedDocCount}/${totalDocTodos} complete`
-                              : hasDocumentsRequested
-                                ? `Documents pending · ${completedDocCount}/${totalDocTodos} uploaded`
-                                : 'Documents'}
-                          </span>
-                          <span className="text-sm text-zinc-500">
-                            {hasAllDocumentsUploaded
-                              ? 'All requested documents have been received'
-                              : hasDocumentsRequested
-                                ? 'Waiting for client to upload requested documents'
-                                : 'Request documents from client'}
-                          </span>
-                          {/* Show individual todo items */}
-                          {hasDocumentsRequested && documentTodos.length > 0 && (
-                            <div className="mt-2 flex flex-col gap-1.5">
-                              {documentTodos.map(todo => {
-                                const isCompleted =
-                                  todo.status === 'completed' ||
-                                  todo.document?.uploadStatus === 'FILE_UPLOADED';
-                                const uploadedFile = todo.document?.files?.[0];
+                          <div className="flex flex-1 flex-col">
+                            <span className="font-medium text-zinc-900">
+                              {hasAllDocumentsAccepted
+                                ? `Documents accepted · ${acceptedDocCount}/${totalDocTodos} complete`
+                                : hasAllDocumentsUploaded
+                                  ? `Documents uploaded · ${uploadedDocCount}/${totalDocTodos} (review required)`
+                                  : hasDocumentsRequested
+                                    ? `Documents pending · ${uploadedDocCount}/${totalDocTodos} uploaded`
+                                    : 'Documents'}
+                            </span>
+                            <span className="text-sm text-zinc-500">
+                              {hasAllDocumentsAccepted
+                                ? 'All documents have been reviewed and accepted'
+                                : hasAllDocumentsUploaded
+                                  ? 'Review and accept uploaded documents to proceed'
+                                  : hasDocumentsRequested
+                                    ? 'Waiting for client to upload requested documents'
+                                    : 'Request documents from client'}
+                            </span>
+                            {/* Show individual todo items */}
+                            {hasDocumentsRequested && documentTodos.length > 0 && (
+                              <div className="mt-2 flex flex-col gap-2">
+                                {documentTodos.map(todo => {
+                                  const isUploaded =
+                                    todo.document?.uploadStatus === 'FILE_UPLOADED';
+                                  const isAccepted =
+                                    todo.document?.acceptanceStatus ===
+                                    AcceptanceStatus.ACCEPTED_BY_STRATEGIST;
+                                  const isRejected =
+                                    todo.document?.acceptanceStatus ===
+                                    AcceptanceStatus.REJECTED_BY_STRATEGIST;
+                                  const isPendingReview = isUploaded && !isAccepted && !isRejected;
+                                  const isCompleted = todo.status === 'completed' || isAccepted;
+                                  const uploadedFile = todo.document?.files?.[0];
+                                  const documentId = todo.document?.id;
 
-                                return (
-                                  <div
-                                    key={todo.id}
-                                    className="group flex items-center gap-2 text-xs"
-                                  >
-                                    {isCompleted ? (
-                                      <CheckIcon
-                                        weight="bold"
-                                        className="h-3.5 w-3.5 shrink-0 text-emerald-500"
-                                      />
-                                    ) : (
-                                      <div className="h-3.5 w-3.5 shrink-0 rounded-full border border-zinc-300" />
-                                    )}
-                                    <div className="flex flex-1 flex-col">
-                                      <span
-                                        className={
-                                          isCompleted
-                                            ? 'text-zinc-600 line-through'
-                                            : 'text-zinc-600'
-                                        }
-                                      >
-                                        {todo.title}
-                                      </span>
-                                      {uploadedFile && (
-                                        <a
-                                          href={uploadedFile.downloadUrl || '#'}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="mt-0.5 flex items-center gap-1 text-emerald-600 hover:text-emerald-700 hover:underline"
-                                        >
-                                          <FileArrowDownIcon
-                                            weight="fill"
-                                            className="h-3 w-3"
+                                  return (
+                                    <div
+                                      key={todo.id}
+                                      className={`group rounded-lg border p-2.5 ${
+                                        isRejected
+                                          ? 'border-red-200 bg-red-50'
+                                          : isAccepted
+                                            ? 'border-emerald-200 bg-emerald-50'
+                                            : 'border-zinc-200 bg-zinc-50'
+                                      }`}
+                                    >
+                                      <div className="flex items-start gap-2">
+                                        {isAccepted ? (
+                                          <CheckIcon
+                                            weight="bold"
+                                            className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500"
                                           />
-                                          <span className="truncate max-w-[180px]">
-                                            {uploadedFile.originalName}
-                                          </span>
-                                        </a>
-                                      )}
-                                    </div>
-                                    {/* Delete button - only show if not completed */}
-                                    {!isCompleted && (
-                                      <button
-                                        onClick={() => setTodoToDelete({ id: todo.id, title: todo.title })}
-                                        disabled={deletingTodoId === todo.id}
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-50 text-zinc-400 hover:text-red-500 disabled:opacity-50"
-                                        title="Delete request"
-                                      >
-                                        {deletingTodoId === todo.id ? (
-                                          <SpinnerGap className="h-3 w-3 animate-spin" />
+                                        ) : isRejected ? (
+                                          <XIcon
+                                            weight="bold"
+                                            className="mt-0.5 h-4 w-4 shrink-0 text-red-500"
+                                          />
+                                        ) : isPendingReview ? (
+                                          <Clock
+                                            weight="bold"
+                                            className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500"
+                                          />
                                         ) : (
-                                          <XIcon weight="bold" className="h-3 w-3" />
+                                          <div className="mt-0.5 h-4 w-4 shrink-0 rounded-full border border-zinc-300" />
                                         )}
-                                      </button>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                          <span className="mt-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                            {formatDate(docsTask?.updatedAt || client.user.createdAt)}
-                          </span>
-                          {/* Button: Request documents or Add more */}
-                          {hasAgreementSigned && !hasAllDocumentsUploaded && (
-                            <button
-                              onClick={() => setIsRequestDocsModalOpen(true)}
-                              className={`mt-2 w-fit rounded px-2 py-1 text-xs font-semibold ${
-                                hasDocumentsRequested
-                                  ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                              }`}
-                            >
-                              {hasDocumentsRequested ? 'Add more documents' : 'Request documents'}
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                                        <div className="flex min-w-0 flex-1 flex-col">
+                                          <div className="flex items-center gap-2">
+                                            <span
+                                              className={`text-sm font-medium ${
+                                                isAccepted
+                                                  ? 'text-emerald-700'
+                                                  : isRejected
+                                                    ? 'text-red-700'
+                                                    : 'text-zinc-700'
+                                              }`}
+                                            >
+                                              {todo.title}
+                                            </span>
+                                            {isPendingReview && (
+                                              <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-xs font-medium text-zinc-600">
+                                                Pending review
+                                              </span>
+                                            )}
+                                            {isAccepted && (
+                                              <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-600">
+                                                Accepted
+                                              </span>
+                                            )}
+                                            {isRejected && (
+                                              <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-600">
+                                                Declined
+                                              </span>
+                                            )}
+                                          </div>
+                                          {uploadedFile && (
+                                            <a
+                                              href={uploadedFile.downloadUrl || '#'}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="rounded bg-zinc-100 px-1.5 py-0.5 text-zinc-600 hover:bg-zinc-200"
+                                            >
+                                              <FileArrowDownIcon
+                                                weight="fill"
+                                                className="h-3.5 w-3.5"
+                                              />
+                                              <span className="max-w-[200px] truncate">
+                                                {uploadedFile.originalName}
+                                              </span>
+                                            </a>
+                                          )}
+                                          {/* Accept/Decline buttons for pending review */}
+                                          {isPendingReview && documentId && (
+                                            <div className="mt-2 flex items-center gap-2">
+                                              <button
+                                                onClick={() => handleAcceptDocument(documentId)}
+                                                disabled={
+                                                  acceptingDocId === documentId ||
+                                                  decliningDocId === documentId
+                                                }
+                                                className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                                              >
+                                                {acceptingDocId === documentId ? (
+                                                  <SpinnerGap className="h-3 w-3 animate-spin" />
+                                                ) : (
+                                                  <CheckIcon weight="bold" className="h-3 w-3" />
+                                                )}
+                                                Accept
+                                              </button>
+                                              <button
+                                                onClick={() => handleDeclineDocument(documentId)}
+                                                disabled={
+                                                  acceptingDocId === documentId ||
+                                                  decliningDocId === documentId
+                                                }
+                                                className="flex items-center gap-1 rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-200 disabled:opacity-50"
+                                              >
+                                                {decliningDocId === documentId ? (
+                                                  <SpinnerGap className="h-3 w-3 animate-spin" />
+                                                ) : (
+                                                  <XIcon weight="bold" className="h-3 w-3" />
+                                                )}
+                                                Decline
+                                              </button>
+                                            </div>
+                                          )}
+                                          {/* Re-upload message for rejected */}
+                                          {isRejected && (
+                                            <p className="mt-1 text-xs text-red-600">
+                                              Client needs to re-upload this document
+                                            </p>
+                                          )}
+                                        </div>
+                                        {/* Decline button on hover for accepted docs (strategist can change mind) */}
+                                        {isAccepted && documentId && (
+                                          <button
+                                            onClick={() => handleDeclineDocument(documentId)}
+                                            disabled={decliningDocId === documentId}
+                                            className="rounded p-1 text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+                                            title="Decline document"
+                                          >
+                                            {decliningDocId === documentId ? (
+                                              <SpinnerGap className="h-3 w-3 animate-spin" />
+                                            ) : (
+                                              <XIcon weight="bold" className="h-3 w-3" />
+                                            )}
+                                          </button>
+                                        )}
+                                        {/* Delete button - only show if not uploaded */}
+                                        {!isUploaded && (
+                                          <button
+                                            onClick={() =>
+                                              setTodoToDelete({ id: todo.id, title: todo.title })
+                                            }
+                                            disabled={deletingTodoId === todo.id}
+                                            className="rounded p-1 text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+                                            title="Delete request"
+                                          >
+                                            {deletingTodoId === todo.id ? (
+                                              <SpinnerGap className="h-3 w-3 animate-spin" />
+                                            ) : (
+                                              <XIcon weight="bold" className="h-3 w-3" />
+                                            )}
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            <span className="mt-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                              {formatDate(docsTask?.updatedAt || client.user.createdAt)}
+                            </span>
 
-                      {/* Step 5: Strategy Phase */}
-                      <div className="relative flex gap-4">
-                        <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
-                          <div
-                            className={`h-2 w-2 rounded-full ${step5Sent || step5Complete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
-                          />
+                            <div className='flex items-center gap-2'>
+                              {/* Button: Request documents or Add more - always visible after agreement signed */}
+                              {hasAgreementSigned && (
+                                <button
+                                  onClick={() => setIsRequestDocsModalOpen(true)}
+                                  className="mt-2 w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200"
+                                >
+                                  {hasDocumentsRequested
+                                    ? 'Ask more documents'
+                                    : 'Request documents'}
+                                </button>
+                              )}
+                              {/* Advance to Strategy button - only shows when all docs are accepted and not yet in PENDING_STRATEGY */}
+                              {hasAllDocumentsAccepted && hasDocumentsRequested && signedAgreement?.status === AgreementStatus.PENDING_TODOS_COMPLETION && (
+                                <button
+                                  onClick={handleAdvanceToStrategy}
+                                  disabled={isAdvancingToStrategy}
+                                  className="mt-2 w-fit rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1"
+                                >
+                                  {isAdvancingToStrategy ? (
+                                    <>
+                                      <SpinnerGap className="h-3 w-3 animate-spin" />
+                                      Advancing...
+                                    </>
+                                  ) : (
+                                    'Advance to strategy'
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex flex-1 flex-col">
-                          <span className="font-medium text-zinc-900">
-                            {step5Complete
-                              ? 'Tax strategy approved & signed'
-                              : step5Sent
-                                ? 'Strategy sent for approval'
-                                : 'Tax strategy pending'}
-                          </span>
-                          <span className="text-sm text-zinc-500">
-                            {step5Complete
-                              ? strategyDoc?.originalName.replace(/\.[^/.]+$/, '') ||
-                                'Tax Strategy Plan'
-                              : step5Sent
-                                ? 'Awaiting client signature on tax strategy document'
-                                : 'Ready to create personalized tax strategy'}
-                          </span>
-                          <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                            {strategyDoc?.signedAt
-                              ? formatDate(strategyDoc.signedAt)
-                              : strategyDoc?.createdAt
-                                ? formatDate(strategyDoc.createdAt)
-                                : 'Not started'}
-                          </span>
-                          {/* Button: emerald if strategist needs to act, zinc if already acted (resend) */}
-                          {step4Complete && !step5Complete && (
-                            <button
-                              className={`mt-2 w-fit rounded px-2 py-1 text-xs font-semibold ${
-                                step5Sent
-                                  ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                              }`}
-                            >
-                              {step5Sent ? 'Resend strategy' : 'Create strategy'}
-                            </button>
-                          )}
-                          {step5Complete && (
-                            <button className="mt-2 w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-200">
-                              View strategy
-                            </button>
-                          )}
+
+                        {/* Step 5: Strategy Phase */}
+                        <div className="relative flex gap-4">
+                          <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
+                            <div
+                              className={`h-2 w-2 rounded-full ${step5Sent || step5Complete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                            />
+                          </div>
+                          <div className="flex flex-1 flex-col">
+                            <span className="font-medium text-zinc-900">
+                              {step5Complete
+                                ? 'Tax strategy approved & signed'
+                                : step5Sent
+                                  ? 'Strategy sent for approval'
+                                  : 'Tax strategy pending'}
+                            </span>
+                            <span className="text-sm text-zinc-500">
+                              {step5Complete
+                                ? strategyDoc?.originalName.replace(/\.[^/.]+$/, '') ||
+                                  'Tax Strategy Plan'
+                                : step5Sent
+                                  ? 'Awaiting client signature on tax strategy document'
+                                  : 'Ready to create personalized tax strategy'}
+                            </span>
+                            <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                              {strategyDoc?.signedAt
+                                ? formatDate(strategyDoc.signedAt)
+                                : strategyDoc?.createdAt
+                                  ? formatDate(strategyDoc.createdAt)
+                                  : 'Not started'}
+                            </span>
+                            {/* Create strategy button - shows when agreement is in PENDING_STRATEGY status */}
+                            {signedAgreement?.status === AgreementStatus.PENDING_STRATEGY && !step5Complete && (
+                              <button
+                                onClick={() => setIsStrategySheetOpen(true)}
+                                className={`mt-2 w-fit rounded px-2 py-1 text-xs font-semibold ${
+                                  step5Sent
+                                    ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                                    : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                }`}
+                              >
+                                {step5Sent ? 'Resend strategy' : 'Create strategy'}
+                              </button>
+                            )}
+                            {step5Complete && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <button className="w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-200">
+                                  View strategy
+                                </button>
+                                {signedAgreement?.status !== AgreementStatus.COMPLETED && (
+                                  <button
+                                    onClick={handleCompleteAgreement}
+                                    disabled={isCompletingAgreement}
+                                    className="w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700 disabled:bg-emerald-400"
+                                  >
+                                    {isCompletingAgreement ? (
+                                      <span className="flex items-center gap-1">
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        Completing...
+                                      </span>
+                                    ) : (
+                                      'Finish Agreement'
+                                    )}
+                                  </button>
+                                )}
+                                {signedAgreement?.status === AgreementStatus.COMPLETED && (
+                                  <span className="w-fit rounded bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                                    ✓ Completed
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })())}
+                );
+              })()
+            )}
 
             <div>
               <div className="flex w-full items-center justify-between">
-                <h2 className="mb-8 text-base font-medium text-zinc-900">Documents</h2>
-                <Button variant="outline" size="sm">
-                  Add Document
-                </Button>
+                <div>
+                  <h2 className="text-base font-medium text-zinc-900">Documents</h2>
+                  {!isLoadingDocuments && clientDocuments.length > 0 && (
+                    <p className="text-sm text-zinc-500">
+                      {clientDocuments.length} document{clientDocuments.length !== 1 ? 's' : ''}
+                    </p>
+                  )}
+                </div>
               </div>
 
+              {/* Loading State */}
+              {isLoadingDocuments && (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
+                  {/* <p className="mt-4 text-sm text-zinc-500">Loading documents...</p> */}
+                </div>
+              )}
+
               {/* Empty State */}
-              {client.documents.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  {/* Stacked Documents Icon */}
-                  <div className="relative mb-6 h-28 w-28">
-                    {/* Back document (rotated left) */}
-                    <div className="absolute top-2 left-2 h-20 w-16 -rotate-6 rounded-lg border border-zinc-200 bg-white shadow-sm">
-                      <div className="mt-4 space-y-1.5 px-2.5">
-                        <div className="h-1.5 w-full rounded-full bg-zinc-200" />
-                        <div className="h-1.5 w-3/4 rounded-full bg-zinc-200" />
-                        <div className="h-1.5 w-full rounded-full bg-zinc-200" />
-                      </div>
-                    </div>
-                    {/* Front document (rotated right) */}
-                    <div className="absolute top-0 right-2 h-20 w-16 rotate-6 rounded-lg border border-zinc-200 bg-white shadow-sm">
-                      <div className="mt-4 space-y-1.5 px-2.5">
-                        <div className="h-1.5 w-full rounded-full bg-zinc-200" />
-                        <div className="h-1.5 w-2/3 rounded-full bg-zinc-200" />
-                        <div className="h-1.5 w-full rounded-full bg-zinc-200" />
-                        <div className="h-1.5 w-1/2 rounded-full bg-zinc-200" />
-                      </div>
-                      {/* Small watermark */}
-                      <div className="absolute right-2 bottom-1 text-xs font-medium text-zinc-300">
-                        ariex
-                      </div>
-                    </div>
-                  </div>
-                  <p className="mb-1.5 text-lg font-semibold text-zinc-800">No documents yet</p>
+              {!isLoadingDocuments && clientDocuments.length === 0 && (
+                <div className="flex flex-col items-center justify-center pt-12 pb-8 text-center">
+                  <EmptyDocumentsIllustration />
+                  <p className="text-lg font-semibold text-zinc-800">No documents yet</p>
                   <p className="text-sm text-zinc-400">
                     When this client uploads a document, it will show up here
                   </p>
@@ -1273,11 +1714,11 @@ export default function StrategistClientDetailPage({ params }: Props) {
               )}
 
               {/* Documents List */}
-              {client.documents.length > 0 && (
-                <div className="">
+              {!isLoadingDocuments && clientDocuments.length > 0 && (
+                <div className="mt-6">
                   {groupDocumentsByDate(
-                    [...client.documents].sort(
-                      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+                    [...clientDocuments].sort(
+                      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                     )
                   ).map(group => (
                     <div key={group.label} className="mb-6">
@@ -1318,16 +1759,58 @@ export default function StrategistClientDetailPage({ params }: Props) {
                                 </div>
 
                                 {/* Document Info */}
-                                <div className="flex flex-1 flex-col">
-                                  <span className="font-medium text-zinc-900">
-                                    {doc.originalName.replace(/\.[^/.]+$/, '')}
-                                  </span>
-                                  <span className="text-sm text-zinc-500">Me</span>
+                                <div className="flex flex-1 flex-col gap-0.5">
+                                  <span className="font-medium text-zinc-900">{doc.name}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-zinc-500">{doc.type || 'Document'}</span>
+                                    {doc.uploadedByName && (
+                                      <>
+                                        <span className="text-zinc-300">·</span>
+                                        <span className="text-sm text-zinc-500">Uploaded by {doc.uploadedByName}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                  {doc.description && (
+                                    <p className="mt-0.5 text-sm text-zinc-400 line-clamp-1">{doc.description}</p>
+                                  )}
                                 </div>
 
+                                {/* See document button - appears on hover */}
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    console.log('[UI] See document clicked for:', doc.id);
+                                    setViewingDocId(doc.id);
+                                    try {
+                                      const url = await getDownloadUrl(doc.id);
+                                      console.log('[UI] Got download URL:', url);
+                                      if (url) {
+                                        window.open(url, '_blank');
+                                      } else {
+                                        console.error('[UI] No download URL returned');
+                                      }
+                                    } catch (err) {
+                                      console.error('[UI] Error getting download URL:', err);
+                                    } finally {
+                                      setViewingDocId(null);
+                                    }
+                                  }}
+                                  disabled={viewingDocId === doc.id}
+                                  className="shrink-0 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 opacity-0 transition-all hover:bg-zinc-50 group-hover:opacity-100 disabled:opacity-100"
+                                >
+                                  {viewingDocId === doc.id ? (
+                                    <span className="flex items-center gap-1.5">
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                      Loading...
+                                    </span>
+                                  ) : (
+                                    'See document'
+                                  )}
+                                </button>
+
                                 {/* Timestamp */}
-                                <span className="text-sm text-zinc-400">
-                                  {formatRelativeTime(doc.createdAt)}
+                                <span className="text-sm text-zinc-400 shrink-0">
+                                  {formatRelativeTime(new Date(doc.createdAt))}
                                 </span>
                               </div>
                             </div>
@@ -1345,7 +1828,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
                         router.push(`/strategist/clients/${params.clientId}/documents`)
                       }
                     >
-                      View all {client.documents.length} documents
+                      View all {clientDocuments.length} documents
                     </Button>
                   </div>
                 </div>
@@ -1356,11 +1839,15 @@ export default function StrategistClientDetailPage({ params }: Props) {
       </div>
 
       {/* Strategy Sheet */}
-      <StrategySheet
-        client={client}
-        isOpen={isStrategySheetOpen}
-        onClose={() => setIsStrategySheetOpen(false)}
-      />
+      {signedAgreement && (
+        <StrategySheet
+          client={client}
+          agreementId={signedAgreement.id}
+          isOpen={isStrategySheetOpen}
+          onClose={() => setIsStrategySheetOpen(false)}
+          onSend={handleSendStrategy}
+        />
+      )}
 
       {/* Agreement Sheet (full-screen editor) */}
       <AgreementSheet
@@ -1376,11 +1863,11 @@ export default function StrategistClientDetailPage({ params }: Props) {
       {isPaymentModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center">
           {/* Backdrop */}
-          <div 
+          <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setIsPaymentModalOpen(false)}
           />
-          
+
           {/* Modal */}
           <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
             {/* Header */}
@@ -1391,7 +1878,9 @@ export default function StrategistClientDetailPage({ params }: Props) {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-zinc-900">Send Payment Link</h2>
-                  <p className="text-sm text-zinc-500">Create a Stripe checkout for {client.user.name || 'client'}</p>
+                  <p className="text-sm text-zinc-500">
+                    Create a Stripe checkout for {client.user.name || 'client'}
+                  </p>
                 </div>
               </div>
               <button
@@ -1405,14 +1894,14 @@ export default function StrategistClientDetailPage({ params }: Props) {
             {/* Agreement Info */}
             <div className="mb-4 rounded-lg bg-zinc-50 p-4">
               <p className="text-sm font-medium text-zinc-700">Agreement</p>
-              <p className="text-sm text-zinc-600">{signedAgreement?.name || 'Service Agreement'}</p>
+              <p className="text-sm text-zinc-600">
+                {signedAgreement?.name || 'Service Agreement'}
+              </p>
             </div>
 
             {/* Amount Input */}
             <div className="mb-6">
-              <label className="mb-2 block text-sm font-medium text-zinc-700">
-                Payment Amount
-              </label>
+              <label className="mb-2 block text-sm font-medium text-zinc-700">Payment Amount</label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                   <CurrencyDollar className="h-5 w-5 text-zinc-400" />
@@ -1420,8 +1909,8 @@ export default function StrategistClientDetailPage({ params }: Props) {
                 <input
                   type="number"
                   value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                  className="w-full rounded-lg border border-zinc-300 py-2.5 pl-10 pr-4 text-zinc-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                  onChange={e => setPaymentAmount(Number(e.target.value))}
+                  className="w-full rounded-lg border border-zinc-300 py-2.5 pr-4 pl-10 text-zinc-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                   placeholder="499"
                   min={1}
                 />
@@ -1496,7 +1985,8 @@ export default function StrategistClientDetailPage({ params }: Props) {
           <div className="relative z-10 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
             <h3 className="text-lg font-semibold text-zinc-900">Delete Document Request</h3>
             <p className="mt-2 text-sm text-zinc-600">
-              Are you sure you want to delete the request for <strong>&quot;{todoToDelete.title}&quot;</strong>? This action cannot be undone.
+              Are you sure you want to delete the request for{' '}
+              <strong>&quot;{todoToDelete.title}&quot;</strong>? This action cannot be undone.
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <button

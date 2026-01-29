@@ -18,6 +18,11 @@ function formatRelativeTime(date: Date): string {
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
+  // Handle future dates
+  if (diffDays < 0) {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
   if (diffDays === 0) {
     return date.toLocaleTimeString('en-US', {
       hour: 'numeric',
@@ -71,7 +76,7 @@ function LoadingState() {
   return (
     <div className="flex flex-col items-center justify-center py-16">
       <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
-      <p className="mt-4 text-sm text-zinc-500">Loading documents...</p>
+      {/* <p className="mt-4 text-sm text-zinc-500">Loading documents...</p> */}
     </div>
   );
 }

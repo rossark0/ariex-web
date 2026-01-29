@@ -34,6 +34,7 @@ interface Todo {
 interface TodoUploadItemProps {
   todo: Todo;
   agreementId: string;
+  strategistId: string;
   onUploadComplete?: () => void;
 }
 
@@ -41,7 +42,7 @@ interface TodoUploadItemProps {
 // TODO UPLOAD ITEM COMPONENT
 // ============================================================================
 
-export function TodoUploadItem({ todo, agreementId, onUploadComplete }: TodoUploadItemProps) {
+export function TodoUploadItem({ todo, agreementId, strategistId, onUploadComplete }: TodoUploadItemProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,13 +77,16 @@ export function TodoUploadItem({ todo, agreementId, onUploadComplete }: TodoUplo
       // Convert file to base64
       const base64 = await fileToBase64(file);
       
+      // If document was rejected, use replace-file endpoint instead of creating new
       const result = await uploadDocumentForTodo({
         todoId: todo.id,
         agreementId,
+        strategistId,
         fileName: file.name,
         mimeType: file.type,
         size: file.size,
         fileContent: base64,
+        existingDocumentId: isRejected ? todo.document?.id : undefined,
       });
 
       if (result.success) {

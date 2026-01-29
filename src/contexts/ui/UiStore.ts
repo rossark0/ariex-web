@@ -23,7 +23,10 @@ interface UiState {
   // Selection state for AI floating chatbot
   selectedCount: number;
   onClearSelection: (() => void) | null;
-  setSelection: (count: number, onClear: (() => void) | null) => void;
+  onDownloadSelection: (() => void) | null;
+  isDownloadingSelection: boolean;
+  setSelection: (count: number, onClear: (() => void) | null, onDownload?: (() => void) | null) => void;
+  setDownloadingSelection: (isDownloading: boolean) => void;
   clearSelection: () => void;
   // AI chat state
   aiMessages: AiMessage[];
@@ -45,8 +48,11 @@ export const useUiStore = create<UiState>((set, get) => ({
   // Selection state
   selectedCount: 0,
   onClearSelection: null,
-  setSelection: (count, onClear) => set({ selectedCount: count, onClearSelection: onClear }),
-  clearSelection: () => set({ selectedCount: 0, onClearSelection: null }),
+  onDownloadSelection: null,
+  isDownloadingSelection: false,
+  setSelection: (count, onClear, onDownload = null) => set({ selectedCount: count, onClearSelection: onClear, onDownloadSelection: onDownload }),
+  setDownloadingSelection: (isDownloading) => set({ isDownloadingSelection: isDownloading }),
+  clearSelection: () => set({ selectedCount: 0, onClearSelection: null, onDownloadSelection: null, isDownloadingSelection: false }),
   // AI chat state
   aiMessages: [],
   isAiChatOpen: false,
