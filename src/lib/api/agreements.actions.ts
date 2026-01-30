@@ -97,7 +97,8 @@ export async function sendAgreementToClient(params: {
 
     const agreementTitle = customTitle;
     const clientName = client.name || client.fullName || client.email.split('@')[0];
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // Hardcode production URL for SignatureAPI redirect (env var not reliable at runtime)
+    const baseUrl = 'https://ariex-web-nine.vercel.app';
 
     // Get strategist info for dual signing
     let strategistName = 'Ariex Tax Strategist';

@@ -250,7 +250,8 @@ export async function createCeremonyForRecipient(params: {
   redirectUrl?: string;
   embeddableIn?: string[];
 }): Promise<{ ceremonyUrl: string }> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  // Hardcode production URL for SignatureAPI redirect (env var not reliable at runtime)
+  const baseUrl = 'https://ariex-web-nine.vercel.app';
   
   // Create ceremony with custom authentication to get URL via API
   const requestBody = {
