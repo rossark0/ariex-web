@@ -1112,7 +1112,12 @@ export default function StrategistClientDetailPage({ params }: Props) {
     step4Complete &&
     (strategyDoc?.signatureStatus === 'SENT' ||
       strategyDoc?.signatureStatus === 'SIGNED' ||
-      signedAgreement?.status === AgreementStatus.PENDING_STRATEGY_REVIEW);
+      strategyMetadata?.sentAt); // Strategy was sent if metadata exists
+  
+  // Strategy is signed when status is PENDING_STRATEGY_REVIEW (client signed, awaiting strategist review)
+  const step5Signed =
+    signedAgreement?.status === AgreementStatus.PENDING_STRATEGY_REVIEW;
+  
   const step5Complete =
     strategyDoc?.signatureStatus === 'SIGNED' ||
     signedAgreement?.status === AgreementStatus.COMPLETED;
@@ -1713,10 +1718,9 @@ export default function StrategistClientDetailPage({ params }: Props) {
                                       ? 'Sent'
                                       : 'Not started'}
                             </span>
-                            {/* Create/Resend strategy button - shows when agreement is in PENDING_STRATEGY or PENDING_STRATEGY_REVIEW status */}
-                            {(signedAgreement?.status === AgreementStatus.PENDING_STRATEGY ||
-                              signedAgreement?.status ===
-                                AgreementStatus.PENDING_STRATEGY_REVIEW) &&
+                            {/* Create/Resend strategy button - shows when agreement is in PENDING_STRATEGY and not yet signed */}
+                            {signedAgreement?.status === AgreementStatus.PENDING_STRATEGY &&
+                              !step5Signed &&
                               !step5Complete && (
                                 <button
                                   onClick={() => setIsStrategySheetOpen(true)}
@@ -1729,6 +1733,36 @@ export default function StrategistClientDetailPage({ params }: Props) {
                                   {step5Sent ? 'Resend strategy' : 'Create strategy'}
                                 </button>
                               )}
+                            {/* Client signed - show Download and Finish buttons */}
+                            {step5Signed && !step5Complete && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    // TODO: Download signed strategy document
+                                    if (strategyMetadata?.strategyEnvelopeId) {
+                                      console.log('[UI] Download signed strategy for envelope:', strategyMetadata.strategyEnvelopeId);
+                                    }
+                                  }}
+                                  className="w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200"
+                                >
+                                  Download signed document
+                                </button>
+                                <button
+                                  onClick={handleCompleteAgreement}
+                                  disabled={isCompletingAgreement}
+                                  className="w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700 disabled:bg-emerald-400"
+                                >
+                                  {isCompletingAgreement ? (
+                                    <span className="flex items-center gap-1">
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                      Completing...
+                                    </span>
+                                  ) : (
+                                    'Finish Agreement'
+                                  )}
+                                </button>
+                              </div>
+                            )}
                             {step5Complete && (
                               <div className="mt-2 flex items-center gap-2">
                                 <button className="w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-200">

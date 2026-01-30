@@ -122,7 +122,8 @@ export async function sendStrategyToClient(params: {
     // ========================================================================
     console.log('[Strategies] Step 2: Creating SignatureAPI envelope');
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // Hardcode production URL for SignatureAPI redirect (env var not reliable at runtime)
+    const baseUrl = 'https://ariex-web-nine.vercel.app';
 
     const signatureResult = await createEnvelopeWithCeremony({
       title: data.title,
@@ -145,12 +146,12 @@ export async function sendStrategyToClient(params: {
     console.log('[Strategies] Ceremony URL:', signatureResult.ceremonyUrl);
 
     // ========================================================================
-    // STEP 3: Update agreement with strategy envelope info
+    // STEP 3: Store strategy envelope info (keep status as PENDING_STRATEGY)
     // ========================================================================
-    console.log('[Strategies] Step 3: Updating agreement status');
+    console.log('[Strategies] Step 3: Storing strategy metadata (status stays PENDING_STRATEGY)');
 
-    // Update agreement status to PENDING_STRATEGY_REVIEW
-    // Include strategy metadata in description (similar to how agreement does it)
+    // Store strategy metadata in description - status will change to PENDING_STRATEGY_REVIEW
+    // only AFTER the client signs (handled by syncStrategySignatureStatus)
     const strategyMetadata = {
       type: 'STRATEGY',
       strategyEnvelopeId: signatureResult.envelopeId,
@@ -160,15 +161,15 @@ export async function sendStrategyToClient(params: {
       sentAt: new Date().toISOString(),
     };
 
+    // Only update description with metadata, don't change status
     const updated = await updateAgreementWithMetadata(agreementId, {
-      status: AgreementStatus.PENDING_STRATEGY_REVIEW,
       description: `__STRATEGY_METADATA__:${JSON.stringify(strategyMetadata)}`,
     });
 
     if (updated) {
-      console.log('[Strategies] Agreement status updated to PENDING_STRATEGY_REVIEW');
+      console.log('[Strategies] Strategy metadata stored (status remains PENDING_STRATEGY)');
     } else {
-      console.warn('[Strategies] Failed to update agreement status (envelope was created)');
+      console.warn('[Strategies] Failed to store strategy metadata (envelope was created)');
     }
 
     return {

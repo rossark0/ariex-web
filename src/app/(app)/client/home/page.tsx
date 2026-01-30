@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { FileIcon, Check, SpinnerGap, Check as CheckIcon } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { EmptyDocumentsIllustration } from '@/components/ui/empty-documents-illustration';
@@ -12,6 +12,7 @@ import { useUiStore } from '@/contexts/ui/UiStore';
 import {
   getClientDashboardData,
   syncAgreementSignatureStatus,
+  syncStrategySignatureStatus,
   getDocumentDownloadUrl,
   type ClientDashboardData,
   type ClientAgreement,
@@ -144,6 +145,7 @@ function groupDocumentsByDate(documents: ClientDocument[]) {
 export default function ClientDashboardPage() {
   useRoleRedirect('CLIENT');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState<ClientDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -204,6 +206,44 @@ export default function ClientDashboardPage() {
   // SignatureAPI sync state - holds the REAL envelope statuses
   const [envelopeStatuses, setEnvelopeStatuses] = useState<Record<string, string>>({});
   const hasSyncedRef = useRef(false);
+  const hasHandledStrategySignedRef = useRef(false);
+
+  // Handle ?strategy_signed=true redirect from SignatureAPI
+  // This syncs the strategy signature status with the backend
+  useEffect(() => {
+    const strategySigned = searchParams.get('strategy_signed');
+    const ceremonyResult = searchParams.get('ceremony_result');
+    const envelopeId = searchParams.get('envelope_id');
+
+    if (strategySigned === 'true' && envelopeId && !hasHandledStrategySignedRef.current) {
+      hasHandledStrategySignedRef.current = true;
+      console.log('[ClientHome] 🎉 Strategy signed! Syncing with backend...');
+      console.log('[ClientHome] Envelope ID:', envelopeId);
+      console.log('[ClientHome] Ceremony result:', ceremonyResult);
+
+      // Remove query params from URL
+      window.history.replaceState({}, '', '/client/home');
+
+      // Sync strategy signature with backend
+      (async () => {
+        try {
+          const result = await syncStrategySignatureStatus(envelopeId);
+          console.log('[ClientHome] Strategy sync result:', result);
+
+          if (result.success) {
+            console.log('[ClientHome] ✅ Strategy signature synced successfully!');
+            // Refresh dashboard data to show updated status
+            const refreshedData = await getClientDashboardData();
+            setDashboardData(refreshedData);
+          } else {
+            console.error('[ClientHome] ❌ Failed to sync strategy signature:', result.error);
+          }
+        } catch (error) {
+          console.error('[ClientHome] ❌ Error syncing strategy signature:', error);
+        }
+      })();
+    }
+  }, [searchParams]);
 
   // Fetch dashboard data from API
   useEffect(() => {

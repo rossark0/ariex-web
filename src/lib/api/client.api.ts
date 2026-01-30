@@ -405,7 +405,7 @@ export async function getClientAgreements(): Promise<ClientAgreement[]> {
 
                 const newCeremony = await createCeremonyForRecipient({
                   recipientId: envelopeMatch.recipientId,
-                  redirectUrl: 'http://localhost:3000/client/onboarding?signed=true',
+                  redirectUrl: 'https://ariex-web-nine.vercel.app/client/onboarding?signed=true',
                 });
 
                 if (newCeremony?.ceremonyUrl) ceremonyUrl = newCeremony.ceremonyUrl;
@@ -680,6 +680,91 @@ export async function syncAgreementSignatureStatus(
     return { success: true, status: envelopeDetails.status };
   } catch {
     return { success: false, error: 'Failed to sync status' };
+  }
+}
+
+/**
+ * Sync strategy signature status from SignatureAPI
+ * Called when client is redirected back after signing the strategy document
+ * Updates agreement status from PENDING_STRATEGY to PENDING_STRATEGY_REVIEW
+ * (Strategist will manually complete it by clicking "Finish Agreement")
+ */
+export async function syncStrategySignatureStatus(
+  envelopeId: string
+): Promise<{ success: boolean; agreementId?: string; error?: string }> {
+  try {
+    console.log('[API] Syncing strategy signature for envelope:', envelopeId);
+
+    // Verify with SignatureAPI that the envelope is completed
+    const envelopeDetails = await getEnvelopeDetails(envelopeId);
+
+    if (!envelopeDetails) {
+      return { success: false, error: 'Could not get envelope details from SignatureAPI' };
+    }
+
+    console.log('[API] Envelope status:', envelopeDetails.status);
+
+    // Check if envelope is completed
+    const isEnvelopeCompleted = envelopeDetails.status === 'completed';
+    const clientRecipient = envelopeDetails.recipients?.find(
+      r => r.key === 'client' || r.type === 'signer'
+    );
+    const isRecipientCompleted = clientRecipient?.status === 'completed';
+
+    if (!isEnvelopeCompleted && !isRecipientCompleted) {
+      return { success: false, error: `Envelope not completed. Status: ${envelopeDetails.status}` };
+    }
+
+    // Find the agreement that has this strategy envelope ID
+    // The envelope ID is stored in the agreement's description as metadata
+    const agreements = await getClientAgreements();
+    
+    // Find agreement with matching strategy envelope ID in its metadata
+    const targetAgreement = agreements.find(a => {
+      // Check if description contains strategy metadata with this envelope ID
+      if (a.description?.includes('__STRATEGY_METADATA__')) {
+        try {
+          const metadataStr = a.description.split('__STRATEGY_METADATA__:')[1];
+          const metadata = JSON.parse(metadataStr);
+          return metadata.strategyEnvelopeId === envelopeId;
+        } catch {
+          return false;
+        }
+      }
+      return false;
+    });
+
+    if (!targetAgreement) {
+      console.error('[API] No agreement found with strategy envelope ID:', envelopeId);
+      return { success: false, error: 'Agreement not found for this envelope' };
+    }
+
+    console.log('[API] Found agreement:', targetAgreement.id, 'Current status:', targetAgreement.status);
+
+    // Update agreement status to PENDING_STRATEGY_REVIEW (client signed, strategist reviews)
+    // Strategist will manually complete it by clicking "Finish Agreement"
+    try {
+      await updateAgreementStatus(targetAgreement.id, AgreementStatus.PENDING_STRATEGY_REVIEW);
+      console.log('[API] ✅ Agreement updated to PENDING_STRATEGY_REVIEW:', targetAgreement.id);
+      return { success: true, agreementId: targetAgreement.id };
+    } catch (updateError) {
+      console.error('[API] Failed to update agreement status:', updateError);
+      
+      // Try fallback with PATCH
+      try {
+        await apiRequest(`/agreements/${targetAgreement.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: AgreementStatus.PENDING_STRATEGY_REVIEW }),
+        });
+        console.log('[API] ✅ Agreement updated to PENDING_STRATEGY_REVIEW (via PATCH):', targetAgreement.id);
+        return { success: true, agreementId: targetAgreement.id };
+      } catch {
+        return { success: false, agreementId: targetAgreement.id, error: 'Failed to update agreement status' };
+      }
+    }
+  } catch (error) {
+    console.error('[API] Failed to sync strategy signature:', error);
+    return { success: false, error: 'Failed to sync strategy signature status' };
   }
 }
 
