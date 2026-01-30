@@ -196,7 +196,9 @@ export default function ComplianceClientDetailPage({ params }: Props) {
   return (
     <div className="flex min-h-full flex-col bg-white">
       {/* Breadcrumb */}
-      <div className={`fixed top-4 z-50 pl-2 pt-3.75 pb-2 transition-all duration-300 ${isSidebarCollapsed ? 'left-14' : 'left-60'}`}>
+      <div
+        className={`fixed top-4 z-50 pt-3.75 pb-2 pl-2 transition-all duration-300 ${isSidebarCollapsed ? 'left-14' : 'left-60'}`}
+      >
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -331,7 +333,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                       <span className="text-sm text-zinc-500">
                         Client onboarding initiated by strategist
                       </span>
-                      <span className="mt-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
+                      <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                         {formatDate(client.user.createdAt)}
                       </span>
                     </div>
@@ -362,7 +364,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                             ? 'Waiting for client to review and sign'
                             : 'Send service agreement to client'}
                       </span>
-                      <span className="mt-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
+                      <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                         {formatDate(agreementTask?.updatedAt || client.user.createdAt)}
                       </span>
                     </div>
@@ -393,7 +395,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                             ? 'Awaiting payment via Stripe link'
                             : 'Send payment link to client'}
                       </span>
-                      <span className="mt-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
+                      <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                         {payment?.paidAt
                           ? formatDate(payment.paidAt)
                           : payment?.dueDate
@@ -428,7 +430,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                             ? 'Client needs to upload W-2s, 1099s, and relevant tax documents'
                             : 'Request documents from client'}
                       </span>
-                      <span className="mt-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
+                      <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                         {formatDate(docsTask?.updatedAt || client.user.createdAt)}
                       </span>
                     </div>
@@ -451,12 +453,13 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                       </span>
                       <span className="text-sm text-zinc-500">
                         {step5Complete
-                          ? strategyDoc?.originalName.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan'
+                          ? strategyDoc?.originalName.replace(/\.[^/.]+$/, '') ||
+                            'Tax Strategy Plan'
                           : step5Sent
                             ? 'Awaiting client signature on tax strategy document'
                             : 'Ready to create personalized tax strategy'}
                       </span>
-                      <span className="mt-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
+                      <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                         {strategyDoc?.signedAt
                           ? formatDate(strategyDoc.signedAt)
                           : strategyDoc?.createdAt
@@ -465,7 +468,9 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                       </span>
                       {step5Complete && (
                         <button
-                          onClick={() => router.push(`/compliance/clients/${params.clientId}/strategy`)}
+                          onClick={() =>
+                            router.push(`/compliance/clients/${params.clientId}/strategy`)
+                          }
                           className="mt-2 w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-200"
                         >
                           View strategy
@@ -574,16 +579,18 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                       </div>
                     ))}
 
-                  {client.documents.length > 3 && (
+                  {/* {client.documents.length > 3 && (
                     <div className="mt-2 flex justify-center pb-8">
                       <Button
                         variant="outline"
-                        onClick={() => router.push(`/compliance/clients/${params.clientId}/documents`)}
+                        onClick={() =>
+                          router.push(`/compliance/clients/${params.clientId}/documents`)
+                        }
                       >
                         View all {client.documents.length} documents
                       </Button>
                     </div>
-                  )}
+                  )} */}
                 </div>
               )}
             </div>

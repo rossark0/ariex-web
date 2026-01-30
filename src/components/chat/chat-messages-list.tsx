@@ -63,11 +63,11 @@ export function ChatMessagesList({
   };
 
   return (
-    <div className={cn('relative flex-1 overflow-hidden', className)}>
+    <div className={cn('relative flex-1 overflow-hidden pb-[200px]', className)}>
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="absolute inset-0 overflow-y-auto pt-4"
+        className="absolute inset-0 overflow-y-auto pt-4 pb-[200px]"
       >
         {/* Empty state */}
         {messages.length === 0 && !isTyping && (

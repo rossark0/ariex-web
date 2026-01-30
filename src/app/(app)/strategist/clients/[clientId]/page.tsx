@@ -20,6 +20,7 @@ import {
   deleteTodo,
   updateDocumentAcceptance,
   updateAgreementStatus,
+  deleteDocument,
 } from '@/lib/api/strategist.api';
 import { sendAgreementToClient } from '@/lib/api/agreements.actions';
 import { sendStrategyToClient, completeAgreement } from '@/lib/api/strategies.actions';
@@ -27,6 +28,7 @@ import { AgreementSheet, type AgreementSendData } from '@/components/agreements/
 import { StrategySheet, type StrategySendData } from '@/components/strategy/strategy-sheet';
 import { RequestDocumentsModal } from '@/components/documents/request-documents-modal';
 import { EmptyDocumentsIllustration } from '@/components/ui/empty-documents-illustration';
+import { ClientFloatingChat } from '@/components/chat/client-floating-chat';
 import { CLIENT_STATUS_CONFIG, type ClientStatusKey } from '@/lib/client-status';
 import {
   AgreementStatus,
@@ -365,14 +367,55 @@ export default function StrategistClientDetailPage({ params }: Props) {
     }
   }, [selectedDocs, setDownloadingSelection]);
 
+  // Handle deleting selected documents
+  const [isDeletingSelected, setIsDeletingSelected] = useState(false);
+  const handleDeleteSelected = useCallback(async () => {
+    if (selectedDocs.size === 0) return;
+
+    const confirmMessage =
+      selectedDocs.size === 1
+        ? 'Are you sure you want to delete this document?'
+        : `Are you sure you want to delete ${selectedDocs.size} documents?`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    console.log('[UI] Deleting selected documents:', Array.from(selectedDocs));
+    setIsDeletingSelected(true);
+
+    let deletedCount = 0;
+    for (const docId of selectedDocs) {
+      try {
+        const success = await deleteDocument(docId);
+        if (success) {
+          deletedCount++;
+        }
+      } catch (error) {
+        console.error('Failed to delete document:', docId, error);
+      }
+    }
+
+    // Clear selection and refresh data
+    setSelectedDocs(new Set());
+    setIsDeletingSelected(false);
+
+    // Refresh client data to reflect deletions
+    if (deletedCount > 0) {
+      console.log(`[UI] Deleted ${deletedCount} documents, refreshing data...`);
+      // Reload agreements to get updated document list
+      const data = await listClientAgreements(params.clientId);
+      setAgreements(data);
+    }
+  }, [selectedDocs, params.clientId]);
+
   // Sync selection state with UI store
   useEffect(() => {
     setSelection(
-      selectedDocs.size, 
+      selectedDocs.size,
       () => setSelectedDocs(new Set()),
-      selectedDocs.size > 0 ? handleDownloadSelected : null
+      selectedDocs.size > 0 ? handleDownloadSelected : null,
+      selectedDocs.size > 0 ? handleDeleteSelected : null
     );
-  }, [selectedDocs.size, setSelection, handleDownloadSelected]);
+  }, [selectedDocs.size, setSelection, handleDownloadSelected, handleDeleteSelected]);
 
   // Load agreements from backend
   useEffect(() => {
@@ -400,7 +443,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
           })),
           `Client ${params.clientId}`
         );
-        
+
         // 🔵 Debug: Log each agreement status individually
         data.forEach(a => {
           console.log(`🔵 [STRATEGIST] Agreement "${a.name}" status: ${a.status}`);
@@ -425,7 +468,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
         setIsLoadingDocuments(false);
         return;
       }
-      
+
       setIsLoadingDocuments(true);
       try {
         const docs = await listAgreementDocuments(activeAgreement.id);
@@ -694,12 +737,15 @@ export default function StrategistClientDetailPage({ params }: Props) {
   // Handler for advancing agreement to PENDING_STRATEGY status
   const handleAdvanceToStrategy = async () => {
     if (!signedAgreement) return;
-    
+
     setIsAdvancingToStrategy(true);
     try {
       console.log('🔵 [STRATEGIST] Advancing agreement to PENDING_STRATEGY:', signedAgreement.id);
-      const success = await updateAgreementStatus(signedAgreement.id, AgreementStatus.PENDING_STRATEGY);
-      
+      const success = await updateAgreementStatus(
+        signedAgreement.id,
+        AgreementStatus.PENDING_STRATEGY
+      );
+
       if (success) {
         console.log('🔵 [STRATEGIST] Agreement advanced to PENDING_STRATEGY');
         logAgreementStatus(
@@ -708,7 +754,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
           AgreementStatus.PENDING_STRATEGY,
           'All documents accepted - ready for strategy'
         );
-        
+
         // Reload agreements to get updated state
         const data = await listClientAgreements(params.clientId);
         setAgreements(data);
@@ -725,13 +771,13 @@ export default function StrategistClientDetailPage({ params }: Props) {
   // Handler for sending strategy to client for signature
   const handleSendStrategy = async (data: StrategySendData) => {
     if (!signedAgreement || !apiClient) return;
-    
+
     setIsSendingStrategy(true);
     setStrategyError(null);
-    
+
     try {
       console.log('🔵 [STRATEGIST] Sending strategy to client:', signedAgreement.id);
-      
+
       const result = await sendStrategyToClient({
         agreementId: signedAgreement.id,
         clientId: apiClient.id,
@@ -740,7 +786,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
         strategistName: 'Ariex Tax Strategist', // Server will override with actual user
         data,
       });
-      
+
       if (result.success) {
         console.log('🔵 [STRATEGIST] Strategy sent successfully');
         logAgreementStatus(
@@ -749,10 +795,10 @@ export default function StrategistClientDetailPage({ params }: Props) {
           AgreementStatus.PENDING_STRATEGY_REVIEW,
           'Strategy sent to client for signature'
         );
-        
+
         // Close the strategy sheet
         setIsStrategySheetOpen(false);
-        
+
         // Reload agreements to get updated state
         const updatedAgreements = await listClientAgreements(params.clientId);
         setAgreements(updatedAgreements);
@@ -771,14 +817,14 @@ export default function StrategistClientDetailPage({ params }: Props) {
   // Handler for completing agreement after strategy is signed
   const handleCompleteAgreement = async () => {
     if (!signedAgreement) return;
-    
+
     setIsCompletingAgreement(true);
-    
+
     try {
       console.log('🔵 [STRATEGIST] Completing agreement:', signedAgreement.id);
-      
+
       const result = await completeAgreement(signedAgreement.id);
-      
+
       if (result.success) {
         console.log('🔵 [STRATEGIST] Agreement completed successfully');
         logAgreementStatus(
@@ -787,7 +833,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
           AgreementStatus.COMPLETED,
           'Agreement completed - all steps finished'
         );
-        
+
         // Reload agreements to get updated state
         const updatedAgreements = await listClientAgreements(params.clientId);
         setAgreements(updatedAgreements);
@@ -823,6 +869,12 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const hasDocumentsRequested = totalDocTodos > 0;
   const hasAllDocumentsUploaded = totalDocTodos > 0 && uploadedDocCount >= totalDocTodos;
   const hasAllDocumentsAccepted = totalDocTodos > 0 && acceptedDocCount >= totalDocTodos;
+
+  // Build a map of todoId -> todo title for matching documents to their request names
+  const todoTitles = new Map<string, string>();
+  for (const todo of allTodos) {
+    todoTitles.set(todo.id, todo.title);
+  }
 
   // Initialize payment amount from agreement metadata when modal opens
   const handleOpenPaymentModal = () => {
@@ -1038,13 +1090,32 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const step4Complete = hasAllDocumentsAccepted;
 
   // Step 5: Strategy - Check if strategy document exists and is signed
+  // OR if agreement status is PENDING_STRATEGY_REVIEW (strategy sent, awaiting signature)
   const strategyDoc = client.documents.find(
     d => d.category === 'contract' && d.originalName.toLowerCase().includes('strategy')
   );
+
+  // Parse strategy metadata from agreement description
+  let strategyMetadata: { sentAt?: string; strategyCeremonyUrl?: string } | null = null;
+  const strategyMetadataMatch = signedAgreement?.description?.match(
+    /__STRATEGY_METADATA__:([\s\S]+)$/
+  );
+  if (strategyMetadataMatch) {
+    try {
+      strategyMetadata = JSON.parse(strategyMetadataMatch[1]);
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
   const step5Sent =
     step4Complete &&
-    (strategyDoc?.signatureStatus === 'SENT' || strategyDoc?.signatureStatus === 'SIGNED');
-  const step5Complete = strategyDoc?.signatureStatus === 'SIGNED';
+    (strategyDoc?.signatureStatus === 'SENT' ||
+      strategyDoc?.signatureStatus === 'SIGNED' ||
+      signedAgreement?.status === AgreementStatus.PENDING_STRATEGY_REVIEW);
+  const step5Complete =
+    strategyDoc?.signatureStatus === 'SIGNED' ||
+    signedAgreement?.status === AgreementStatus.COMPLETED;
 
   // Compute status key from real data
   type StatusKey =
@@ -1124,7 +1195,10 @@ export default function StrategistClientDetailPage({ params }: Props) {
 
               <button
                 disabled={signedAgreement?.status !== AgreementStatus.PENDING_STRATEGY}
-                onClick={() => signedAgreement?.status === AgreementStatus.PENDING_STRATEGY && setIsStrategySheetOpen(true)}
+                onClick={() =>
+                  signedAgreement?.status === AgreementStatus.PENDING_STRATEGY &&
+                  setIsStrategySheetOpen(true)
+                }
                 className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-sm font-medium transition-colors ${
                   signedAgreement?.status === AgreementStatus.PENDING_STRATEGY
                     ? 'cursor-pointer border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600'
@@ -1569,7 +1643,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
                               {formatDate(docsTask?.updatedAt || client.user.createdAt)}
                             </span>
 
-                            <div className='flex items-center gap-2'>
+                            <div className="flex items-center gap-2">
                               {/* Button: Request documents or Add more - always visible after agreement signed */}
                               {hasAgreementSigned && (
                                 <button
@@ -1582,22 +1656,25 @@ export default function StrategistClientDetailPage({ params }: Props) {
                                 </button>
                               )}
                               {/* Advance to Strategy button - only shows when all docs are accepted and not yet in PENDING_STRATEGY */}
-                              {hasAllDocumentsAccepted && hasDocumentsRequested && signedAgreement?.status === AgreementStatus.PENDING_TODOS_COMPLETION && (
-                                <button
-                                  onClick={handleAdvanceToStrategy}
-                                  disabled={isAdvancingToStrategy}
-                                  className="mt-2 w-fit rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1"
-                                >
-                                  {isAdvancingToStrategy ? (
-                                    <>
-                                      <SpinnerGap className="h-3 w-3 animate-spin" />
-                                      Advancing...
-                                    </>
-                                  ) : (
-                                    'Advance to strategy'
-                                  )}
-                                </button>
-                              )}
+                              {hasAllDocumentsAccepted &&
+                                hasDocumentsRequested &&
+                                signedAgreement?.status ===
+                                  AgreementStatus.PENDING_TODOS_COMPLETION && (
+                                  <button
+                                    onClick={handleAdvanceToStrategy}
+                                    disabled={isAdvancingToStrategy}
+                                    className="mt-2 flex w-fit items-center gap-1 rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                                  >
+                                    {isAdvancingToStrategy ? (
+                                      <>
+                                        <SpinnerGap className="h-3 w-3 animate-spin" />
+                                        Advancing...
+                                      </>
+                                    ) : (
+                                      'Advance to strategy'
+                                    )}
+                                  </button>
+                                )}
                             </div>
                           </div>
                         </div>
@@ -1630,21 +1707,28 @@ export default function StrategistClientDetailPage({ params }: Props) {
                                 ? formatDate(strategyDoc.signedAt)
                                 : strategyDoc?.createdAt
                                   ? formatDate(strategyDoc.createdAt)
-                                  : 'Not started'}
+                                  : strategyMetadata?.sentAt
+                                    ? formatDate(new Date(strategyMetadata.sentAt))
+                                    : step5Sent
+                                      ? 'Sent'
+                                      : 'Not started'}
                             </span>
-                            {/* Create strategy button - shows when agreement is in PENDING_STRATEGY status */}
-                            {signedAgreement?.status === AgreementStatus.PENDING_STRATEGY && !step5Complete && (
-                              <button
-                                onClick={() => setIsStrategySheetOpen(true)}
-                                className={`mt-2 w-fit rounded px-2 py-1 text-xs font-semibold ${
-                                  step5Sent
-                                    ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                                    : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                                }`}
-                              >
-                                {step5Sent ? 'Resend strategy' : 'Create strategy'}
-                              </button>
-                            )}
+                            {/* Create/Resend strategy button - shows when agreement is in PENDING_STRATEGY or PENDING_STRATEGY_REVIEW status */}
+                            {(signedAgreement?.status === AgreementStatus.PENDING_STRATEGY ||
+                              signedAgreement?.status ===
+                                AgreementStatus.PENDING_STRATEGY_REVIEW) &&
+                              !step5Complete && (
+                                <button
+                                  onClick={() => setIsStrategySheetOpen(true)}
+                                  className={`mt-2 w-fit rounded px-2 py-1 text-xs font-semibold ${
+                                    step5Sent
+                                      ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                  }`}
+                                >
+                                  {step5Sent ? 'Resend strategy' : 'Create strategy'}
+                                </button>
+                              )}
                             {step5Complete && (
                               <div className="mt-2 flex items-center gap-2">
                                 <button className="w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-200">
@@ -1762,22 +1846,31 @@ export default function StrategistClientDetailPage({ params }: Props) {
                                 <div className="flex flex-1 flex-col gap-0.5">
                                   <span className="font-medium text-zinc-900">{doc.name}</span>
                                   <div className="flex items-center gap-2">
-                                    <span className="text-sm text-zinc-500">{doc.type || 'Document'}</span>
+                                    <span className="text-sm text-zinc-500">
+                                      {/* Show todo title if document is linked to a todo */}
+                                      {doc.todoId && todoTitles.get(doc.todoId)
+                                        ? todoTitles.get(doc.todoId)
+                                        : doc.type || 'Document'}
+                                    </span>
                                     {doc.uploadedByName && (
                                       <>
                                         <span className="text-zinc-300">·</span>
-                                        <span className="text-sm text-zinc-500">Uploaded by {doc.uploadedByName}</span>
+                                        <span className="text-sm text-zinc-500">
+                                          Uploaded by {doc.uploadedByName}
+                                        </span>
                                       </>
                                     )}
                                   </div>
                                   {doc.description && (
-                                    <p className="mt-0.5 text-sm text-zinc-400 line-clamp-1">{doc.description}</p>
+                                    <p className="mt-0.5 line-clamp-1 text-sm text-zinc-400">
+                                      {doc.description}
+                                    </p>
                                   )}
                                 </div>
 
                                 {/* See document button - appears on hover */}
                                 <button
-                                  onClick={async (e) => {
+                                  onClick={async e => {
                                     e.stopPropagation();
                                     console.log('[UI] See document clicked for:', doc.id);
                                     setViewingDocId(doc.id);
@@ -1796,7 +1889,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
                                     }
                                   }}
                                   disabled={viewingDocId === doc.id}
-                                  className="shrink-0 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 opacity-0 transition-all hover:bg-zinc-50 group-hover:opacity-100 disabled:opacity-100"
+                                  className="shrink-0 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 opacity-0 transition-all group-hover:opacity-100 hover:bg-zinc-50 disabled:opacity-100"
                                 >
                                   {viewingDocId === doc.id ? (
                                     <span className="flex items-center gap-1.5">
@@ -1809,7 +1902,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
                                 </button>
 
                                 {/* Timestamp */}
-                                <span className="text-sm text-zinc-400 shrink-0">
+                                <span className="shrink-0 text-sm text-zinc-400">
                                   {formatRelativeTime(new Date(doc.createdAt))}
                                 </span>
                               </div>
@@ -1821,7 +1914,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
                   ))}
 
                   {/* View All Button */}
-                  <div className="mt-2 flex justify-center pb-8">
+                  {/* <div className="mt-2 flex justify-center pb-8">
                     <Button
                       variant="outline"
                       onClick={() =>
@@ -1830,7 +1923,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
                     >
                       View all {clientDocuments.length} documents
                     </Button>
-                  </div>
+                  </div> */}
                 </div>
               )}
             </div>
@@ -2023,6 +2116,20 @@ export default function StrategistClientDetailPage({ params }: Props) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Floating Chat */}
+      {apiClient && (
+        <ClientFloatingChat
+          client={{
+            id: apiClient.id,
+            user: {
+              id: apiClient.id,
+              name: apiClient.name,
+              email: apiClient.email,
+            },
+          }}
+        />
       )}
     </div>
   );

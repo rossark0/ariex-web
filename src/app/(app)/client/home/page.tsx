@@ -3,19 +3,26 @@
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
 import { useRouter } from 'next/navigation';
-import { FileIcon, Check, SpinnerGap } from '@phosphor-icons/react';
+import { FileIcon, Check, SpinnerGap, Check as CheckIcon } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { EmptyDocumentsIllustration } from '@/components/ui/empty-documents-illustration';
 import { TodoUploadItem } from '@/components/documents/todo-upload-item';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useUiStore } from '@/contexts/ui/UiStore';
 import {
   getClientDashboardData,
   syncAgreementSignatureStatus,
+  getDocumentDownloadUrl,
   type ClientDashboardData,
   type ClientAgreement,
   type ClientDocument,
 } from '@/lib/api/client.api';
-import { AgreementStatus, isAgreementSigned, isAgreementPaid, logAgreements } from '@/types/agreement';
+import {
+  AgreementStatus,
+  isAgreementSigned,
+  isAgreementPaid,
+  logAgreements,
+} from '@/types/agreement';
 
 // ============================================================================
 // ANIMATED DOTS COMPONENT
@@ -140,13 +147,60 @@ export default function ClientDashboardPage() {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState<ClientDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // 🟣 Debug: Log page mount
   useEffect(() => {
     console.log('\n🟣🟣🟣 CLIENT HOME PAGE LOADED 🟣🟣🟣');
   }, []);
   const [error, setError] = useState<string | null>(null);
-  
+  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  const { setSelection, setDownloadingSelection } = useUiStore();
+
+  const toggleDocSelection = (docId: string) => {
+    setSelectedDocs(prev => {
+      const next = new Set(prev);
+      if (next.has(docId)) {
+        next.delete(docId);
+      } else {
+        next.add(docId);
+      }
+      return next;
+    });
+  };
+
+  // Handle downloading selected documents
+  const handleDownloadSelected = useCallback(async () => {
+    console.log('[UI] Downloading selected documents:', Array.from(selectedDocs));
+    setDownloadingSelection(true);
+    try {
+      for (const docId of selectedDocs) {
+        try {
+          console.log('[UI] Fetching download URL for:', docId);
+          const url = await getDocumentDownloadUrl(docId);
+          console.log('[UI] Got URL:', url);
+          if (url) {
+            window.open(url, '_blank');
+          } else {
+            console.error('[UI] No download URL returned for:', docId);
+          }
+        } catch (error) {
+          console.error('Failed to download document:', docId, error);
+        }
+      }
+    } finally {
+      setDownloadingSelection(false);
+    }
+  }, [selectedDocs, setDownloadingSelection]);
+
+  // Sync selection state with UI store
+  useEffect(() => {
+    setSelection(
+      selectedDocs.size,
+      () => setSelectedDocs(new Set()),
+      selectedDocs.size > 0 ? handleDownloadSelected : null
+    );
+  }, [selectedDocs.size, setSelection, handleDownloadSelected]);
+
   // SignatureAPI sync state - holds the REAL envelope statuses
   const [envelopeStatuses, setEnvelopeStatuses] = useState<Record<string, string>>({});
   const hasSyncedRef = useRef(false);
@@ -158,24 +212,28 @@ export default function ClientDashboardPage() {
         setIsLoading(true);
         const data = await getClientDashboardData();
         setDashboardData(data);
-        
+
         // 🟣 Debug: Log agreements for client
         if (data?.agreements) {
-          logAgreements('client', data.agreements.map(a => ({ 
-            id: a.id, 
-            status: a.status as AgreementStatus, 
-            name: a.name 
-          })), 'Home dashboard loaded');
-          
+          logAgreements(
+            'client',
+            data.agreements.map(a => ({
+              id: a.id,
+              status: a.status as AgreementStatus,
+              name: a.name,
+            })),
+            'Home dashboard loaded'
+          );
+
           // 🟣 Debug: Log each agreement status individually
           data.agreements.forEach(a => {
             console.log(`🟣 [CLIENT] Agreement "${a.name}" status: ${a.status}`);
           });
         }
-        
+
         // If no agreements exist, redirect to onboarding
         const hasAgreements = data?.agreements && data.agreements.length > 0;
-        
+
         if (!hasAgreements) {
           console.log('[ClientDashboard] No agreements found, redirecting to onboarding');
           router.replace('/client/onboarding');
@@ -186,37 +244,37 @@ export default function ClientDashboardPage() {
         // Sync signature status from SignatureAPI for ALL agreements
         // This is needed because the webhook may fail to update the backend
         let syncedStatuses: Record<string, string> = {};
-        
+
         // if (hasAgreements && !hasSyncedRef.current) {
         //   hasSyncedRef.current = true;
-        //   
+        //
         //   const statuses: Record<string, string> = {};
         //   let needsRefresh = false;
-        //   
+        //
         //   // Check ALL agreements, not just the first one
         //   for (const agreement of data.agreements) {
         //     if (agreement?.signatureEnvelopeId) {
         //       console.log('[ClientDashboard] Checking envelope status for agreement:', agreement.id);
-        //       
+        //
         //       const syncResult = await syncAgreementSignatureStatus(agreement.id);
         //       console.log('[ClientDashboard] Sync result:', syncResult);
-        //       
+        //
         //       if (syncResult.status) {
         //         // Store status - 'signed' means completed
         //         statuses[agreement.id] = syncResult.status === 'signed' ? 'completed' : syncResult.status;
-        //         
+        //
         //         if (syncResult.status === 'signed') {
         //           needsRefresh = true;
         //         }
         //       }
         //     }
         //   }
-        //   
+        //
         //   if (Object.keys(statuses).length > 0) {
         //     setEnvelopeStatuses(statuses);
         //     syncedStatuses = statuses;
         //   }
-        //   
+        //
         //   // Refresh data if any agreement was synced as signed
         //   if (needsRefresh) {
         //     console.log('[ClientDashboard] Agreement synced as signed - refreshing data');
@@ -232,31 +290,39 @@ export default function ClientDashboardPage() {
         // ============================================================================
         // ACCESS CONTROL: Client must have signed agreement AND paid to access /home
         // ============================================================================
-        const serviceAgreement = data.agreements.length > 0 
-          ? data.agreements.find(a => 
-              isAgreementSigned(a.status) || 
-              syncedStatuses[a.id] === 'completed'
-            ) || data.agreements[0]
-          : null;
+        const serviceAgreement =
+          data.agreements.length > 0
+            ? data.agreements.find(
+                a => isAgreementSigned(a.status) || syncedStatuses[a.id] === 'completed'
+              ) || data.agreements[0]
+            : null;
 
         // Check if agreement is signed (using helper)
-        const envelopeIsCompleted = serviceAgreement && syncedStatuses[serviceAgreement.id] === 'completed';
-        const backendSaysSignedOrComplete = serviceAgreement && isAgreementSigned(serviceAgreement.status);
-        const agreementSigned = envelopeIsCompleted || backendSaysSignedOrComplete || !!serviceAgreement?.signedAt;
+        const envelopeIsCompleted =
+          serviceAgreement && syncedStatuses[serviceAgreement.id] === 'completed';
+        const backendSaysSignedOrComplete =
+          serviceAgreement && isAgreementSigned(serviceAgreement.status);
+        const agreementSigned =
+          envelopeIsCompleted || backendSaysSignedOrComplete || !!serviceAgreement?.signedAt;
 
         // Check if payment is completed (using helper)
         const paymentCompleted = serviceAgreement && isAgreementPaid(serviceAgreement.status);
 
         // Redirect to onboarding if agreement not signed OR payment not completed
         if (!agreementSigned || !paymentCompleted) {
-          console.log('[ClientDashboard] Access denied - Agreement signed:', agreementSigned, 'Payment completed:', paymentCompleted);
+          console.log(
+            '[ClientDashboard] Access denied - Agreement signed:',
+            agreementSigned,
+            'Payment completed:',
+            paymentCompleted
+          );
           console.log('[ClientDashboard] Redirecting to onboarding');
           router.replace('/client/onboarding');
           return;
         }
 
         console.log('[ClientDashboard] Access granted - Agreement signed and payment completed');
-        
+
         setError(null);
       } catch (err) {
         console.error('[ClientDashboard] Failed to fetch data:', err);
@@ -279,7 +345,10 @@ export default function ClientDashboardPage() {
         setDashboardData(data);
         // Debug: Log the todos after refresh
         const todos = data.agreements?.[0]?.todoLists?.flatMap(list => list.todos || []) || [];
-        console.log('[ClientDashboard] Dashboard refreshed - todos:', JSON.stringify(todos, null, 2));
+        console.log(
+          '[ClientDashboard] Dashboard refreshed - todos:',
+          JSON.stringify(todos, null, 2)
+        );
       }
     } catch (err) {
       console.error('[ClientDashboard] Failed to refresh:', err);
@@ -331,15 +400,24 @@ export default function ClientDashboardPage() {
   const createdAt = new Date(clientUser.createdAt);
 
   // Find the most recent agreement (by createdAt date)
-  const sortedAgreements = [...agreements].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  const sortedAgreements = [...agreements].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
   const serviceAgreement = sortedAgreements[0] || null;
-  
+
   // Debug: Log which agreement is being used
   if (serviceAgreement) {
     const todoCount = serviceAgreement.todoLists?.flatMap(l => l.todos || []).length || 0;
-    console.log('[ClientDashboard] Using agreement:', serviceAgreement.id, 'status:', serviceAgreement.status, 'created:', serviceAgreement.createdAt, 'total todos:', todoCount);
+    console.log(
+      '[ClientDashboard] Using agreement:',
+      serviceAgreement.id,
+      'status:',
+      serviceAgreement.status,
+      'created:',
+      serviceAgreement.createdAt,
+      'total todos:',
+      todoCount
+    );
   }
 
   // Extract ALL todos from agreement
@@ -347,17 +425,24 @@ export default function ClientDashboardPage() {
   console.log('[ClientDashboard] Agreement todos:', agreementTodos.length);
   // Log each todo with its document status
   agreementTodos.forEach(t => {
-    console.log('[ClientDashboard] Todo:', t.id, t.title, 'status:', t.status, 'document:', t.document ? { uploadStatus: t.document.uploadStatus, files: t.document.files?.length } : 'none');
+    console.log(
+      '[ClientDashboard] Todo:',
+      t.id,
+      t.title,
+      'status:',
+      t.status,
+      'document:',
+      t.document
+        ? { uploadStatus: t.document.uploadStatus, files: t.document.files?.length }
+        : 'none'
+    );
   });
-  
+
   // Separate signing todos from document/other todos
-  const signingTodos = agreementTodos.filter(
-    todo => todo.title.toLowerCase().includes('sign')
-  );
+  const signingTodos = agreementTodos.filter(todo => todo.title.toLowerCase().includes('sign'));
   // Document todos = exclude sign and pay todos
   const documentTodos = agreementTodos.filter(
-    todo => !todo.title.toLowerCase().includes('sign') && 
-            !todo.title.toLowerCase().includes('pay')
+    todo => !todo.title.toLowerCase().includes('sign') && !todo.title.toLowerCase().includes('pay')
   );
   const completedDocTodos = documentTodos.filter(
     todo => todo.status === 'completed' || todo.document?.uploadStatus === 'FILE_UPLOADED'
@@ -372,48 +457,84 @@ export default function ClientDashboardPage() {
     d => d.type !== 'agreement' && d.type !== 'strategy' && d.category !== 'contract'
   );
 
+  // Build a map of todoId -> todo title for matching documents to their request names
+  const todoTitles = new Map<string, string>();
+  for (const todo of agreementTodos) {
+    todoTitles.set(todo.id, todo.title);
+  }
+
   // Calculate step completion states based on agreement status
   // Using AgreementStatus enum for proper status checks
-  // 
+  //
   // SOURCE OF TRUTH: SignatureAPI envelope status
   // The backend may not be updated if the webhook failed, so we check SignatureAPI directly
   //
-  
+
   // Check SignatureAPI envelope status (the REAL source of truth)
-  const envelopeIsCompleted = serviceAgreement && envelopeStatuses[serviceAgreement.id] === 'completed';
-  
+  const envelopeIsCompleted =
+    serviceAgreement && envelopeStatuses[serviceAgreement.id] === 'completed';
+
   // Also check backend signals as backup
-  const backendSaysSignedOrComplete = serviceAgreement ? isAgreementSigned(serviceAgreement.status) : false;
+  const backendSaysSignedOrComplete = serviceAgreement
+    ? isAgreementSigned(serviceAgreement.status)
+    : false;
   const documentSaysSigned = signingTodos.some(todo => todo.status === 'completed');
-  
+
   const step1Complete = true; // Account always created
-  const step2Sent = serviceAgreement?.status === AgreementStatus.PENDING_SIGNATURE || backendSaysSignedOrComplete;
-  
+  const step2Sent =
+    serviceAgreement?.status === AgreementStatus.PENDING_SIGNATURE || backendSaysSignedOrComplete;
+
   // Agreement is signed if SignatureAPI says so OR backend says so
   const step2Complete = envelopeIsCompleted || backendSaysSignedOrComplete || documentSaysSigned;
-  
+
   // Payment: use AgreementStatus - PENDING_PAYMENT means payment was sent
   // Also check paymentLink exists as a secondary indicator
-  const step3Sent = step2Complete && (
-    serviceAgreement?.status === AgreementStatus.PENDING_PAYMENT ||
+  const step3Sent =
+    step2Complete &&
+    (serviceAgreement?.status === AgreementStatus.PENDING_PAYMENT ||
+      isAgreementPaid(serviceAgreement?.status as AgreementStatus) ||
+      !!serviceAgreement?.paymentLink);
+  const step3Complete =
     isAgreementPaid(serviceAgreement?.status as AgreementStatus) ||
-    !!serviceAgreement?.paymentLink
-  );
-  const step3Complete = isAgreementPaid(serviceAgreement?.status as AgreementStatus) || serviceAgreement?.paymentStatus === 'paid';
-  
+    serviceAgreement?.paymentStatus === 'paid';
+
   // Documents: show based on PENDING_TODOS_COMPLETION status or if there are document todos
   // Only consider complete if there are todos AND they're all done
-  const step4Sent = step3Complete || serviceAgreement?.status === AgreementStatus.PENDING_TODOS_COMPLETION || hasDocTodos;
+  const step4Sent =
+    step3Complete ||
+    serviceAgreement?.status === AgreementStatus.PENDING_TODOS_COMPLETION ||
+    hasDocTodos;
   const step4Complete = hasDocTodos && completedDocTodos.length >= documentTodos.length;
-  
+
   // Strategy: use PENDING_STRATEGY or PENDING_STRATEGY_REVIEW
-  const step5Sent = serviceAgreement?.status === AgreementStatus.PENDING_STRATEGY_REVIEW || strategyDoc?.signatureStatus === 'SENT';
-  const step5Complete = serviceAgreement?.status === AgreementStatus.COMPLETED || strategyDoc?.signatureStatus === 'SIGNED';
+  const step5Sent =
+    serviceAgreement?.status === AgreementStatus.PENDING_STRATEGY_REVIEW ||
+    strategyDoc?.signatureStatus === 'SENT';
+  const step5Complete =
+    serviceAgreement?.status === AgreementStatus.COMPLETED ||
+    strategyDoc?.signatureStatus === 'SIGNED';
+
+  // Parse strategy metadata from agreement description to get ceremony URL and document ID
+  let strategyCeremonyUrl: string | null = null;
+  let strategyDocumentId: string | null = null;
+  const strategyMetadataMatch = serviceAgreement?.description?.match(
+    /__STRATEGY_METADATA__:([\s\S]+)$/
+  );
+  if (strategyMetadataMatch) {
+    try {
+      const metadata = JSON.parse(strategyMetadataMatch[1]);
+      strategyCeremonyUrl = metadata.strategyCeremonyUrl || null;
+      strategyDocumentId = metadata.strategyDocumentId || null;
+    } catch {
+      // Ignore parse errors
+    }
+  }
 
   const paymentAmount = serviceAgreement?.paymentAmount || serviceAgreement?.price || 499;
 
   // Check if there's a pending action
-  const hasPendingAgreement = step2Sent && !step2Complete && !!serviceAgreement?.signatureCeremonyUrl;
+  const hasPendingAgreement =
+    step2Sent && !step2Complete && !!serviceAgreement?.signatureCeremonyUrl;
 
   function formatDate(date: Date | string): string {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
@@ -529,7 +650,7 @@ export default function ClientDashboardPage() {
                     )}
                     {/* Show button only if previous step complete AND current step not complete */}
                     {step1Complete && step2Sent && !step2Complete && serviceAgreement && (
-                      <button 
+                      <button
                         onClick={() => {
                           if (serviceAgreement.signatureCeremonyUrl) {
                             window.open(serviceAgreement.signatureCeremonyUrl, '_blank');
@@ -540,7 +661,9 @@ export default function ClientDashboardPage() {
                         }}
                         className="mt-2 w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
                       >
-                        {serviceAgreement.signatureCeremonyUrl ? 'Sign agreement' : 'View agreements'}
+                        {serviceAgreement.signatureCeremonyUrl
+                          ? 'Sign agreement'
+                          : 'View agreements'}
                       </button>
                     )}
                   </div>
@@ -598,12 +721,14 @@ export default function ClientDashboardPage() {
                     )}
                     {/* Show button only if step 2 complete AND current step not complete */}
                     {step2Complete && step3Sent && !step3Complete && serviceAgreement && (
-                      <button 
+                      <button
                         onClick={() => {
                           if (serviceAgreement.paymentLink) {
                             window.open(serviceAgreement.paymentLink, '_blank');
                           } else {
-                            alert('Payment link not available yet. Your strategist will send it shortly.');
+                            alert(
+                              'Payment link not available yet. Your strategist will send it shortly.'
+                            );
                           }
                         }}
                         className="mt-2 w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
@@ -656,13 +781,13 @@ export default function ClientDashboardPage() {
                             ? 'Your strategist will request documents when needed'
                             : 'You will be notified when documents are needed'}
                     </span>
-                      <span className="mt-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                    <span className="mt-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                       {formatDate(createdAt)}
                     </span>
                     {/* Show document todos from agreement with upload functionality */}
                     {hasDocTodos && documentTodos.length > 0 && serviceAgreement && (
-                      <div className="mt-3 flex flex-col gap-2 w-full">
-                        <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-1">
+                      <div className="mt-3 flex w-full flex-col gap-2">
+                        <span className="mb-1 text-xs font-medium tracking-wide text-zinc-500 uppercase">
                           Requested documents ({completedDocTodos.length}/{documentTodos.length})
                         </span>
                         {documentTodos.map(todo => (
@@ -727,11 +852,33 @@ export default function ClientDashboardPage() {
                         )}
                       </Badge>
                     )}
-                    {/* Show button only if step 4 complete (onboarding done) AND strategy is sent but not signed */}
+                    {/* Show buttons only if step 4 complete (onboarding done) AND strategy is sent but not signed */}
                     {step4Complete && step5Sent && !step5Complete && (
-                      <button className="mt-2 w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700">
-                        Review strategy
-                      </button>
+                      <div className="mt-2 flex items-center gap-2">
+                        <button
+                          onClick={async () => {
+                            if (strategyDocumentId) {
+                              const url = await getDocumentDownloadUrl(strategyDocumentId);
+                              if (url) window.open(url, '_blank');
+                            }
+                          }}
+                          disabled={!strategyDocumentId}
+                          className="w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200 disabled:opacity-50"
+                        >
+                          View strategy
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (strategyCeremonyUrl) {
+                              window.open(strategyCeremonyUrl, '_blank');
+                            }
+                          }}
+                          disabled={!strategyCeremonyUrl}
+                          className="w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          Sign strategy
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -743,7 +890,7 @@ export default function ClientDashboardPage() {
         {/* Bottom Section - Recent Documents */}
         <div className="bg-white pb-42">
           <div className="mx-auto flex w-full max-w-[642px] flex-col py-6">
-            <h2 className="mb-4 text-lg font-medium text-zinc-900">Documents required</h2>
+            <h2 className="mb-4 text-lg font-medium text-zinc-900">Documents uploaded</h2>
             {/* Empty State - No documents yet */}
             {uploadedDocs.length === 0 && (
               <div className="flex flex-col items-center justify-center pt-24 pb-12 text-center">
@@ -760,7 +907,9 @@ export default function ClientDashboardPage() {
                 {groupDocumentsByDate(
                   [...uploadedDocs]
                     .filter(d => d.category !== 'contract')
-                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .sort(
+                      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                    )
                 ).map(group => (
                   <div key={group.label} className="mb-6">
                     {/* Date Group Label */}
@@ -768,30 +917,54 @@ export default function ClientDashboardPage() {
 
                     {/* Document List */}
                     <div className="flex flex-col">
-                      {group.documents.map(doc => (
-                        <div key={doc.id} className="group relative">
-                          {/* Document Row */}
-                          <div className="flex items-center gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-zinc-50">
-                            {/* Document Icon */}
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-                              <FileIcon className="h-5 w-5 text-zinc-400" />
+                      {group.documents.map(doc => {
+                        const isSelected = selectedDocs.has(doc.id);
+                        return (
+                          <div key={doc.id} className="group relative">
+                            {/* Checkbox - positioned in left gutter */}
+                            <div
+                              className={`pointer-events-none absolute top-1/2 -left-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center transition-opacity ${
+                                isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                              }`}
+                            >
+                              {isSelected ? (
+                                <div className="flex h-4 w-4 items-center justify-center rounded bg-teal-600">
+                                  <CheckIcon weight="bold" className="h-3 w-3 text-white" />
+                                </div>
+                              ) : (
+                                <div className="h-4 w-4 rounded border-2 border-zinc-300 bg-white transition-colors group-hover:border-teal-400" />
+                              )}
                             </div>
 
-                            {/* Document Info */}
-                            <div className="flex flex-1 flex-col">
-                              <span className="font-medium text-zinc-900">
-                                {(doc.name || 'Untitled Document').replace(/\.[^/.]+$/, '')}
+                            {/* Document Row - clickable */}
+                            <div
+                              onClick={() => toggleDocSelection(doc.id)}
+                              className={`flex cursor-pointer items-center gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-zinc-50 ${
+                                isSelected ? 'bg-zinc-50' : ''
+                              }`}
+                            >
+                              {/* Document Icon */}
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
+                                <FileIcon className="h-5 w-5 text-zinc-400" />
+                              </div>
+
+                              {/* Document Info */}
+                              <div className="flex flex-1 flex-col">
+                                <span className="font-medium text-zinc-900">
+                                  {doc.todoId && todoTitles.get(doc.todoId)
+                                    ? todoTitles.get(doc.todoId)
+                                    : 'Agreement Document'}
+                                </span>
+                              </div>
+
+                              {/* Timestamp */}
+                              <span className="text-sm text-zinc-400">
+                                {formatRelativeTime(doc.createdAt)}
                               </span>
-                              <span className="text-sm text-zinc-500">Me</span>
                             </div>
-
-                            {/* Timestamp */}
-                            <span className="text-sm text-zinc-400">
-                              {formatRelativeTime(doc.createdAt)}
-                            </span>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}

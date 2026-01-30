@@ -61,6 +61,7 @@ export interface ApiDocument {
   category?: string;
   mimeType?: string;
   size?: number;
+  todoId?: string; // Link to todo if document was uploaded for a todo request
 }
 
 export interface ApiPayment {
@@ -484,7 +485,10 @@ export async function confirmDocumentUpload(documentId: string): Promise<boolean
  * Update document to link it to an agreement
  * This is needed when the document is created before the agreement exists
  */
-export async function updateDocumentAgreement(documentId: string, agreementId: string): Promise<boolean> {
+export async function updateDocumentAgreement(
+  documentId: string,
+  agreementId: string
+): Promise<boolean> {
   try {
     console.log('[API] Linking document to agreement:', { documentId, agreementId });
     await apiRequest(`/documents/${documentId}`, {
@@ -495,6 +499,24 @@ export async function updateDocumentAgreement(documentId: string, agreementId: s
     return true;
   } catch (error) {
     console.error('[API] Failed to link document to agreement:', error);
+    return false;
+  }
+}
+
+/**
+ * Delete a document by ID
+ * DELETE /documents/{id}
+ */
+export async function deleteDocument(documentId: string): Promise<boolean> {
+  try {
+    console.log('[API] Deleting document:', documentId);
+    await apiRequest(`/documents/${documentId}`, {
+      method: 'DELETE',
+    });
+    console.log('[API] Document deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('[API] Failed to delete document:', error);
     return false;
   }
 }
@@ -542,9 +564,9 @@ export async function getUploadUrl(data: {
     agreementId: data.agreementId,
     todoId: data.todoId,
   });
-  
+
   if (!result) return null;
-  
+
   return {
     uploadUrl: result.uploadUrl,
     fileId: result.files?.[0]?.id || result.id,
@@ -568,11 +590,16 @@ export async function getDownloadUrl(documentId: string): Promise<string | null>
     console.log('[API] Getting download URL for document:', documentId);
     const doc = await apiRequest<{
       id: string;
-      files?: Array<{ downloadUrl?: string; id?: string; key?: string }>;
+      files?: Array<{ downloadUrl?: string; url?: string; id?: string; key?: string }>;
+      downloadUrl?: string;
+      url?: string;
     }>(`/documents/${documentId}`);
     console.log('[API] Document response:', JSON.stringify(doc, null, 2));
-    
-    const downloadUrl = doc.files?.[0]?.downloadUrl || null;
+
+    // Try multiple possible locations for the download URL
+    const downloadUrl =
+      doc.files?.[0]?.downloadUrl || doc.files?.[0]?.url || doc.downloadUrl || doc.url || null;
+
     console.log('[API] Download URL:', downloadUrl);
     return downloadUrl;
   } catch (error) {
@@ -625,7 +652,7 @@ export interface CreateClientData {
 export async function createClient(data: CreateClientData): Promise<ApiClient | null> {
   const fullName = `${data.firstName} ${data.lastName}`.trim();
 
-  console.log("Creating client with data:", data);
+  console.log('Creating client with data:', data);
 
   try {
     // Use the dedicated invite endpoint
@@ -635,7 +662,7 @@ export async function createClient(data: CreateClientData): Promise<ApiClient | 
       email: string;
       fullName?: string;
       status?: string;
-      strategistId: string
+      strategistId: string;
     }>('/users/clients/invite', {
       method: 'POST',
       body: JSON.stringify({
@@ -697,7 +724,7 @@ export async function listClientAgreements(clientId: string): Promise<ApiAgreeme
   try {
     // Fetch agreements first
     const agreements = await apiRequest<ApiAgreement[]>('/agreements');
-    
+
     console.log('[API] All agreements:', agreements.length);
     console.log('[API] Filtering for clientId:', clientId);
 
@@ -713,68 +740,78 @@ export async function listClientAgreements(clientId: string): Promise<ApiAgreeme
     console.log('[API] Client agreements after filter:', clientAgreements.length);
 
     // For each agreement, fetch documents filtered by agreementId and merge into todos
-    const enrichedAgreements = await Promise.all(clientAgreements.map(async (a) => {
-      // Fetch documents for this specific agreement
-      const documents = await apiRequest<StrategistDocument[]>(`/documents?agreementId=${a.id}`).catch(() => []);
-      console.log('[API] Documents for agreement', a.id, ':', documents.length);
-      
-      // Build lookup by todoId
-      const documentsByTodoId = new Map<string, StrategistDocument>();
-      for (const doc of documents) {
-        if (doc.todoId) {
-          documentsByTodoId.set(doc.todoId, doc);
-          console.log('[API] Document', doc.id, 'has todoId:', doc.todoId);
+    const enrichedAgreements = await Promise.all(
+      clientAgreements.map(async a => {
+        // Fetch documents for this specific agreement
+        const documents = await apiRequest<StrategistDocument[]>(
+          `/documents?agreementId=${a.id}`
+        ).catch(() => []);
+        console.log('[API] Documents for agreement', a.id, ':', documents.length);
+
+        // Build lookup by todoId
+        const documentsByTodoId = new Map<string, StrategistDocument>();
+        for (const doc of documents) {
+          if (doc.todoId) {
+            documentsByTodoId.set(doc.todoId, doc);
+            console.log('[API] Document', doc.id, 'has todoId:', doc.todoId);
+          }
         }
-      }
-      
-      // Merge documents into todos
-      if (a.todoLists) {
-        for (const todoList of a.todoLists) {
-          if (todoList.todos) {
-            for (const todo of todoList.todos) {
-              const matchingDoc = documentsByTodoId.get(todo.id);
-              if (matchingDoc) {
-                todo.document = {
-                  id: matchingDoc.id,
-                  signedStatus: 'WAITING_SIGNED',
-                  uploadStatus: matchingDoc.uploadStatus || 'FILE_UPLOADED',
-                  acceptanceStatus: matchingDoc.acceptanceStatus,
-                  files: matchingDoc.files,
-                };
-                console.log('[API] ✅ Merged document into todo:', todo.id, todo.title, 'acceptanceStatus:', matchingDoc.acceptanceStatus);
-              } else {
-                console.log('[API] ❌ No document for todo:', todo.id, todo.title);
+
+        // Merge documents into todos
+        if (a.todoLists) {
+          for (const todoList of a.todoLists) {
+            if (todoList.todos) {
+              for (const todo of todoList.todos) {
+                const matchingDoc = documentsByTodoId.get(todo.id);
+                if (matchingDoc) {
+                  todo.document = {
+                    id: matchingDoc.id,
+                    signedStatus: 'WAITING_SIGNED',
+                    uploadStatus: matchingDoc.uploadStatus || 'FILE_UPLOADED',
+                    acceptanceStatus: matchingDoc.acceptanceStatus,
+                    files: matchingDoc.files,
+                  };
+                  console.log(
+                    '[API] ✅ Merged document into todo:',
+                    todo.id,
+                    todo.title,
+                    'acceptanceStatus:',
+                    matchingDoc.acceptanceStatus
+                  );
+                } else {
+                  console.log('[API] ❌ No document for todo:', todo.id, todo.title);
+                }
               }
             }
           }
         }
-      }
-      
-      if (a.signatureEnvelopeId) {
-        console.log('[API] Agreement', a.id, 'already has envelopeId:', a.signatureEnvelopeId);
-        return a;
-      }
-      
-      console.log('[API] Agreement', a.id, 'description:', a.description?.substring(0, 200));
-      const metadataMatch = a.description?.match(/__SIGNATURE_METADATA__:([\s\S]+)$/);
-      if (metadataMatch) {
-        try {
-          const metadata = JSON.parse(metadataMatch[1]);
-          console.log('[API] Parsed metadata for agreement', a.id, ':', metadata);
-          return {
-            ...a,
-            signatureEnvelopeId: metadata.envelopeId,
-            signatureRecipientId: metadata.recipientId,
-            signatureCeremonyUrl: metadata.ceremonyUrl,
-          };
-        } catch (e) {
-          console.error('[API] Failed to parse metadata for agreement', a.id, ':', e);
+
+        if (a.signatureEnvelopeId) {
+          console.log('[API] Agreement', a.id, 'already has envelopeId:', a.signatureEnvelopeId);
+          return a;
         }
-      } else {
-        console.log('[API] No metadata found in agreement', a.id, 'description');
-      }
-      return a;
-    }));
+
+        console.log('[API] Agreement', a.id, 'description:', a.description?.substring(0, 200));
+        const metadataMatch = a.description?.match(/__SIGNATURE_METADATA__:([\s\S]+)$/);
+        if (metadataMatch) {
+          try {
+            const metadata = JSON.parse(metadataMatch[1]);
+            console.log('[API] Parsed metadata for agreement', a.id, ':', metadata);
+            return {
+              ...a,
+              signatureEnvelopeId: metadata.envelopeId,
+              signatureRecipientId: metadata.recipientId,
+              signatureCeremonyUrl: metadata.ceremonyUrl,
+            };
+          } catch (e) {
+            console.error('[API] Failed to parse metadata for agreement', a.id, ':', e);
+          }
+        } else {
+          console.log('[API] No metadata found in agreement', a.id, 'description');
+        }
+        return a;
+      })
+    );
 
     return enrichedAgreements;
   } catch (error) {
@@ -876,6 +913,31 @@ export async function updateAgreementStatus(
 }
 
 /**
+ * Update agreement with status and optional metadata in description
+ * Used for strategy flow to embed strategy metadata
+ */
+export async function updateAgreementWithMetadata(
+  agreementId: string,
+  updates: {
+    status?: AgreementStatus;
+    description?: string;
+  }
+): Promise<boolean> {
+  try {
+    console.log('[API] Updating agreement with metadata:', agreementId);
+    await apiRequest(`/agreements/${agreementId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+    console.log('[API] Agreement updated successfully');
+    return true;
+  } catch (error) {
+    console.error('[API] Failed to update agreement:', error);
+    return false;
+  }
+}
+
+/**
  * Get agreement by ID
  */
 export async function getAgreement(agreementId: string): Promise<ApiAgreement | null> {
@@ -911,7 +973,7 @@ export async function updateAgreementSignature(
     // Parse existing description to preserve user text
     let userDescription = agreement.description || '';
     let signatureMetadata = {};
-    
+
     // Check if description already has metadata
     const metadataMatch = userDescription.match(/\n\n__SIGNATURE_METADATA__:(.+)$/s);
     if (metadataMatch) {
@@ -940,7 +1002,7 @@ export async function updateAgreementSignature(
         description: newDescription,
       }),
     });
-    
+
     console.log('[API] Stored signature metadata in agreement description');
     return true;
   } catch (error) {
@@ -1040,7 +1102,9 @@ export async function getPaymentIntegration(): Promise<PaymentIntegration | null
 /**
  * Create/submit Stripe secret key for current strategist
  */
-export async function createPaymentIntegration(stripeSecretKey: string): Promise<PaymentIntegration | null> {
+export async function createPaymentIntegration(
+  stripeSecretKey: string
+): Promise<PaymentIntegration | null> {
   try {
     const integration = await apiRequest<PaymentIntegration>('/payment-integrations', {
       method: 'POST',
@@ -1098,21 +1162,21 @@ export async function createCharge(data: {
   try {
     // Convert amount (dollars) to amountCents
     const amountCents = Math.round(data.amount * 100);
-    
+
     const requestBody = {
       agreementId: data.agreementId,
       amountCents: amountCents,
       currency: data.currency || 'usd',
       description: data.description,
     };
-    
+
     console.log('🔵 [API] Creating charge - Request body:', JSON.stringify(requestBody, null, 2));
-    
+
     const charge = await apiRequest<Charge>('/charges', {
       method: 'POST',
       body: JSON.stringify(requestBody),
     });
-    
+
     console.log('🔵 [API] Charge created - Response:', JSON.stringify(charge, null, 2));
     return charge;
   } catch (error) {
@@ -1162,24 +1226,28 @@ export async function generatePaymentLink(
 ): Promise<string | null> {
   try {
     // Build the base URL
-    const baseUrl = typeof window !== 'undefined' 
-      ? window.location.origin 
-      : process.env.NEXT_PUBLIC_APP_URL || 'https://ariex-web-nine.vercel.app';
-    
+    const baseUrl =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_APP_URL || 'https://ariex-web-nine.vercel.app';
+
     const body: Record<string, string> = {
       url: baseUrl,
       successUrl: options?.successUrl || `${baseUrl}/client/onboarding?payment=success`,
       cancelUrl: options?.cancelUrl || `${baseUrl}/client/onboarding?payment=cancel`,
     };
-    
+
     if (options?.customerEmail) {
       body.customerEmail = options.customerEmail;
     }
 
-    const result = await apiRequest<{ paymentLink: string; url?: string }>(`/charges/${chargeId}/payment-link`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
+    const result = await apiRequest<{ paymentLink: string; url?: string }>(
+      `/charges/${chargeId}/payment-link`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }
+    );
     console.log('[API] Payment link generated');
     return result.paymentLink || result.url || null;
   } catch (error) {
@@ -1213,11 +1281,14 @@ import { getEnvelopeDetails } from '@/lib/signature/signatureapi';
  * Check envelope status from SignatureAPI for an agreement
  * This is used to verify signing status when the webhook may have failed
  */
-export async function getAgreementEnvelopeStatus(agreementId: string, envelopeId: string): Promise<{ status: string | null; error?: string }> {
+export async function getAgreementEnvelopeStatus(
+  agreementId: string,
+  envelopeId: string
+): Promise<{ status: string | null; error?: string }> {
   try {
     const envelopeDetails = await getEnvelopeDetails(envelopeId);
     console.log('[StrategistAPI] Envelope status from SignatureAPI:', envelopeDetails?.status);
-    
+
     if (!envelopeDetails) {
       return { status: null, error: 'Could not get envelope details from SignatureAPI' };
     }
@@ -1225,16 +1296,18 @@ export async function getAgreementEnvelopeStatus(agreementId: string, envelopeId
     // If envelope is completed, try to update backend
     if (envelopeDetails.status === 'completed') {
       console.log('[StrategistAPI] Envelope is COMPLETED - attempting to sync to backend');
-      
+
       // Try to update agreement status to ACTIVE (signed)
       await apiRequest(`/agreements/${agreementId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status: 'ACTIVE',
           signedAt: new Date().toISOString(),
         }),
       }).catch(() => {
-        console.log('[StrategistAPI] Failed to update agreement status (backend may not support this)');
+        console.log(
+          '[StrategistAPI] Failed to update agreement status (backend may not support this)'
+        );
       });
     }
 
@@ -1260,7 +1333,7 @@ export async function createDocumentRequest(data: {
 }): Promise<{ todoListId: string; todos: ApiTodo[] } | null> {
   try {
     console.log('[API] Creating document request:', data);
-    
+
     // 1. Create TodoList
     // Note: When agreementId is provided, the backend automatically assigns the client
     // from the agreement, so we should NOT send assignedToId
@@ -1346,12 +1419,12 @@ export async function updateTodoStatus(
 export async function deleteTodo(todoId: string): Promise<boolean> {
   try {
     console.log('[API] Deleting todo:', todoId);
-    
+
     const accessToken = await getAccessToken();
     if (!accessToken) {
       throw new Error('Not authenticated');
     }
-    
+
     const response = await fetch(`${API_URL}/todos/${todoId}`, {
       method: 'DELETE',
       headers: {
@@ -1359,14 +1432,14 @@ export async function deleteTodo(todoId: string): Promise<boolean> {
         Authorization: `Bearer ${accessToken}`,
       },
     });
-    
+
     console.log('[API] Delete response status:', response.status);
-    
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Delete failed' }));
       throw new Error(error.message || 'Delete failed');
     }
-    
+
     console.log('[API] Todo deleted');
     return true;
   } catch (error) {
@@ -1407,14 +1480,17 @@ export async function getAllDocuments(): Promise<StrategistDocument[]> {
     console.log('[API] getAllDocuments count:', documents?.length || 0);
     // Log first few documents with their todoId field for debugging
     documents?.slice(0, 5).forEach(doc => {
-      console.log('[API] Document sample:', JSON.stringify({
-        id: doc.id,
-        type: doc.type,
-        todoId: doc.todoId,
-        todo: (doc as any).todo,
-        uploadStatus: doc.uploadStatus,
-        acceptanceStatus: doc.acceptanceStatus,
-      }));
+      console.log(
+        '[API] Document sample:',
+        JSON.stringify({
+          id: doc.id,
+          type: doc.type,
+          todoId: doc.todoId,
+          todo: (doc as any).todo,
+          uploadStatus: doc.uploadStatus,
+          acceptanceStatus: doc.acceptanceStatus,
+        })
+      );
     });
     // Count documents with todoId
     const withTodoId = documents?.filter(d => d.todoId) || [];

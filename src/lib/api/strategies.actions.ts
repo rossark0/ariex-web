@@ -1,6 +1,5 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { AgreementStatus } from '@/types/agreement';
 import { createEnvelopeWithCeremony } from '@/lib/signature/signatureapi';
 import {
@@ -8,9 +7,8 @@ import {
   confirmDocumentUpload,
   getDownloadUrl,
   getCurrentUser,
+  updateAgreementWithMetadata,
 } from '@/lib/api/strategist.api';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // ============================================================================
 // TYPES
@@ -32,53 +30,13 @@ interface SendStrategyResult {
   ceremonyUrl?: string;
   envelopeId?: string;
 }
-
-// ============================================================================
-// HELPER: Get auth token from cookies
-// ============================================================================
-
-async function getAuthToken(): Promise<string | null> {
-  const cookieStore = await cookies();
-  return cookieStore.get('accessToken')?.value || null;
-}
-
-// ============================================================================
-// HELPER: API request with auth
-// ============================================================================
-
-async function apiRequest<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const token = await getAuthToken();
-  if (!token) {
-    throw new Error('Not authenticated');
-  }
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...options.headers,
-    },
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `API error: ${response.status}`);
-  }
-
-  return response.json();
-}
-
 // ============================================================================
 // SEND STRATEGY TO CLIENT
 // ============================================================================
 
 /**
  * Send a tax strategy document to the client for signature
- * 
+ *
  * Flow:
  * 1. Upload PDF to S3 via document creation API
  * 2. Create SignatureAPI envelope with the document URL
@@ -117,10 +75,10 @@ export async function sendStrategyToClient(params: {
     // STEP 1: Upload PDF to S3 via document API
     // ========================================================================
     console.log('[Strategies] Step 1: Creating document record for PDF upload');
-    
+
     const pdfBuffer = Buffer.from(data.pdfBase64, 'base64');
     const fileName = `strategy-${data.title.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.pdf`;
-    
+
     const documentRecord = await createDocument({
       type: 'STRATEGY',
       fileName: fileName,
@@ -163,9 +121,9 @@ export async function sendStrategyToClient(params: {
     // STEP 2: Create SignatureAPI envelope
     // ========================================================================
     console.log('[Strategies] Step 2: Creating SignatureAPI envelope');
-    
+
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    
+
     const signatureResult = await createEnvelopeWithCeremony({
       title: data.title,
       documentUrl: downloadUrl,
@@ -182,7 +140,7 @@ export async function sendStrategyToClient(params: {
       },
       totalPages: data.totalPages,
     });
-    
+
     console.log('[Strategies] Envelope created:', signatureResult.envelopeId);
     console.log('[Strategies] Ceremony URL:', signatureResult.ceremonyUrl);
 
@@ -190,21 +148,6 @@ export async function sendStrategyToClient(params: {
     // STEP 3: Update agreement with strategy envelope info
     // ========================================================================
     console.log('[Strategies] Step 3: Updating agreement status');
-    
-    // First, update the document record with signature info
-    try {
-      await apiRequest(`/documents/${documentRecord.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          signatureStatus: 'SENT',
-          signatureEnvelopeId: signatureResult.envelopeId,
-          signatureRecipientId: signatureResult.recipientId,
-        }),
-      });
-      console.log('[Strategies] Document signature info updated');
-    } catch (docUpdateError) {
-      console.warn('[Strategies] Could not update document signature info:', docUpdateError);
-    }
 
     // Update agreement status to PENDING_STRATEGY_REVIEW
     // Include strategy metadata in description (similar to how agreement does it)
@@ -213,24 +156,19 @@ export async function sendStrategyToClient(params: {
       strategyEnvelopeId: signatureResult.envelopeId,
       strategyDocumentId: documentRecord.id,
       strategyCeremonyUrl: signatureResult.ceremonyUrl,
+      strategyRecipientId: signatureResult.recipientId,
       sentAt: new Date().toISOString(),
     };
 
-    try {
-      await apiRequest(`/agreements/${agreementId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          status: AgreementStatus.PENDING_STRATEGY_REVIEW,
-          // Append strategy metadata to description
-          description: `__STRATEGY_METADATA__:${JSON.stringify(strategyMetadata)}`,
-        }),
-      });
+    const updated = await updateAgreementWithMetadata(agreementId, {
+      status: AgreementStatus.PENDING_STRATEGY_REVIEW,
+      description: `__STRATEGY_METADATA__:${JSON.stringify(strategyMetadata)}`,
+    });
+
+    if (updated) {
       console.log('[Strategies] Agreement status updated to PENDING_STRATEGY_REVIEW');
-    } catch (statusError) {
-      // If direct status update fails, try alternative endpoint
-      console.warn('[Strategies] Direct status update failed, trying alternative:', statusError);
-      // The status might need to be changed through a dedicated endpoint
-      // For now, log the error but don't fail the operation since envelope was created
+    } else {
+      console.warn('[Strategies] Failed to update agreement status (envelope was created)');
     }
 
     return {
@@ -255,7 +193,9 @@ export async function sendStrategyToClient(params: {
  * Mark an agreement as completed
  * Called by strategist after client has signed the strategy
  */
-export async function completeAgreement(agreementId: string): Promise<{ success: boolean; error?: string }> {
+export async function completeAgreement(
+  agreementId: string
+): Promise<{ success: boolean; error?: string }> {
   console.log('[Strategies] Completing agreement:', agreementId);
 
   try {

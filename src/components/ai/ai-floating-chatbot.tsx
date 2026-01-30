@@ -12,19 +12,26 @@ import {
   ClipboardIcon,
   PaperclipIcon,
   DownloadSimple,
+  Trash,
 } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { EmptyMessagesIllustration } from '@/components/ui/empty-messages-illustration';
 import { MarkdownContent } from '@/components/ui/markdown-content';
-import { MiniDocumentStack, MiniPaymentStack, MiniFileStack } from '@/components/ui/mini-document-illustration';
+import {
+  MiniDocumentStack,
+  MiniPaymentStack,
+  MiniFileStack,
+} from '@/components/ui/mini-document-illustration';
 import { useUiStore, type AiMessage } from '@/contexts/ui/UiStore';
 
 interface AiFloatingChatbotProps {
   selectedCount?: number;
   onClearSelection?: () => void;
   onDownload?: () => void;
+  onDelete?: () => void;
   isDownloading?: boolean;
+  isDeleting?: boolean;
   contextType?: string;
 }
 
@@ -32,7 +39,9 @@ export function AiFloatingChatbot({
   selectedCount = 0,
   onClearSelection,
   onDownload,
+  onDelete,
   isDownloading = false,
+  isDeleting = false,
   contextType = 'item',
 }: AiFloatingChatbotProps) {
   const {
@@ -201,6 +210,22 @@ export function AiFloatingChatbot({
                 <span>{isDownloading ? 'Downloading...' : 'Download'}</span>
               </button>
             )}
+
+            {/* Delete button - shows when onDelete handler is provided */}
+            {onDelete && (
+              <button
+                onClick={onDelete}
+                disabled={isDeleting}
+                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-red-200 bg-white py-1.5 pr-3 pl-2 text-sm font-medium text-red-600 shadow-lg transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash weight="bold" className="h-4 w-4" />
+                )}
+                <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -268,7 +293,7 @@ export function AiFloatingChatbot({
                             </div>
                           )}
                           <div className="max-w-[80%] rounded-2xl bg-zinc-100 px-4 py-2.5">
-                            <p className="break-words text-base text-zinc-900">{message.content}</p>
+                            <p className="text-base break-words text-zinc-900">{message.content}</p>
                           </div>
                         </div>
                       ) : (
@@ -292,7 +317,7 @@ export function AiFloatingChatbot({
       {/* Input anchored at bottom, grows upward */}
       {isAiChatOpen ? (
         <div className="z-40 -translate-y-4 scale-[97%] transition-all duration-300">
-          <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 focus-within:ring-2 focus-within:ring-emerald-100 focus:border-emerald-100! hover:bg-white">
+          <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 focus-within:ring-2 focus-within:ring-emerald-100 hover:bg-white focus:border-emerald-100!">
             {/* Textarea */}
             <textarea
               ref={textareaRef}

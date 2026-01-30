@@ -24,9 +24,17 @@ interface UiState {
   selectedCount: number;
   onClearSelection: (() => void) | null;
   onDownloadSelection: (() => void) | null;
+  onDeleteSelection: (() => void) | null;
   isDownloadingSelection: boolean;
-  setSelection: (count: number, onClear: (() => void) | null, onDownload?: (() => void) | null) => void;
+  isDeletingSelection: boolean;
+  setSelection: (
+    count: number,
+    onClear: (() => void) | null,
+    onDownload?: (() => void) | null,
+    onDelete?: (() => void) | null
+  ) => void;
   setDownloadingSelection: (isDownloading: boolean) => void;
+  setDeletingSelection: (isDeleting: boolean) => void;
   clearSelection: () => void;
   // AI chat state
   aiMessages: AiMessage[];
@@ -49,32 +57,53 @@ export const useUiStore = create<UiState>((set, get) => ({
   selectedCount: 0,
   onClearSelection: null,
   onDownloadSelection: null,
+  onDeleteSelection: null,
   isDownloadingSelection: false,
-  setSelection: (count, onClear, onDownload = null) => set({ selectedCount: count, onClearSelection: onClear, onDownloadSelection: onDownload }),
-  setDownloadingSelection: (isDownloading) => set({ isDownloadingSelection: isDownloading }),
-  clearSelection: () => set({ selectedCount: 0, onClearSelection: null, onDownloadSelection: null, isDownloadingSelection: false }),
+  isDeletingSelection: false,
+  setSelection: (count, onClear, onDownload = null, onDelete = null) =>
+    set({
+      selectedCount: count,
+      onClearSelection: onClear,
+      onDownloadSelection: onDownload,
+      onDeleteSelection: onDelete,
+    }),
+  setDownloadingSelection: isDownloading => set({ isDownloadingSelection: isDownloading }),
+  setDeletingSelection: isDeleting => set({ isDeletingSelection: isDeleting }),
+  clearSelection: () =>
+    set({
+      selectedCount: 0,
+      onClearSelection: null,
+      onDownloadSelection: null,
+      onDeleteSelection: null,
+      isDownloadingSelection: false,
+      isDeletingSelection: false,
+    }),
   // AI chat state
   aiMessages: [],
   isAiChatOpen: false,
-  setAiChatOpen: (open) => set({ isAiChatOpen: open }),
-  addAiMessage: (message) => set(state => ({
-    aiMessages: [...state.aiMessages, {
-      ...message,
-      id: crypto.randomUUID(),
-      timestamp: new Date(),
-    }],
-  })),
+  setAiChatOpen: open => set({ isAiChatOpen: open }),
+  addAiMessage: message =>
+    set(state => ({
+      aiMessages: [
+        ...state.aiMessages,
+        {
+          ...message,
+          id: crypto.randomUUID(),
+          timestamp: new Date(),
+        },
+      ],
+    })),
   clearAiMessages: () => set({ aiMessages: [] }),
   askAriexWithContext: (contextType, count) => {
     const { addAiMessage, setAiChatOpen, onClearSelection } = get();
-    
+
     // Add user message with context
     const userMessage = `Analyze my ${count} selected ${contextType}${count > 1 ? 's' : ''}`;
     addAiMessage({ role: 'user', content: userMessage, context: { type: contextType, count } });
-    
+
     // Open the chat
     setAiChatOpen(true);
-    
+
     // Simulate AI response after a short delay
     setTimeout(() => {
       const mockResponses: Record<string, string> = {
@@ -82,11 +111,13 @@ export const useUiStore = create<UiState>((set, get) => ({
         agreement: `I've reviewed your ${count} selected agreement${count > 1 ? 's' : ''}. Here's my analysis:\n\n• **Document status**: I can see the signature status of each agreement\n• **Key terms**: These agreements outline your tax advisory services with Ariex\n• **Action items**: ${count > 1 ? 'Some agreements may require your signature' : 'Check if this agreement requires any action'}\n\nWould you like me to summarize the key points of any specific agreement, or explain any terms in detail?`,
         document: `I've analyzed your ${count} selected document${count > 1 ? 's' : ''}. Here's what I found:\n\n• **Document types**: Tax-related documents for your strategy\n• **Upload dates**: Recently uploaded files are ready for review\n• **Next steps**: Your tax strategist will review these documents\n\nWould you like me to help categorize these documents or explain how they'll be used in your tax strategy?`,
       };
-      
-      const response = mockResponses[contextType] || `I've analyzed your ${count} selected item${count > 1 ? 's' : ''}. How can I help you with ${count > 1 ? 'them' : 'it'}?`;
+
+      const response =
+        mockResponses[contextType] ||
+        `I've analyzed your ${count} selected item${count > 1 ? 's' : ''}. How can I help you with ${count > 1 ? 'them' : 'it'}?`;
       addAiMessage({ role: 'assistant', content: response });
     }, 1000);
-    
+
     // Clear selection after asking
     if (onClearSelection) {
       onClearSelection();

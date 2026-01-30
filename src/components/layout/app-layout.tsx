@@ -21,7 +21,15 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
   // ALL HOOKS MUST BE CALLED AT THE TOP (Rules of Hooks)
   // ============================================================================
   const pathname = usePathname();
-  const { isSidebarCollapsed, selectedCount, onClearSelection, onDownloadSelection, isDownloadingSelection } = useUiStore();
+  const {
+    isSidebarCollapsed,
+    selectedCount,
+    onClearSelection,
+    onDownloadSelection,
+    onDeleteSelection,
+    isDownloadingSelection,
+    isDeletingSelection,
+  } = useUiStore();
   const { user } = useAuth();
 
   // Mobile detection (below lg breakpoint - 1024px)
@@ -121,7 +129,9 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
               selectedCount={selectedCount}
               onClearSelection={onClearSelection ?? undefined}
               onDownload={onDownloadSelection ?? undefined}
+              onDelete={onDeleteSelection ?? undefined}
               isDownloading={isDownloadingSelection}
+              isDeleting={isDeletingSelection}
               contextType={getContextType()}
             />
           ) : null}
