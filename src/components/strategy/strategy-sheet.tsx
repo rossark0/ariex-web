@@ -2,280 +2,301 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import {
-  Check,
-  DownloadSimple,
-  Eye,
-  FloppyDisk,
-  MagicWand,
+  SpinnerGap,
+  FilePdf as FilePdfIcon,
   SquaresFour,
-  TextHOne,
-  TextHTwo,
-  TextHThree,
-  TextB,
-  TextItalic,
-  ListBullets,
-  ListNumbers,
-  Quotes,
-  Code,
-  Link,
-  Minus,
-  ArrowsOutSimple,
-  X,
-  FilePdfIcon,
+  Plus,
+  Trash,
+  CaretLeft,
+  CaretRight,
+  Paperclip,
+  ArrowUp,
+  Sparkle,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
+import { XIcon } from 'lucide-react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
+import { MiniFileStack } from '@/components/ui/mini-document-illustration';
 import type { FullClientMock } from '@/lib/mocks/client-full';
-import { SaveIcon, XIcon } from 'lucide-react';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-interface StrategySheetProps {
-  client: FullClientMock;
-  isOpen: boolean;
-  onClose: () => void;
+interface Page {
+  id: string;
+  content: string;
 }
 
-interface ChatMessage {
+interface StrategySheetProps {
+  client: FullClientMock;
+  agreementId: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onSend: (data: StrategySendData) => Promise<void>;
+}
+
+export interface StrategySendData {
+  title: string;
+  description: string;
+  markdownContent: string;
+  /** Base64-encoded PDF generated client-side */
+  pdfBase64: string;
+  /** Total number of pages in the PDF */
+  totalPages: number;
+}
+
+// AI Chat Message type
+interface AiChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  createdAt: Date;
+  timestamp: Date;
+  isEditing?: boolean;
+  suggestions?: string[];
+  context?: {
+    type: 'file';
+    fileName: string;
+    count: number;
+  };
 }
 
-interface ToolbarAction {
-  icon: React.ElementType;
-  label: string;
-  markdown: string;
-  shortcut?: string;
-}
-
 // ============================================================================
-// MARKDOWN TOOLBAR CONFIG
+// HELPER FUNCTIONS
 // ============================================================================
 
-const toolbarActions: ToolbarAction[] = [
-  { icon: TextHOne, label: 'Heading 1', markdown: '# ', shortcut: 'Ctrl+1' },
-  { icon: TextHTwo, label: 'Heading 2', markdown: '## ', shortcut: 'Ctrl+2' },
-  { icon: TextHThree, label: 'Heading 3', markdown: '### ', shortcut: 'Ctrl+3' },
-  { icon: TextB, label: 'Bold', markdown: '**text**', shortcut: 'Ctrl+B' },
-  { icon: TextItalic, label: 'Italic', markdown: '*text*', shortcut: 'Ctrl+I' },
-  { icon: ListBullets, label: 'Bullet List', markdown: '- ', shortcut: 'Ctrl+U' },
-  { icon: ListNumbers, label: 'Numbered List', markdown: '1. ', shortcut: 'Ctrl+O' },
-  { icon: Quotes, label: 'Quote', markdown: '> ' },
-  { icon: Code, label: 'Code', markdown: '`code`' },
-  { icon: Link, label: 'Link', markdown: '[text](url)' },
-  { icon: Minus, label: 'Divider', markdown: '\n---\n' },
-];
+const generateId = () => Math.random().toString(36).substring(2, 9);
+
+const createEmptyPage = (): Page => ({
+  id: generateId(),
+  content: '',
+});
 
 // ============================================================================
-// INITIAL STRATEGY TEMPLATE
+// INITIAL TEMPLATE (HTML for Tiptap) - Tax Strategy Document
 // ============================================================================
 
-const getInitialStrategy = (clientName: string, businessName: string | null) => `
-
-## Client Overview
-
-**Client:** ${clientName}
-${businessName ? `**Business:** ${businessName}` : ''}
-
----
-
-## Executive Summary
-
-*AI will help you generate a comprehensive tax strategy based on the client's documents and profile.*
-
----
-
-## Key Findings
-
-### Income Analysis
-- 
-
-### Deduction Opportunities
-- 
-
-### Tax Liability Assessment
-- 
-
----
-
-## Recommended Strategies
-
-### Strategy 1: [Name]
-**Potential Savings:** $X,XXX
-**Implementation:** 
-
-### Strategy 2: [Name]
-**Potential Savings:** $X,XXX
-**Implementation:** 
-
----
-
-## Action Items
-
-- [ ] 
-- [ ] 
-- [ ] 
-
----
-
-## Timeline
-
-| Phase | Action | Deadline |
-|-------|--------|----------|
-| 1 | | |
-| 2 | | |
-
----
-
-## Notes
-
+const getInitialTemplate = (clientName: string, businessName: string | null, strategistName: string) => {
+  const today = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  
+  return `
+<hr />
+<p><strong>Date:</strong> ${today}</p>
+<p><strong>Prepared for:</strong> ${clientName}${businessName ? ` (${businessName})` : ''}</p>
+<p><strong>Prepared by:</strong> ${strategistName}</p>
+<hr />
+<h2>EXECUTIVE SUMMARY</h2>
+<p>Based on our comprehensive analysis of your financial situation, we have identified several key opportunities for tax optimization. This strategy document outlines our recommendations to help minimize your tax liability while ensuring full compliance with all applicable tax laws.</p>
+<hr />
+<h2>KEY FINDINGS</h2>
+<ul>
+  <li><strong>Current Tax Bracket:</strong> [To be determined based on income analysis]</li>
+  <li><strong>Potential Annual Savings:</strong> [Estimated after strategy implementation]</li>
+  <li><strong>Primary Optimization Areas:</strong> Entity structure, deductions, retirement planning</li>
+</ul>
+<hr />
+<h2>RECOMMENDED STRATEGIES</h2>
+<h3>1. Entity Structure Optimization</h3>
+<p>Based on your business activities and income level, we recommend evaluating your current entity structure. Potential options include S-Corporation election, which may reduce self-employment taxes significantly.</p>
+<h3>2. Retirement Account Maximization</h3>
+<p>Maximizing contributions to tax-advantaged retirement accounts can provide immediate tax deductions while building long-term wealth. We recommend exploring SEP-IRA, Solo 401(k), or defined benefit plan options.</p>
+<h3>3. Business Expense Optimization</h3>
+<p>We have identified several potential deductions that may not be fully utilized, including home office deduction, vehicle expenses, health insurance premiums, and professional development costs.</p>
+<hr />
+<h2>IMPLEMENTATION TIMELINE</h2>
+<ol>
+  <li><strong>Immediate (0-30 days):</strong> Review and organize documentation for identified deductions</li>
+  <li><strong>Short-term (30-90 days):</strong> Implement entity structure changes if recommended</li>
+  <li><strong>Ongoing:</strong> Quarterly tax planning reviews and estimated payment optimization</li>
+</ol>
+<hr />
+<h2>NEXT STEPS</h2>
+<p>Please review this strategy document carefully. Upon your approval, we will proceed with implementing the recommended strategies. Sign below to acknowledge receipt and approval of this tax strategy plan.</p>
+<hr />
+<h2>SIGNATURES</h2>
+<p><strong>Client:</strong> _____________________________ Date: __________</p>
+<p><strong>Tax Strategist:</strong> ${strategistName}</p>
+<hr />
 `;
+};
 
 // ============================================================================
 // AI SUGGESTION PROMPTS
 // ============================================================================
 
 const aiSuggestions = [
-  { label: 'List action items', hasGradientIcon: true },
-  { label: 'Write follow-up email', hasGradientIcon: true },
-  { label: 'List Q&A', hasGradientIcon: true },
+  { label: 'Add more tax savings strategies', hasGradientIcon: true },
+  { label: 'Improve executive summary', hasGradientIcon: true },
+  { label: 'Generate retirement planning section', hasGradientIcon: true },
+  { label: 'Add implementation timeline', hasGradientIcon: true },
 ];
 
 // ============================================================================
-// SIMULATED AI RESPONSES
+// PAGE NAVIGATION COMPONENT
 // ============================================================================
 
-const getAiResponse = (prompt: string, clientName: string): string => {
-  const responses: Record<string, string> = {
-    'Analyze client documents and suggest deductions': `Based on ${clientName}'s uploaded documents, I've identified several potential deductions:
-
-**Business Expenses:**
-- Home office deduction (if applicable)
-- Vehicle mileage for business use
-- Professional development and training
-
-**Investment-Related:**
-- Capital loss harvesting opportunities
-- Qualified business income (QBI) deduction
-
-Would you like me to elaborate on any of these or add them to the strategy document?`,
-
-    'Generate executive summary based on profile': `Here's a draft executive summary for ${clientName}:
-
-**Executive Summary**
-
-After reviewing the client's financial profile and documentation, we recommend a multi-faceted tax optimization strategy focusing on:
-
-1. **Entity Structure Optimization** - Consider restructuring for better tax efficiency
-2. **Retirement Contribution Maximization** - Maximize 401(k) and IRA contributions
-3. **Quarterly Estimated Tax Planning** - Avoid penalties with proper planning
-
-Estimated annual tax savings: **$8,500 - $12,000**
-
-Shall I insert this into your document?`,
-
-    default: `I understand you're working on ${clientName}'s tax strategy. I can help you with:
-
-• Analyzing uploaded documents for deduction opportunities
-• Generating specific sections of the strategy document
-• Reviewing and optimizing your current recommendations
-• Creating timeline and action items
-
-What would you like me to focus on?`,
-  };
-
-  return responses[prompt] || responses['default'];
-};
-
-// ============================================================================
-// MARKDOWN EDITOR COMPONENT
-// ============================================================================
-
-interface MarkdownEditorProps {
-  content: string;
-  onChange: (content: string) => void;
-  onSave: () => void;
-  isSaving: boolean;
-  lastSaved: Date | null;
+interface PageNavigationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  onAddPage: () => void;
+  onDeletePage: () => void;
 }
 
-function MarkdownEditor({ content, onChange, onSave, isSaving, lastSaved }: MarkdownEditorProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [isPreview, setIsPreview] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+function PageNavigation({
+  currentPage,
+  totalPages,
+  onPageChange,
+  onAddPage,
+  onDeletePage,
+}: PageNavigationProps) {
+  return (
+    <div className="flex items-center justify-center gap-2 border-t border-zinc-100 bg-white py-3">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 0}
+        className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        <CaretLeft weight="bold" className="h-3 w-3" />
+      </button>
 
-  const insertMarkdown = (markdown: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+      <div className="flex items-center gap-1">
+        {Array.from({ length: totalPages }).map((_, index) => (
+          <button
+            key={index}
+            onClick={() => onPageChange(index)}
+            className={cn(
+              'h-6 w-6 rounded-lg text-sm font-medium transition-colors',
+              currentPage === index
+                ? 'bg-emerald-500 text-white'
+                : 'text-zinc-500 hover:bg-zinc-100'
+            )}
+          >
+            {index + 1}
+          </button>
+        ))}
+      </div>
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = content.substring(start, end);
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages - 1}
+        className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        <CaretRight weight="bold" className="h-3 w-3" />
+      </button>
 
-    let newContent: string;
-    let newCursorPos: number;
+      <div className="mx-2 h-4 w-px bg-zinc-200" />
 
-    if (markdown.includes('text')) {
-      const replacement = markdown.replace('text', selectedText || 'text');
-      newContent = content.substring(0, start) + replacement + content.substring(end);
-      newCursorPos = start + replacement.length;
-    } else {
-      newContent = content.substring(0, start) + markdown + content.substring(end);
-      newCursorPos = start + markdown.length;
+      <button
+        onClick={onAddPage}
+        className="flex cursor-pointer items-center gap-1 rounded-md bg-zinc-100 px-2 py-1.5 text-xs font-semibold text-zinc-600 transition-colors hover:bg-zinc-200"
+      >
+        <Plus weight="bold" className="h-3.5 w-3.5" />
+        Add Page
+      </button>
+
+      {totalPages > 1 && (
+        <button
+          onClick={onDeletePage}
+          className="flex items-center gap-1 rounded-md bg-white px-2 py-1.5 text-xs font-semibold text-red-500 transition-colors hover:bg-red-600 hover:text-white"
+        >
+          <Trash weight="bold" className="h-3.5 w-3.5" />
+          Delete page
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// TIPTAP EDITOR COMPONENT
+// ============================================================================
+
+const PAGE_MAX_HEIGHT = 700;
+
+interface TiptapEditorProps {
+  content: string;
+  onChange: (content: string) => void;
+  onOverflow?: (isOverflowing: boolean) => void;
+}
+
+function TiptapEditor({ content, onChange, onOverflow }: TiptapEditorProps) {
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3],
+        },
+      }),
+      Placeholder.configure({
+        placeholder: 'Start typing your strategy content...',
+      }),
+    ],
+    content: content,
+    immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm prose-zinc max-w-none focus:outline-none min-h-[500px] pt-4',
+      },
+    },
+    onUpdate: ({ editor }) => {
+      onChange(editor.getHTML());
+    },
+  });
+
+  // Update editor content when prop changes
+  useEffect(() => {
+    if (editor && content && editor.getHTML() !== content) {
+      editor.commands.setContent(content);
     }
+  }, [editor, content]);
 
-    onChange(newContent);
+  // Check for content overflow
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (editorContainerRef.current) {
+        const height = editorContainerRef.current.scrollHeight;
+        const overflow = height > PAGE_MAX_HEIGHT;
+        setIsOverflowing(overflow);
+        onOverflow?.(overflow);
+      }
+    };
 
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-      e.preventDefault();
-      onSave();
+    checkOverflow();
+    const observer = new ResizeObserver(checkOverflow);
+    if (editorContainerRef.current) {
+      observer.observe(editorContainerRef.current);
     }
-  };
+    return () => observer.disconnect();
+  }, [content, onOverflow]);
 
   return (
-    <div className={cn('flex h-full flex-col bg-white', isFullscreen && 'fixed inset-4 z-50')}>
-      {/* Editor/Preview Area */}
-      <div className="relative flex-1 overflow-hidden">
-        {isPreview ? (
-          <div className="prose prose-sm prose-zinc max-w-none overflow-auto">
-            <div
-              dangerouslySetInnerHTML={{
-                __html: content
-                  .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-                  .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-                  .replace(/^# (.*$)/gim, '<h1 style="font-size: 28px; font-weight: 600;">$1</h1>')
-                  .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
-                  .replace(/\*(.*)\*/gim, '<em>$1</em>')
-                  .replace(/^- (.*$)/gim, '<li>$1</li>')
-                  .replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>')
-                  .replace(/`(.*)`/gim, '<code>$1</code>')
-                  .replace(/\n---\n/g, '<hr />')
-                  .replace(/\n/g, '<br />'),
-              }}
-            />
-          </div>
-        ) : (
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={e => onChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Start writing your strategy..."
-            className="h-full min-h-[500px] w-full resize-none p-6 font-mono text-sm leading-relaxed text-zinc-800 placeholder:text-zinc-400 focus:outline-none"
-            spellCheck={false}
-          />
-        )}
+    <div className="flex h-full flex-col bg-white">
+      <div
+        ref={editorContainerRef}
+        className="relative flex-1 overflow-auto"
+        style={{ maxHeight: PAGE_MAX_HEIGHT }}
+      >
+        <EditorContent editor={editor} className="h-full" />
       </div>
+      {isOverflowing && (
+        <div className="flex items-center justify-center gap-2 border-t border-amber-200 bg-amber-50 px-4 py-2">
+          <span className="text-xs font-medium text-amber-700">
+            Content exceeds one page. Consider adding a new page to keep PDF layout clean.
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -286,14 +307,31 @@ function MarkdownEditor({ content, onChange, onSave, isSaving, lastSaved }: Mark
 
 interface AiAssistantProps {
   clientName: string;
-  onInsertContent: (content: string) => void;
+  documentContent: string;
+  currentPageIndex: number;
+  totalPages: number;
+  onUpdateContent: (content: string) => void;
+  onAddPage: (content?: string) => void;
+  onGoToPage: (pageIndex: number) => void;
+  onDeletePage: () => void;
 }
 
-function AiAssistant({ clientName, onInsertContent }: AiAssistantProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+function AiAssistant({
+  clientName,
+  documentContent,
+  currentPageIndex,
+  totalPages,
+  onUpdateContent,
+  onAddPage,
+  onGoToPage,
+  onDeletePage,
+}: AiAssistantProps) {
+  const [messages, setMessages] = useState<AiChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -307,28 +345,94 @@ function AiAssistant({ clientName, onInsertContent }: AiAssistantProps) {
     async (content: string) => {
       if (!content.trim()) return;
 
-      const userMessage: ChatMessage = {
+      const userMessage: AiChatMessage = {
         id: `user-${Date.now()}`,
         role: 'user',
         content,
-        createdAt: new Date(),
+        timestamp: new Date(),
       };
       setMessages(prev => [...prev, userMessage]);
       setInput('');
       setIsTyping(true);
 
-      setTimeout(() => {
-        const aiMessage: ChatMessage = {
+      try {
+        const response = await fetch('/api/ai/document-editor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'chat',
+            documentContent,
+            userMessage: content,
+            chatHistory: messages.map(m => ({ role: m.role, content: m.content })),
+            clientName,
+            currentPageIndex: currentPageIndex + 1,
+            totalPages,
+            documentType: 'strategy', // Let AI know this is a strategy document
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to get AI response');
+        }
+
+        const aiMessage: AiChatMessage = {
           id: `ai-${Date.now()}`,
           role: 'assistant',
-          content: getAiResponse(content, clientName),
-          createdAt: new Date(),
+          content: data.message || 'I apologize, I could not process that request.',
+          timestamp: new Date(),
         };
+
         setMessages(prev => [...prev, aiMessage]);
+
+        // If AI provided updated content, apply it
+        if (data.fullContent) {
+          onUpdateContent(data.fullContent);
+        }
+
+        // If AI wants to create a new page
+        if (data.action === 'addPage') {
+          onAddPage(data.newPageContent || '');
+        }
+
+        // If AI wants to navigate to a specific page
+        if (data.action === 'goToPage' && typeof data.pageIndex === 'number') {
+          onGoToPage(data.pageIndex - 1);
+        }
+
+        // If AI wants to delete the current page
+        if (data.action === 'deletePage') {
+          onDeletePage();
+        }
+      } catch (error) {
+        console.error('AI chat error:', error);
+        const errorContent =
+          error instanceof Error
+            ? error.message
+            : 'Sorry, I encountered an error. Please try again.';
+        const errorMessage: AiChatMessage = {
+          id: `error-${Date.now()}`,
+          role: 'assistant',
+          content: errorContent,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      } finally {
         setIsTyping(false);
-      }, 1500);
+      }
     },
-    [clientName]
+    [
+      documentContent,
+      messages,
+      clientName,
+      currentPageIndex,
+      totalPages,
+      onUpdateContent,
+      onAddPage,
+      onGoToPage,
+      onDeletePage,
+    ]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -342,27 +446,120 @@ function AiAssistant({ clientName, onInsertContent }: AiAssistantProps) {
     handleSend(label);
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || file.type !== 'application/pdf') return;
+
+    setIsProcessingFile(true);
+
+    const userMessage: AiChatMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: `Please analyze this PDF and incorporate relevant content into the strategy.`,
+      timestamp: new Date(),
+      context: {
+        type: 'file',
+        fileName: file.name,
+        count: 1,
+      },
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setIsTyping(true);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+
+      const response = await fetch('/api/ai/document-editor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'ocr-pdf',
+          pdfBase64: base64,
+          clientName,
+          documentType: 'strategy',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to process PDF');
+      }
+
+      if (data.pages && data.pages.length > 0) {
+        onUpdateContent(data.pages[0].content);
+
+        for (let i = 1; i < data.pages.length; i++) {
+          onAddPage(data.pages[i].content);
+        }
+
+        const aiMessage: AiChatMessage = {
+          id: `ai-${Date.now()}`,
+          role: 'assistant',
+          content: `I've analyzed the PDF "${file.name}" and incorporated the content. ${data.title ? `Document title: "${data.title}".` : ''} You can now edit the content in the editor.`,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, aiMessage]);
+      } else {
+        throw new Error('No content extracted from PDF');
+      }
+    } catch (error) {
+      console.error('File upload error:', error);
+      const errorMessage: AiChatMessage = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content:
+          error instanceof Error
+            ? error.message
+            : 'Failed to process the uploaded file. Please try again.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsProcessingFile(false);
+      setIsTyping(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
-    <div className="flex h-full flex-col rounded-xl bg-white">
+    <div className="relative flex h-full flex-col rounded-xl bg-white">
+      {/* Floating page indicator - top right */}
+      <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-500">
+        <Sparkle weight="fill" className="h-4 w-4 text-emerald-500" /> Editing{' '}
+        <span>
+          page {currentPageIndex + 1} of {totalPages}
+        </span>
+      </div>
+
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 pt-10">
         {messages.length === 0 ? null : (
           <div className="space-y-6">
             {messages.map(message => (
               <div key={message.id}>
                 {message.role === 'user' ? (
-                  /* User message - simple pill on the right */
-                  <div className="flex justify-end">
-                    <div className="max-w-[80%] rounded-full bg-zinc-100 px-4 py-2">
+                  <div className="flex flex-col items-end gap-2">
+                    {message.context && (
+                      <div className="flex items-center gap-2">
+                        <MiniFileStack count={message.context.count} />
+                        <span className="text-sm text-zinc-500">{message.context.fileName}</span>
+                      </div>
+                    )}
+                    <div className="max-w-[80%] rounded-2xl bg-zinc-100 px-4 py-2.5">
                       <p className="text-sm font-medium text-zinc-900">{message.content}</p>
                     </div>
                   </div>
                 ) : (
-                  /* AI message - plain text, no bubble */
                   <div className="space-y-3">
                     <p className="text-base leading-relaxed text-zinc-900">{message.content}</p>
                     <button
-                      onClick={() => onInsertContent(message.content)}
+                      onClick={() => onUpdateContent(message.content)}
                       className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-all hover:bg-zinc-50"
                     >
                       Say more
@@ -385,43 +582,77 @@ function AiAssistant({ clientName, onInsertContent }: AiAssistantProps) {
         )}
       </div>
 
-      {/* Suggestions - matching image styling */}
-      <div className="px-4 pb-2">
-        <div className="flex flex-wrap gap-2">
-          {aiSuggestions.map((suggestion, i) => (
+      {/* Suggestions - only show when no messages yet */}
+      {messages.length === 0 && (
+        <div className="px-4 pb-2">
+          <div className="flex flex-wrap gap-2">
+            {aiSuggestions.map((suggestion, i) => (
+              <button
+                key={i}
+                onClick={() => handleSuggestionClick(suggestion.label)}
+                className="flex cursor-pointer items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-all hover:bg-zinc-50"
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded bg-linear-to-br from-cyan-400 to-emerald-500 text-[10px] font-bold text-white">
+                  /
+                </span>
+                {suggestion.label}
+              </button>
+            ))}
             <button
-              key={i}
-              onClick={() => handleSuggestionClick(suggestion.label)}
-              className="flex cursor-pointer items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-all hover:bg-zinc-50"
+              onClick={() => handleSuggestionClick('Show all recipes')}
+              className="flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-all hover:bg-zinc-50"
             >
-              {/* Gradient icon */}
-              <span className="flex h-5 w-5 items-center justify-center rounded bg-linear-to-br from-cyan-400 to-emerald-500 text-[10px] font-bold text-white">
-                /
-              </span>
-              {suggestion.label}
+              <SquaresFour weight="bold" className="h-5 w-5 text-zinc-700" />
+              All recipes
             </button>
-          ))}
-          {/* All recipes button */}
+          </div>
+        </div>
+      )}
+
+      {/* Input */}
+      <div className="p-3">
+        <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 focus-within:ring-2 focus-within:ring-zinc-300 hover:bg-white">
+          <textarea
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask AI..."
+            rows={1}
+            className="min-h-14 flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-zinc-700 placeholder:text-zinc-500 focus:outline-none"
+          />
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+
           <button
-            onClick={() => handleSuggestionClick('Show all recipes')}
-            className="flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-all hover:bg-zinc-50"
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessingFile || isTyping}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 transition-all hover:bg-zinc-100 disabled:opacity-50"
+            aria-label="Attach file"
           >
-            <SquaresFour weight="bold" className="h-5 w-5 text-zinc-700" />
-            All recipes
+            {isProcessingFile ? (
+              <SpinnerGap size={20} weight="bold" className="animate-spin" />
+            ) : (
+              <Paperclip size={20} weight="bold" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            disabled={!input.trim() || isTyping}
+            onClick={() => handleSend(input)}
+            className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+            aria-label="Send message"
+          >
+            <ArrowUp size={20} weight="bold" />
           </button>
         </div>
-      </div>
-
-      {/* Input - matching ai-floating-chatbot style */}
-      <div className="p-3">
-        <textarea
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask AI to help with strategy..."
-          rows={1}
-          className="min-h-[56px] w-full resize-none rounded-4xl border border-zinc-200 bg-white px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-zinc-500 shadow-2xl transition-all duration-300 placeholder:text-zinc-500 hover:bg-white focus:ring-2 focus:ring-zinc-300 focus:outline-none"
-        />
       </div>
     </div>
   );
@@ -431,17 +662,35 @@ function AiAssistant({ clientName, onInsertContent }: AiAssistantProps) {
 // MAIN STRATEGY SHEET COMPONENT
 // ============================================================================
 
-export function StrategySheet({ client, isOpen, onClose }: StrategySheetProps) {
-  const [strategyContent, setStrategyContent] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+export function StrategySheet({
+  client,
+  agreementId,
+  isOpen,
+  onClose,
+  onSend,
+}: StrategySheetProps) {
+  const strategistName = 'Ariex Tax Strategist';
+  const clientName = client.user.name || 'Client';
+  const businessName = client.profile.businessName;
+
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Trigger entrance animation
+  // Form state
+  const [title, setTitle] = useState('Tax Strategy Document');
+
+  // Multi-page state
+  const [pages, setPages] = useState<Page[]>([createEmptyPage()]);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+
+  // Get current page
+  const currentPage = pages[currentPageIndex];
+
+  // Animation handling
   useEffect(() => {
     if (isOpen) {
-      // Small delay to ensure the initial state is rendered first
       const timer = setTimeout(() => setIsVisible(true), 10);
       return () => clearTimeout(timer);
     } else {
@@ -450,16 +699,21 @@ export function StrategySheet({ client, isOpen, onClose }: StrategySheetProps) {
     }
   }, [isOpen]);
 
-  // Initialize strategy content
+  // Load template when opened
   useEffect(() => {
-    if (isOpen && client) {
-      setStrategyContent(
-        getInitialStrategy(client.user.name || 'Client', client.profile.businessName)
-      );
+    if (isOpen) {
+      const firstPage: Page = {
+        id: generateId(),
+        content: getInitialTemplate(clientName, businessName, strategistName),
+      };
+      setPages([firstPage]);
+      setCurrentPageIndex(0);
+      setTitle(`Tax Strategy - ${clientName}`);
+      setError(null);
     }
-  }, [isOpen, client]);
+  }, [isOpen, clientName, businessName, strategistName]);
 
-  // Prevent body scroll when open
+  // Prevent body scroll
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -471,34 +725,275 @@ export function StrategySheet({ client, isOpen, onClose }: StrategySheetProps) {
     };
   }, [isOpen]);
 
-  // Handle escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose();
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleEscape);
-    }
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [isOpen]);
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
+    if (isSending) return;
     setIsClosing(true);
     setTimeout(() => {
       onClose();
       setIsClosing(false);
     }, 300);
+  }, [isSending, onClose]);
+
+  // Escape key handler
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isSending) handleClose();
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleEscape);
+    }
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, isSending, handleClose]);
+
+  // Page management functions
+  const updateCurrentPageContent = (content: string) => {
+    setPages(prev =>
+      prev.map((page, index) => (index === currentPageIndex ? { ...page, content } : page))
+    );
   };
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setLastSaved(new Date());
-    setIsSaving(false);
+  const addPage = () => {
+    const newPage = createEmptyPage();
+    setPages(prev => [...prev, newPage]);
+    setCurrentPageIndex(pages.length);
   };
 
-  const handleInsertContent = (content: string) => {
-    setStrategyContent(prev => prev + '\n\n' + content);
+  const addPageWithContent = (content?: string) => {
+    const newPage: Page = {
+      id: generateId(),
+      content: content || '',
+    };
+    setPages(prev => [...prev, newPage]);
+    setCurrentPageIndex(pages.length);
+  };
+
+  const deletePage = () => {
+    if (pages.length <= 1) return;
+    setPages(prev => prev.filter((_, index) => index !== currentPageIndex));
+    setCurrentPageIndex(prev => Math.max(0, prev - 1));
+  };
+
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportPdf = async () => {
+    setIsExporting(true);
+    setError(null);
+
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      const contentWidth = pageWidth - margin * 2;
+
+      for (let i = 0; i < pages.length; i++) {
+        if (i > 0) {
+          pdf.addPage();
+        }
+
+        const page = pages[i];
+
+        const tempContainer = document.createElement('div');
+        tempContainer.style.width = '800px';
+        tempContainer.style.padding = '40px';
+        tempContainer.style.backgroundColor = 'white';
+        tempContainer.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-9999px';
+
+        if (i === 0) {
+          const titleEl = document.createElement('h1');
+          titleEl.textContent = title;
+          titleEl.style.fontSize = '32px';
+          titleEl.style.fontWeight = '600';
+          titleEl.style.marginBottom = '24px';
+          titleEl.style.color = '#18181b';
+          tempContainer.appendChild(titleEl);
+        }
+
+        const pageIndicator = document.createElement('p');
+        pageIndicator.textContent = `Page ${i + 1} of ${pages.length}`;
+        pageIndicator.style.fontSize = '14px';
+        pageIndicator.style.color = '#71717a';
+        pageIndicator.style.marginBottom = '20px';
+        tempContainer.appendChild(pageIndicator);
+
+        const contentEl = document.createElement('div');
+        contentEl.innerHTML = page.content;
+        contentEl.style.fontSize = '18px';
+        contentEl.style.lineHeight = '1.7';
+        contentEl.style.color = '#27272a';
+
+        const style = document.createElement('style');
+        style.textContent = `
+          hr { border: none; border-top: 1px solid #e4e4e7; margin: 20px 0; height: 0; }
+          h2 { font-size: 24px; font-weight: 600; margin-top: 24px; margin-bottom: 12px; }
+          h3 { font-size: 20px; font-weight: 600; margin-top: 20px; margin-bottom: 10px; }
+          p { margin-bottom: 12px; }
+          ul, ol { margin-bottom: 12px; padding-left: 24px; }
+          li { margin-bottom: 6px; }
+          strong { font-weight: 600; }
+        `;
+        tempContainer.appendChild(style);
+        tempContainer.appendChild(contentEl);
+
+        document.body.appendChild(tempContainer);
+
+        const canvas = await html2canvas(tempContainer, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+        });
+
+        document.body.removeChild(tempContainer);
+
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = contentWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const maxHeight = pageHeight - margin * 2;
+
+        let finalWidth = imgWidth;
+        let finalHeight = imgHeight;
+
+        if (imgHeight > maxHeight) {
+          const scale = maxHeight / imgHeight;
+          finalWidth = imgWidth * scale;
+          finalHeight = maxHeight;
+        }
+
+        const xOffset = margin + (contentWidth - finalWidth) / 2;
+        pdf.addImage(imgData, 'PNG', xOffset, margin, finalWidth, finalHeight);
+      }
+
+      const fileName = `${title.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+      setError('Failed to export PDF. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Generate PDF client-side for sending
+  const generatePdfBase64 = async (): Promise<{ base64: string; totalPages: number }> => {
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pageWidth - margin * 2;
+
+    for (let i = 0; i < pages.length; i++) {
+      if (i > 0) {
+        pdf.addPage();
+      }
+
+      const page = pages[i];
+
+      const tempContainer = document.createElement('div');
+      tempContainer.style.width = '800px';
+      tempContainer.style.padding = '40px';
+      tempContainer.style.backgroundColor = 'white';
+      tempContainer.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+
+      if (i === 0) {
+        const titleEl = document.createElement('h1');
+        titleEl.textContent = title;
+        titleEl.style.fontSize = '32px';
+        titleEl.style.fontWeight = '600';
+        titleEl.style.marginBottom = '24px';
+        titleEl.style.color = '#18181b';
+        tempContainer.appendChild(titleEl);
+      }
+
+      const pageIndicator = document.createElement('p');
+      pageIndicator.textContent = `Page ${i + 1} of ${pages.length}`;
+      pageIndicator.style.fontSize = '14px';
+      pageIndicator.style.color = '#71717a';
+      pageIndicator.style.marginBottom = '20px';
+      tempContainer.appendChild(pageIndicator);
+
+      const contentEl = document.createElement('div');
+      contentEl.innerHTML = page.content;
+      contentEl.style.fontSize = '18px';
+      contentEl.style.lineHeight = '1.7';
+      contentEl.style.color = '#27272a';
+
+      const style = document.createElement('style');
+      style.textContent = `
+        hr { border: none; border-top: 1px solid #e4e4e7; margin: 20px 0; height: 0; }
+        h2 { font-size: 24px; font-weight: 600; margin-top: 24px; margin-bottom: 12px; }
+        h3 { font-size: 20px; font-weight: 600; margin-top: 20px; margin-bottom: 10px; }
+        p { margin-bottom: 12px; }
+        ul, ol { margin-bottom: 12px; padding-left: 24px; }
+        li { margin-bottom: 6px; }
+        strong { font-weight: 600; }
+      `;
+      tempContainer.appendChild(style);
+      tempContainer.appendChild(contentEl);
+
+      document.body.appendChild(tempContainer);
+
+      const canvas = await html2canvas(tempContainer, {
+        scale: 1.5,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+
+      document.body.removeChild(tempContainer);
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.85);
+      const imgWidth = contentWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const maxHeight = pageHeight - margin * 2;
+
+      let finalWidth = imgWidth;
+      let finalHeight = imgHeight;
+
+      if (imgHeight > maxHeight) {
+        const scale = maxHeight / imgHeight;
+        finalWidth = imgWidth * scale;
+        finalHeight = maxHeight;
+      }
+
+      const xOffset = margin + (contentWidth - finalWidth) / 2;
+      pdf.addImage(imgData, 'PNG', xOffset, margin, finalWidth, finalHeight);
+    }
+
+    const pdfOutput = pdf.output('datauristring');
+    const base64 = pdfOutput.split(',')[1];
+    return { base64, totalPages: pages.length };
+  };
+
+  const handleSend = async () => {
+    const allContent = pages.map(p => p.content).join('');
+    if (!allContent.trim()) {
+      setError('Please add content to the strategy');
+      return;
+    }
+
+    setIsSending(true);
+    setError(null);
+
+    try {
+      const { base64, totalPages } = await generatePdfBase64();
+
+      await onSend({
+        title,
+        description: allContent.substring(0, 200) + '...',
+        markdownContent: allContent,
+        pdfBase64: base64,
+        totalPages,
+      });
+      handleClose();
+    } catch (err) {
+      console.error('Failed to send strategy:', err);
+      setError('Failed to send strategy. Please try again.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -524,6 +1019,7 @@ export function StrategySheet({ client, isOpen, onClose }: StrategySheetProps) {
           isVisible && !isClosing ? 'translate-y-0' : 'translate-y-full'
         )}
       >
+        {/* Close button - top left */}
         <div className="absolute top-4 left-4 z-50 flex items-center gap-2">
           <div className="flex h-6 w-6 items-center justify-center gap-2 rounded-md hover:bg-zinc-100">
             <XIcon onClick={handleClose} className="h-4 w-4 cursor-pointer text-zinc-500" />
@@ -533,43 +1029,98 @@ export function StrategySheet({ client, isOpen, onClose }: StrategySheetProps) {
           </kbd>
         </div>
 
+        {/* Error message */}
+        {error && (
+          <div className="absolute top-16 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
         {/* Two-Column Layout */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Left Column - Markdown Editor */}
-          <div className="relative flex-1 overflow-auto pt-24 pr-48 pl-64">
-            <h2 className="text-2xl font-semibold">
-              Tax Strategy Document for {client.user.name || 'Client'}
-            </h2>
-            <MarkdownEditor
-              content={strategyContent}
-              onChange={setStrategyContent}
-              onSave={handleSave}
-              isSaving={isSaving}
-              lastSaved={lastSaved}
-            />
-
-            <div className="absolute top-4 right-4 flex items-center gap-2">
+          {/* Left Column - Document Editor */}
+          <div className="relative flex flex-1 flex-col overflow-hidden">
+            {/* Action buttons - top right of left column */}
+            <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
               <button
-                onClick={handleSave}
-                className={`flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-500  transition-colors hover:bg-zinc-100`}
+                onClick={handleExportPdf}
+                disabled={isExporting || !pages.some(p => p.content.trim())}
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 disabled:opacity-50"
               >
-                <FilePdfIcon weight="fill" className="h-4 w-4" />
-                <span>Export as PDF</span>
+                {isExporting ? (
+                  <>
+                    <SpinnerGap className="h-4 w-4 animate-spin" />
+                    <span>Exporting...</span>
+                  </>
+                ) : (
+                  <>
+                    <FilePdfIcon weight="fill" className="h-4 w-4" />
+                    <span>Export as PDF</span>
+                  </>
+                )}
               </button>
               <button
-                onClick={handleSave}
-                className={`flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-500 bg-emerald-500 px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-emerald-600`}
+                onClick={handleSend}
+                disabled={isSending || !pages.some(p => p.content.trim())}
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-500 bg-emerald-500 px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-emerald-600 disabled:opacity-50"
               >
-                <span>Save</span>
+                {isSending ? (
+                  <>
+                    <SpinnerGap className="h-4 w-4 animate-spin" />
+                    <span>Sending...</span>
+                  </>
+                ) : (
+                  <span>Send to client</span>
+                )}
               </button>
             </div>
+
+            {/* Page Content Area */}
+            <div className="flex-1 overflow-auto pt-24 pr-48 pb-8 pl-64">
+              <div className="flex min-h-[calc(100vh-200px)] flex-col">
+                <input
+                  type="text"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  className="w-full border-none bg-transparent text-2xl font-semibold outline-none placeholder:text-zinc-400 focus:outline-none"
+                  placeholder="Enter document title..."
+                />
+
+                <p className="mt-1 text-xs font-semibold text-zinc-400 uppercase">
+                  Page {currentPageIndex + 1} of {pages.length}
+                </p>
+
+                <div className="flex-1">
+                  <TiptapEditor
+                    key={currentPage.id}
+                    content={currentPage.content}
+                    onChange={updateCurrentPageContent}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Page Navigation */}
+            <PageNavigation
+              currentPage={currentPageIndex}
+              totalPages={pages.length}
+              onPageChange={setCurrentPageIndex}
+              onAddPage={addPage}
+              onDeletePage={deletePage}
+            />
           </div>
 
           {/* Right Column - AI Assistant */}
           <div className="w-[400px] shrink-0 border-l border-zinc-200 bg-white p-4">
             <AiAssistant
-              clientName={client.user.name || 'Client'}
-              onInsertContent={handleInsertContent}
+              clientName={clientName}
+              documentContent={currentPage.content}
+              currentPageIndex={currentPageIndex}
+              totalPages={pages.length}
+              onUpdateContent={updateCurrentPageContent}
+              onAddPage={addPageWithContent}
+              onGoToPage={setCurrentPageIndex}
+              onDeletePage={deletePage}
             />
           </div>
         </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { Robot } from '@phosphor-icons/react';
+import { Robot, SpinnerGap } from '@phosphor-icons/react';
 
 export interface ConversationData {
   id: string;
@@ -11,6 +11,7 @@ export interface ConversationData {
   unreadCount?: number;
   isAI?: boolean;
   avatarUrl?: string;
+  isLoading?: boolean; // Show loading spinner instead of lastMessage
 }
 
 interface ChatConversationItemProps {
@@ -101,17 +102,24 @@ export function ChatConversationItem({
             {conversation.title}
           </span>
           <span className="shrink-0 text-[10px] text-zinc-400">
-            {formatTime(conversation.lastMessageAt)}
+            {conversation.isLoading ? '' : formatTime(conversation.lastMessageAt)}
           </span>
         </div>
-        <p
-          className={cn(
-            'truncate text-xs',
-            conversation.unreadCount ? 'font-medium text-zinc-600' : 'text-zinc-500'
-          )}
-        >
-          {conversation.lastMessage}
-        </p>
+        {conversation.isLoading ? (
+          <div className="flex items-center gap-1 text-xs text-zinc-400">
+            <SpinnerGap className="h-3 w-3 animate-spin" />
+            <span>Loading...</span>
+          </div>
+        ) : (
+          <p
+            className={cn(
+              'truncate text-xs',
+              conversation.unreadCount ? 'font-medium text-zinc-600' : 'text-zinc-500'
+            )}
+          >
+            {conversation.lastMessage}
+          </p>
+        )}
       </div>
     </button>
   );

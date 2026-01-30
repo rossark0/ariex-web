@@ -1,53 +1,24 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { CaretUp } from '@phosphor-icons/react';
-import type { FullClientMock } from '@/lib/mocks/client-full';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { CaretUp, SpinnerGap } from '@phosphor-icons/react';
+import { useChatStore } from '@/contexts/chat/ChatStore';
+import { useAuth } from '@/contexts/auth/AuthStore';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 interface ClientFloatingChatProps {
-  client: FullClientMock;
+  client: {
+    id: string;
+    user: {
+      id: string;
+      name: string | null;
+      email: string;
+    };
+  };
 }
-
-interface ChatMessage {
-  id: string;
-  role: 'strategist' | 'client';
-  content: string;
-  createdAt: Date;
-}
-
-// ============================================================================
-// MOCK CONVERSATION DATA
-// ============================================================================
-
-const getMockConversation = (clientName: string): ChatMessage[] => {
-  const now = new Date();
-  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  
-  return [
-    {
-      id: '1',
-      role: 'strategist',
-      content: `Hi ${clientName?.split(' ')[0]}, I've reviewed your documents. Do you have a few minutes to discuss?`,
-      createdAt: yesterday,
-    },
-    {
-      id: '2',
-      role: 'client',
-      content: 'Yes, I can chat now. What did you find?',
-      createdAt: new Date(yesterday.getTime() + 30 * 60 * 1000),
-    },
-    {
-      id: '3',
-      role: 'strategist',
-      content: 'I found some opportunities for deductions. I\'ll prepare a summary and send it over.',
-      createdAt: new Date(yesterday.getTime() + 35 * 60 * 1000),
-    },
-  ];
-};
 
 // ============================================================================
 // MAIN COMPONENT
@@ -55,16 +26,56 @@ const getMockConversation = (clientName: string): ChatMessage[] => {
 
 export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false); // Track if first load completed
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
-  // Load mock conversation
+  // Auth state
+  const user = useAuth(state => state.user);
+
+  // Chat store state
+  const {
+    currentUserId,
+    activeChatId,
+    messages,
+    isLoadingMessages,
+    isSending,
+    initialize,
+    openChatWithUser,
+    sendMessage,
+    stopPolling,
+  } = useChatStore();
+
+  // Initialize chat store when user is available
   useEffect(() => {
-    setMessages(getMockConversation(client.user.name || 'Client'));
-  }, [client]);
+    if (user?.id && !currentUserId) {
+      initialize(user.id, 'STRATEGIST');
+    }
+  }, [user?.id, currentUserId, initialize]);
+
+  // Open chat with client when expanded
+  useEffect(() => {
+    if (isExpanded && currentUserId && client.user.id) {
+      setHasLoadedOnce(false); // Reset when opening new chat
+      openChatWithUser(client.user.id);
+    }
+  }, [isExpanded, currentUserId, client.user.id, openChatWithUser]);
+
+  // Track when first load is complete
+  useEffect(() => {
+    if (!isLoadingMessages && activeChatId) {
+      setHasLoadedOnce(true);
+    }
+  }, [isLoadingMessages, activeChatId]);
+
+  // Stop polling when collapsed
+  useEffect(() => {
+    if (!isExpanded) {
+      stopPolling();
+    }
+  }, [isExpanded, stopPolling]);
 
   // Click outside to minimize
   useEffect(() => {
@@ -80,36 +91,33 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isExpanded]);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   useEffect(() => {
     if (isExpanded) {
       scrollToBottom();
     }
-  }, [messages, isExpanded]);
+  }, [messages, isExpanded, scrollToBottom]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const handleSend = useCallback(async () => {
+    if (!input.trim() || isSending) return;
 
-    const newMessage: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      role: 'strategist',
-      content: input.trim(),
-      createdAt: new Date(),
-    };
-    
-    setMessages(prev => [...prev, newMessage]);
+    const messageContent = input.trim();
     setInput('');
-  };
+    await sendMessage(messageContent);
+  }, [input, isSending, sendMessage]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    },
+    [handleSend]
+  );
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -117,7 +125,12 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
 
   const getInitials = (name: string | null) => {
     if (!name) return '?';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
@@ -162,41 +175,62 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
       {/* Messages */}
       {isExpanded && (
         <div className="flex-1 overflow-y-auto p-4">
-          <div className="space-y-4">
-            {messages.map(message => (
-              <div key={message.id}>
-                {message.role === 'strategist' ? (
-                  /* Strategist message - right side */
-                  <div className="flex justify-end">
-                    <div className="max-w-[85%]">
-                      <div className="rounded-2xl rounded-br-sm bg-teal-500 px-4 py-2">
-                        <p className="text-sm text-white">{message.content}</p>
+          {isLoadingMessages || !hasLoadedOnce ? (
+            <div className="flex h-full items-center justify-center">
+              <SpinnerGap className="h-6 w-6 animate-spin text-zinc-400" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {messages.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center py-8 text-center">
+                  <p className="text-sm text-zinc-500">No messages yet</p>
+                  <p className="text-xs text-zinc-400">
+                    Start the conversation with {client.user.name?.split(' ')[0]}
+                  </p>
+                </div>
+              ) : (
+                messages.map(message => (
+                  <div key={message.id}>
+                    {message.role === 'user' ? (
+                      /* Strategist message - right side */
+                      <div className="flex justify-end">
+                        <div className="max-w-[85%]">
+                          <div className="rounded-2xl rounded-br-sm bg-teal-500 px-4 py-2">
+                            <p className="text-sm text-white">{message.content}</p>
+                          </div>
+                          <p className="mt-1 text-right text-[10px] text-zinc-400">
+                            {formatTime(message.createdAt)}
+                          </p>
+                        </div>
                       </div>
-                      <p className="mt-1 text-right text-[10px] text-zinc-400">
-                        {formatTime(message.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  /* Client message - left side */
-                  <div className="flex gap-2">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-[10px] font-medium text-zinc-600">
-                      {getInitials(client.user.name)}
-                    </div>
-                    <div className="max-w-[85%]">
-                      <div className="rounded-2xl rounded-bl-sm bg-zinc-100 px-4 py-2">
-                        <p className="text-sm text-zinc-900">{message.content}</p>
+                    ) : (
+                      /* Client message - left side */
+                      <div className="flex gap-2">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-[10px] font-medium text-zinc-600">
+                          {getInitials(client.user.name)}
+                        </div>
+                        <div className="max-w-[85%]">
+                          <div
+                            className={`rounded-2xl rounded-bl-sm bg-zinc-100 px-4 py-2 ${message.isError ? 'bg-red-50' : ''}`}
+                          >
+                            <p
+                              className={`text-sm text-zinc-900 ${message.isError ? 'text-red-600' : ''}`}
+                            >
+                              {message.content}
+                            </p>
+                          </div>
+                          <p className="mt-1 text-[10px] text-zinc-400">
+                            {formatTime(message.createdAt)}
+                          </p>
+                        </div>
                       </div>
-                      <p className="mt-1 text-[10px] text-zinc-400">
-                        {formatTime(message.createdAt)}
-                      </p>
-                    </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
+                ))
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
         </div>
       )}
 
@@ -211,7 +245,8 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
               onKeyDown={handleKeyDown}
               placeholder={`Message ${client.user.name?.split(' ')[0]}...`}
               rows={1}
-              className="min-h-[44px] flex-1 resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 transition-all placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+              disabled={isSending}
+              className="min-h-[44px] flex-1 resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 transition-all placeholder:text-zinc-400 focus:ring-2 focus:ring-zinc-200 focus:outline-none disabled:opacity-50"
             />
           </div>
         </div>

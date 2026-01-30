@@ -44,7 +44,7 @@ export default function Sidebar({ items, className }: SidebarProps) {
   return (
     <div className={cn('flex h-full flex-col', className)}>
       {/* Header */}
-      <div className='flex pl-2 items-center gap-2 mb-8'>
+      <div className="mb-8 flex items-center gap-2 pl-2">
         <span className="font-mono text-sm font-medium text-zinc-500 uppercase">ARIEX AI</span>
       </div>
 
@@ -134,11 +134,11 @@ export default function Sidebar({ items, className }: SidebarProps) {
             <button className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-1 transition-colors hover:bg-zinc-50">
               <div className="relative h-8 w-8 overflow-hidden rounded-md bg-zinc-200">
                 <div className="flex h-full w-full items-center justify-center text-xs font-medium text-zinc-600">
-                  {user?.name?.charAt(0) || 'U'}
+                  {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
                 </div>
               </div>
               <span className="flex-1 truncate text-left text-sm font-medium text-zinc-900">
-                {user?.name || 'User'}
+                {user?.name || user?.email?.split('@')[0] || 'User'}
               </span>
               <CaretDown weight="bold" className="h-3 w-3 text-zinc-400" />
             </button>
@@ -149,11 +149,13 @@ export default function Sidebar({ items, className }: SidebarProps) {
               <div className="flex items-center gap-3 rounded-md px-2 py-2">
                 <div className="relative h-8 w-8 overflow-hidden rounded-md bg-zinc-200">
                   <div className="flex h-full w-full items-center justify-center text-xs font-medium text-zinc-600">
-                    {user?.name?.charAt(0) || 'U'}
+                    {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-zinc-900">{user?.name || 'User'}</p>
+                  <p className="text-sm font-medium text-zinc-900">
+                    {user?.name || user?.email?.split('@')[0] || 'User'}
+                  </p>
                   <p className="text-xs text-zinc-500">{user?.email || ''}</p>
                 </div>
               </div>

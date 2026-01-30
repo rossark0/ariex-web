@@ -1,69 +1,49 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { useUiStore } from '@/contexts/ui/UiStore';
 import { cn } from '@/lib/utils';
 import { Chat } from '../chat';
 import { usePathname } from 'next/navigation';
-import { getFullUserProfile } from '@/contexts/auth/data/mock-users';
-import type { FullClientMock } from '@/lib/mocks/client-full';
-import { getStrategistById } from '@/lib/mocks/strategist-full';
-import { getFullClientById } from '@/lib/mocks/client-full';
+import { getClientDashboardData } from '@/lib/api/client.api';
 
 export default function ChatSidebar() {
   const pathname = usePathname();
   const user = useAuth(state => state.user);
   const isStrategist = user?.role === 'STRATEGIST';
-  const isClient = user?.role === 'CLIENT';
-  const isCompliance = user?.role === 'COMPLIANCE';
   const { isChatSidebarCollapsed } = useUiStore();
 
-  // Check if on compliance strategist detail page
-  const complianceStrategistMatch = pathname.match(/\/compliance\/strategists\/([^/]+)$/);
-  const complianceStrategistId = complianceStrategistMatch?.[1];
+  // For clients, we need to know their strategist ID
+  const [strategistId, setStrategistId] = useState<string | null>(null);
 
-  // Check if on compliance client detail page
-  const complianceClientMatch = pathname.match(/\/compliance\/clients\/([^/]+)$/);
-  const complianceClientId = complianceClientMatch?.[1];
+  // Fetch strategist ID for clients
+  useEffect(() => {
+    async function fetchStrategistId() {
+      if (!isStrategist && user?.id) {
+        try {
+          const dashboardData = await getClientDashboardData();
+          // Get strategist ID from first agreement
+          const firstAgreement = dashboardData?.agreements?.[0];
+          if (firstAgreement?.strategistId) {
+            setStrategistId(firstAgreement.strategistId);
+          }
+        } catch (error) {
+          console.error('[ChatSidebar] Failed to fetch strategist ID:', error);
+        }
+      }
+    }
+    fetchStrategistId();
+  }, [isStrategist, user?.id]);
 
   // Hide sidebar for strategist client routes and strategist documents/agreements/payments routes
   const isClientsRoute = pathname.startsWith('/strategist/clients');
   const isStrategistDocuments = pathname.startsWith('/strategist/documents');
   const isStrategistAgreements = pathname.startsWith('/strategist/agreements');
   const isStrategistPayments = pathname.startsWith('/strategist/payments');
-  
+
   if (isClientsRoute || isStrategistDocuments || isStrategistAgreements || isStrategistPayments) {
     return null;
-  }
-
-  // Get strategist info for client users or compliance viewing strategist
-  let chatTitle: string | undefined;
-  let chatSubtitle: string | undefined;
-  let strategistName: string | undefined;
-
-  if (isClient && user) {
-    const clientProfile = getFullUserProfile(user) as FullClientMock | null;
-    if (clientProfile?.strategistId) {
-      const strategist = getStrategistById(clientProfile.strategistId);
-      if (strategist && strategist.user.name) {
-        strategistName = strategist.user.name;
-        chatTitle = strategistName;
-        chatSubtitle = 'Your Tax Strategist';
-      }
-    }
-  } else if (isCompliance && complianceStrategistId) {
-    const strategist = getStrategistById(complianceStrategistId);
-    if (strategist && strategist.user.name) {
-      strategistName = strategist.user.name;
-      chatTitle = strategistName;
-      chatSubtitle = 'Tax Strategist';
-    }
-  } else if (isCompliance && complianceClientId) {
-    const client = getFullClientById(complianceClientId);
-    if (client && client.user.name) {
-      chatTitle = client.user.name;
-      chatSubtitle = 'Client';
-    }
   }
 
   // Determine chat mode
@@ -83,7 +63,11 @@ export default function ChatSidebar() {
           isChatSidebarCollapsed ? 'hidden opacity-0' : 'flex opacity-100'
         )}
       >
-        <Chat mode={chatMode} title={chatTitle} subtitle={chatSubtitle} />
+        <Chat
+          mode={chatMode}
+          otherUserId={!isStrategist ? (strategistId ?? undefined) : undefined}
+          clientName={!isStrategist ? 'Your Strategist' : undefined}
+        />
       </div>
     </div>
   );
