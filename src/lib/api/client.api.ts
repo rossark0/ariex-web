@@ -302,13 +302,7 @@ export async function getClientAgreements(): Promise<ClientAgreement[]> {
         return false;
       }) || [];
 
-    console.log('[ClientAPI] Logged in user:', userId);
-    console.log(
-      '[ClientAPI] Raw agreements from backend:',
-      rawAgreements?.length,
-      '-> filtered for client:',
-      clientAgreements.length
-    );
+    console.log('[ClientAPI] Logged in user:', userId, '- Agreements:', clientAgreements.length);
     console.log(
       '[ClientAPI] Client agreements:',
       JSON.stringify(

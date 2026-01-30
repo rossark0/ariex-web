@@ -22,7 +22,6 @@ import {
   AgreementStatus,
   isAgreementSigned,
   isAgreementPaid,
-  logAgreements,
 } from '@/types/agreement';
 
 // ============================================================================
@@ -149,11 +148,6 @@ export default function ClientDashboardPage() {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState<ClientDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // 🟣 Debug: Log page mount
-  useEffect(() => {
-    console.log('\n🟣🟣🟣 CLIENT HOME PAGE LOADED 🟣🟣🟣');
-  }, []);
   const [error, setError] = useState<string | null>(null);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const { setSelection, setDownloadingSelection } = useUiStore();
@@ -252,24 +246,6 @@ export default function ClientDashboardPage() {
         setIsLoading(true);
         const data = await getClientDashboardData();
         setDashboardData(data);
-
-        // 🟣 Debug: Log agreements for client
-        if (data?.agreements) {
-          logAgreements(
-            'client',
-            data.agreements.map(a => ({
-              id: a.id,
-              status: a.status as AgreementStatus,
-              name: a.name,
-            })),
-            'Home dashboard loaded'
-          );
-
-          // 🟣 Debug: Log each agreement status individually
-          data.agreements.forEach(a => {
-            console.log(`🟣 [CLIENT] Agreement "${a.name}" status: ${a.status}`);
-          });
-        }
 
         // If no agreements exist, redirect to onboarding
         const hasAgreements = data?.agreements && data.agreements.length > 0;
@@ -439,44 +415,31 @@ export default function ClientDashboardPage() {
   const businessName = profile?.businessName;
   const createdAt = new Date(clientUser.createdAt);
 
-  // Find the most recent agreement (by createdAt date)
-  const sortedAgreements = [...agreements].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-  const serviceAgreement = sortedAgreements[0] || null;
+  // Status priority order (most advanced first)
+  const STATUS_PRIORITY: Record<string, number> = {
+    [AgreementStatus.COMPLETED]: 7,
+    [AgreementStatus.PENDING_STRATEGY_REVIEW]: 6,
+    [AgreementStatus.PENDING_STRATEGY]: 5,
+    [AgreementStatus.PENDING_TODOS_COMPLETION]: 4,
+    [AgreementStatus.PENDING_PAYMENT]: 3,
+    [AgreementStatus.PENDING_SIGNATURE]: 2,
+    [AgreementStatus.DRAFT]: 1,
+    [AgreementStatus.CANCELLED]: 0,
+  };
 
-  // Debug: Log which agreement is being used
-  if (serviceAgreement) {
-    const todoCount = serviceAgreement.todoLists?.flatMap(l => l.todos || []).length || 0;
-    console.log(
-      '[ClientDashboard] Using agreement:',
-      serviceAgreement.id,
-      'status:',
-      serviceAgreement.status,
-      'created:',
-      serviceAgreement.createdAt,
-      'total todos:',
-      todoCount
-    );
-  }
+  // Find the most ADVANCED agreement by status (not just newest by date)
+  // This ensures we show the agreement that's furthest along in the flow
+  const sortedAgreements = [...agreements].sort((a, b) => {
+    const priorityA = STATUS_PRIORITY[a.status] ?? 0;
+    const priorityB = STATUS_PRIORITY[b.status] ?? 0;
+    // Sort by status priority first (descending), then by date (descending)
+    if (priorityB !== priorityA) return priorityB - priorityA;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+  const serviceAgreement = sortedAgreements[0] || null;
 
   // Extract ALL todos from agreement
   const agreementTodos = serviceAgreement?.todoLists?.flatMap(list => list.todos || []) || [];
-  console.log('[ClientDashboard] Agreement todos:', agreementTodos.length);
-  // Log each todo with its document status
-  agreementTodos.forEach(t => {
-    console.log(
-      '[ClientDashboard] Todo:',
-      t.id,
-      t.title,
-      'status:',
-      t.status,
-      'document:',
-      t.document
-        ? { uploadStatus: t.document.uploadStatus, files: t.document.files?.length }
-        : 'none'
-    );
-  });
 
   // Separate signing todos from document/other todos
   const signingTodos = agreementTodos.filter(todo => todo.title.toLowerCase().includes('sign'));
@@ -547,9 +510,17 @@ export default function ClientDashboardPage() {
   const step4Complete = hasDocTodos && completedDocTodos.length >= documentTodos.length;
 
   // Strategy: use PENDING_STRATEGY or PENDING_STRATEGY_REVIEW
+  // PENDING_STRATEGY_REVIEW means client HAS signed, strategist is reviewing
   const step5Sent =
+    serviceAgreement?.status === AgreementStatus.PENDING_STRATEGY ||
     serviceAgreement?.status === AgreementStatus.PENDING_STRATEGY_REVIEW ||
+    serviceAgreement?.status === AgreementStatus.COMPLETED ||
     strategyDoc?.signatureStatus === 'SENT';
+  
+  // Client has signed the strategy (status moved to PENDING_STRATEGY_REVIEW)
+  const step5ClientSigned =
+    serviceAgreement?.status === AgreementStatus.PENDING_STRATEGY_REVIEW;
+  
   const step5Complete =
     serviceAgreement?.status === AgreementStatus.COMPLETED ||
     strategyDoc?.signatureStatus === 'SIGNED';
@@ -877,7 +848,8 @@ export default function ClientDashboardPage() {
                         ? formatDate(strategyDoc.createdAt)
                         : formatDate(createdAt)}
                     </span>
-                    {step4Complete && !step5Complete && (
+                    {/* Show "Action required" only if step 4 complete, strategy sent, but client hasn't signed yet */}
+                    {step4Complete && !step5Complete && !step5ClientSigned && (
                       <Badge variant={step5Sent ? 'warning' : 'warning'} className="mt-2 w-fit">
                         {step5Sent ? (
                           'Action required'
@@ -892,8 +864,8 @@ export default function ClientDashboardPage() {
                         )}
                       </Badge>
                     )}
-                    {/* Show buttons only if step 4 complete (onboarding done) AND strategy is sent but not signed */}
-                    {step4Complete && step5Sent && !step5Complete && (
+                    {/* Show buttons only if step 4 complete (onboarding done) AND strategy is sent but not signed by client */}
+                    {step4Complete && step5Sent && !step5Complete && !step5ClientSigned && (
                       <div className="mt-2 flex items-center gap-2">
                         <button
                           onClick={async () => {
@@ -918,6 +890,14 @@ export default function ClientDashboardPage() {
                         >
                           Sign strategy
                         </button>
+                      </div>
+                    )}
+                    {/* Show message when client has signed but strategist hasn't completed */}
+                    {step5ClientSigned && !step5Complete && (
+                      <div className="mt-2">
+                        <Badge variant="default" className="bg-emerald-100 text-emerald-700">
+                          ✓ Strategy signed - awaiting final approval
+                        </Badge>
                       </div>
                     )}
                   </div>

@@ -187,6 +187,39 @@ export async function sendStrategyToClient(params: {
 }
 
 // ============================================================================
+// GET SIGNED STRATEGY DOCUMENT URL
+// ============================================================================
+
+/**
+ * Get the URL to download the signed strategy document from SignatureAPI
+ */
+export async function getSignedStrategyUrl(
+  envelopeId: string
+): Promise<{ success: boolean; url?: string; error?: string }> {
+  console.log('[Strategies] Getting signed strategy URL for envelope:', envelopeId);
+
+  try {
+    // Import the function dynamically to avoid circular deps
+    const { getSignedDocumentUrl } = await import('@/lib/signature/signatureapi');
+    
+    const url = await getSignedDocumentUrl(envelopeId);
+    
+    if (!url) {
+      return { success: false, error: 'Signed document not yet available' };
+    }
+    
+    console.log('[Strategies] Got signed strategy URL');
+    return { success: true, url };
+  } catch (error) {
+    console.error('[Strategies] Failed to get signed strategy URL:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get signed document',
+    };
+  }
+}
+
+// ============================================================================
 // COMPLETE AGREEMENT
 // ============================================================================
 
@@ -200,11 +233,18 @@ export async function completeAgreement(
   console.log('[Strategies] Completing agreement:', agreementId);
 
   try {
-    await apiRequest(`/agreements/${agreementId}/complete`, {
-      method: 'POST',
+    // Use updateAgreementWithMetadata to set status to COMPLETED
+    const updated = await updateAgreementWithMetadata(agreementId, {
+      status: AgreementStatus.COMPLETED,
     });
-    console.log('[Strategies] Agreement completed successfully');
-    return { success: true };
+    
+    if (updated) {
+      console.log('[Strategies] Agreement completed successfully');
+      return { success: true };
+    } else {
+      console.error('[Strategies] updateAgreementWithMetadata returned false');
+      return { success: false, error: 'Failed to update agreement status' };
+    }
   } catch (error) {
     console.error('[Strategies] Failed to complete agreement:', error);
     return {
