@@ -91,7 +91,7 @@ export function LoginForm() {
       </Button>
 
       <p className="text-center text-sm text-zinc-600">
-        Don't have an account?{' '}
+        Don&apos;t have an account?{' '}
         <Link href="/register" className="font-medium text-emerald-600 hover:text-emerald-700">
           Create one
         </Link>

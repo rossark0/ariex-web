@@ -181,7 +181,9 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
     throw new Error(error.message || 'Request failed');
   }
 
-  return response.json();
+  // Handle empty responses (like from DELETE)
+  const text = await response.text();
+  return text ? JSON.parse(text) : ({} as T);
 }
 
 // ============================================================================
@@ -975,11 +977,11 @@ export async function updateAgreementSignature(
     let signatureMetadata = {};
 
     // Check if description already has metadata
-    const metadataMatch = userDescription.match(/\n\n__SIGNATURE_METADATA__:(.+)$/s);
+    const metadataMatch = userDescription.match(/\n\n__SIGNATURE_METADATA__:([\s\S]+)$/);
     if (metadataMatch) {
       try {
         signatureMetadata = JSON.parse(metadataMatch[1]);
-        userDescription = userDescription.replace(/\n\n__SIGNATURE_METADATA__:.+$/s, '');
+        userDescription = userDescription.replace(/\n\n__SIGNATURE_METADATA__:[\s\S]+$/, '');
       } catch (e) {
         // Ignore parse errors
       }

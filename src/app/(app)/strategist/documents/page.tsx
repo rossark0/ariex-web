@@ -167,7 +167,9 @@ export default function StrategistDocumentsPage() {
           <div className="flex flex-col items-center justify-center pt-24 pb-12 text-center">
             <EmptyDocumentsIllustration />
             <p className="text-lg font-semibold text-zinc-800">No documents yet</p>
-            <p className="text-sm text-zinc-400">Documents will appear here as they're added</p>
+            <p className="text-sm text-zinc-400">
+              Documents will appear here as they&apos;re added
+            </p>
           </div>
         )}
 

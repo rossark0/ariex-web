@@ -27,7 +27,10 @@ export default function LoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isHydrated && isAuthenticated && user) {
-      console.log('[LoginPage] User already authenticated, redirecting to:', getRoleHomePath(user.role));
+      console.log(
+        '[LoginPage] User already authenticated, redirecting to:',
+        getRoleHomePath(user.role)
+      );
       window.location.href = getRoleHomePath(user.role);
     }
   }, [isHydrated, isAuthenticated, user]);
@@ -37,7 +40,7 @@ export default function LoginPage() {
     console.log('[LoginPage] Starting login for:', email);
     const result = await login(email, password);
     console.log('[LoginPage] Login result:', JSON.stringify(result));
-    
+
     if (result.success && result.redirectTo) {
       window.location.href = result.redirectTo;
     } else if (result.needsPasswordChange) {
@@ -161,7 +164,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                  className="absolute top-1/2 right-3 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
                 >
                   {showPassword ? <EyeSlash className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -181,7 +184,7 @@ export default function LoginPage() {
 
           {/* Register Link */}
           <p className="mt-6 text-center text-sm text-zinc-600">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/register" className="font-medium text-emerald-600 hover:text-emerald-700">
               Create one
             </Link>

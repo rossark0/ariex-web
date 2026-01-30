@@ -151,7 +151,7 @@ export function ConfirmEmailForm() {
       </Button>
 
       <p className="text-center text-sm text-zinc-600">
-        Didn't receive the code?{' '}
+        Didn&apos;t receive the code?{' '}
         <button
           type="button"
           className="font-medium text-emerald-600 hover:text-emerald-700"

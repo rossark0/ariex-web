@@ -174,7 +174,7 @@ export function ForgotPasswordForm() {
       )}
 
       <p className="text-sm text-zinc-600">
-        Enter your email address and we'll send you a code to reset your password.
+        Enter your email address and we&apos;ll send you a code to reset your password.
       </p>
 
       <div className="flex flex-col gap-2">

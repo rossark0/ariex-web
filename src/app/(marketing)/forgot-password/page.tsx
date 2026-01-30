@@ -43,7 +43,7 @@ export default function ForgotPasswordPage() {
             <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
               Reset your password
             </h1>
-            <p className="text-zinc-400">We'll help you get back in</p>
+            <p className="text-zinc-400">We&apos;ll help you get back in</p>
           </div>
 
           {/* Forgot Password Form */}
