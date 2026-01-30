@@ -23,7 +23,7 @@ import {
   deleteDocument,
 } from '@/lib/api/strategist.api';
 import { sendAgreementToClient } from '@/lib/api/agreements.actions';
-import { sendStrategyToClient, completeAgreement } from '@/lib/api/strategies.actions';
+import { sendStrategyToClient, completeAgreement, getSignedStrategyUrl } from '@/lib/api/strategies.actions';
 import { AgreementSheet, type AgreementSendData } from '@/components/agreements/agreement-sheet';
 import { StrategySheet, type StrategySendData } from '@/components/strategy/strategy-sheet';
 import { RequestDocumentsModal } from '@/components/documents/request-documents-modal';
@@ -1737,13 +1737,20 @@ export default function StrategistClientDetailPage({ params }: Props) {
                             {step5Signed && !step5Complete && (
                               <div className="mt-2 flex items-center gap-2">
                                 <button
-                                  onClick={() => {
-                                    // TODO: Download signed strategy document
+                                  onClick={async () => {
                                     if (strategyMetadata?.strategyEnvelopeId) {
-                                      console.log('[UI] Download signed strategy for envelope:', strategyMetadata.strategyEnvelopeId);
+                                      console.log('[UI] Downloading signed strategy for envelope:', strategyMetadata.strategyEnvelopeId);
+                                      const result = await getSignedStrategyUrl(strategyMetadata.strategyEnvelopeId);
+                                      if (result.success && result.url) {
+                                        window.open(result.url, '_blank');
+                                      } else {
+                                        console.error('[UI] Failed to get signed document:', result.error);
+                                        alert('Signed document not yet available. Please try again in a moment.');
+                                      }
                                     }
                                   }}
-                                  className="w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200"
+                                  disabled={!strategyMetadata?.strategyEnvelopeId}
+                                  className="w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200 disabled:opacity-50"
                                 >
                                   Download signed document
                                 </button>
