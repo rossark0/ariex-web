@@ -1,0 +1,44 @@
+# Cursor Rules for this project
+
+## Architecture conventions
+
+- Use feature-context architecture under `src/contexts/`.
+- Keep files kebab-case; exception: Zustand store files use PascalCase (e.g., `GenericStore.ts`).
+- Client state via vanilla Zustand stores outside React; consume with `useSyncExternalStore`.
+- Server Actions for backend calls (`'use server'`) in `services/` within each context.
+- Route groups: `(marketing)` is public, `(app)` is authenticated. API handlers under `src/app/api/`.
+
+## Auth and billing
+
+- Authentication and sessions handled by Clerk.
+- Authorization uses Clerk feature flag `app_access`.
+- Middleware must redirect non-authorized users to `/pricing`.
+- Billing via Clerk Billing; pricing UI uses Clerk `<PricingTable />`.
+
+## Styling and UI
+
+- Tailwind CSS v4 + shadcn/ui.
+- Prefer flexbox layouts; avoid CSS Grid unless explicitly requested.
+- Use `src/components/ui/` for shadcn-managed components.
+
+## Environment
+
+- Keep envs in `.env` and deployment config only. Provide `.env.example` with:c
+  - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+  - `CLERK_SECRET_KEY`
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `RESEND_API_KEY`
+  - `NEXT_PUBLIC_APP_URL`
+
+## TypeScript
+
+- Files live under `src/`.
+- Align strictness with repository decision (README currently says non-strict; tsconfig has `strict: true`). Update both together when changing.
+
+## Editing rules
+
+- Do not introduce grid layouts by default; use flexbox.
+- Keep new routes/components under `src/`.
+- Follow existing formatting; do not reformat unrelated files.
+- Keep comments minimal and focused on intent.
