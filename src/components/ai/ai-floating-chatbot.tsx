@@ -61,6 +61,9 @@ export function AiFloatingChatbot({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Determine if the current user is a client
+  const isClient = pageContext?.userRole === 'CLIENT';
+
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -231,7 +234,7 @@ export function AiFloatingChatbot({
             <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-4">
               <div className="flex flex-col pl-2">
                 <span className="text-sm font-medium text-zinc-900">
-                  Tax Strategy Assistant
+                  {isClient ? 'Tax Assistant' : 'Tax Strategy Assistant'}
                 </span>
                 {pageContext ? (
                   <span className="mt-0.5 text-xs text-emerald-600">
@@ -239,7 +242,9 @@ export function AiFloatingChatbot({
                   </span>
                 ) : (
                   <span className="mt-0.5 text-xs text-zinc-400">
-                    Analyze docs, suggest deductions & build strategies
+                    {isClient
+                      ? 'Ask questions, track progress & understand your taxes'
+                      : 'Analyze docs, suggest deductions & build strategies'}
                   </span>
                 )}
               </div>
@@ -265,13 +270,17 @@ export function AiFloatingChatbot({
               {aiMessages.length === 0 ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3">
                   <div className="text-center">
-                    <p className="text-sm font-medium text-zinc-700">Your Tax Strategy Assistant</p>
+                    <p className="text-sm font-medium text-zinc-700">
+                      {isClient ? 'Your Tax Assistant' : 'Your Tax Strategy Assistant'}
+                    </p>
                     <p className="mt-1 max-w-xs text-xs text-zinc-500">
-                      I can analyze client documents, suggest deductions & credits, identify missing filings, and help you build tax strategies.
+                      {isClient
+                        ? 'I can help you understand your tax situation, track your progress, and answer questions about documents, deadlines, and next steps.'
+                        : 'I can analyze client documents, suggest deductions & credits, identify missing filings, and help you build tax strategies.'}
                     </p>
                   </div>
                   {/* Context-aware quick actions */}
-                  {pageContext?.client && (
+                  {pageContext?.client && !isClient && (
                     <div className="mt-2 flex flex-wrap justify-center gap-2">
                       <button
                         onClick={() => {
@@ -314,7 +323,46 @@ export function AiFloatingChatbot({
                       )}
                     </div>
                   )}
-                  {!pageContext?.client && pageContext && (
+                  {/* Client-specific quick actions */}
+                  {isClient && (
+                    <div className="mt-2 flex flex-wrap justify-center gap-2">
+                      <button
+                        onClick={() => {
+                          sendAiMessage("What is my current status? Walk me through where I am in the process and what I need to do next.");
+                        }}
+                        className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                      >
+                        My progress
+                      </button>
+                      <button
+                        onClick={() => {
+                          sendAiMessage('What documents do I still need to upload, and why are they important for my tax strategy?');
+                        }}
+                        className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                      >
+                        What to upload
+                      </button>
+                      <button
+                        onClick={() => {
+                          sendAiMessage('Are there any important tax deadlines coming up that I should be aware of?');
+                        }}
+                        className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                      >
+                        Upcoming deadlines
+                      </button>
+                      {(pageContext?.documents?.length ?? 0) > 0 && (
+                        <button
+                          onClick={() => {
+                            sendAiMessage('Can you explain what each of my uploaded documents is and how they help with my taxes?');
+                          }}
+                          className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                        >
+                          Explain my docs
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {!pageContext?.client && !isClient && pageContext && (
                     <div className="mt-2 flex flex-wrap justify-center gap-2">
                       <button
                         onClick={() => {
@@ -371,11 +419,15 @@ export function AiFloatingChatbot({
                           {!isAiLoading && message.content && (
                             <button
                               onClick={() => {
-                                sendAiMessage('Expand on that — include specific IRS rules, estimated dollar savings, and any deadlines I should be aware of.');
+                                sendAiMessage(
+                                  isClient
+                                    ? 'Can you explain that in more detail? What does this mean for me and what should I do?'
+                                    : 'Expand on that — include specific IRS rules, estimated dollar savings, and any deadlines I should be aware of.'
+                                );
                               }}
                               className="rounded-full border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
                             >
-                              Go deeper
+                              {isClient ? 'Tell me more' : 'Go deeper'}
                             </button>
                           )}
                         </div>
@@ -398,7 +450,9 @@ export function AiFloatingChatbot({
             <textarea
               ref={textareaRef}
               rows={1}
-              placeholder="Ask about deductions, strategies, missing docs…"
+              placeholder={isClient
+                ? "Ask about your documents, deadlines, next steps…"
+                : "Ask about deductions, strategies, missing docs…"}
               value={input}
               onChange={e => setInput(e.target.value)}
               onInput={autoResize}
@@ -453,7 +507,9 @@ export function AiFloatingChatbot({
             <textarea
               ref={textareaRef}
               rows={1}
-              placeholder="Press '/' to ask Tax Strategy Assistant…"
+              placeholder={isClient
+                ? "Press '/' to ask your Tax Assistant…"
+                : "Press '/' to ask Tax Strategy Assistant…"}
               value={input}
               onChange={e => setInput(e.target.value)}
               onClick={() => setAiChatOpen(true)}

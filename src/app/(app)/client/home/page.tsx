@@ -12,6 +12,7 @@ import { useUiStore } from '@/contexts/ui/UiStore';
 import {
   getClientDashboardData,
   getDocumentDownloadUrl,
+  getChargesForAgreement,
   type ClientDashboardData,
   type ClientAgreement,
   type ClientDocument,
@@ -202,6 +203,9 @@ export default function ClientDashboardPage() {
     );
   }, [selectedDocs.size, setSelection, handleDownloadSelected]);
 
+  // Charge amount fetched from the real Charges API (in dollars)
+  const [chargeAmount, setChargeAmount] = useState<number | null>(null);
+
   // SignatureAPI sync state - holds the REAL envelope statuses
   const [envelopeStatuses, setEnvelopeStatuses] = useState<Record<string, string>>({});
   const hasSyncedRef = useRef(false);
@@ -210,6 +214,52 @@ export default function ClientDashboardPage() {
   const [isApprovingStrategy, setIsApprovingStrategy] = useState(false);
   const [isDecliningStrategy, setIsDecliningStrategy] = useState(false);
   const [strategyActionError, setStrategyActionError] = useState<string | null>(null);
+
+  // ─── AI Page Context (must be before any early returns) ────────────────
+  useAiPageContext({
+    pageTitle: 'Client Dashboard',
+    userRole: 'CLIENT',
+    client: dashboardData
+      ? {
+          id: dashboardData.user.id,
+          name: dashboardData.user.fullName || dashboardData.user.name || null,
+          email: dashboardData.user.email,
+          phoneNumber: dashboardData.profile?.phoneNumber,
+          businessName: dashboardData.profile?.businessName,
+          businessType: dashboardData.profile?.businessType,
+          city: dashboardData.profile?.city,
+          state: dashboardData.profile?.state,
+          estimatedIncome: dashboardData.profile?.estimatedIncome,
+          filingStatus: dashboardData.profile?.filingStatus,
+          dependents: dashboardData.profile?.dependents,
+        }
+      : null,
+    documents: dashboardData?.documents?.map(
+      (d): AiDocumentContext => ({
+        id: d.id,
+        name: d.name || 'Document',
+        type: d.type || d.category || 'unknown',
+        status: d.status,
+        category: d.category,
+        createdAt: typeof d.createdAt === 'string' ? d.createdAt : new Date(d.createdAt).toISOString(),
+      })
+    ),
+    agreements: dashboardData?.agreements?.map(
+      (a): AiAgreementContext => ({
+        id: a.id,
+        name: a.name || a.title || 'Agreement',
+        status: a.status,
+        price: typeof a.price === 'string' ? parseFloat(a.price) : a.price,
+        createdAt: typeof a.createdAt === 'string' ? a.createdAt : new Date(a.createdAt).toISOString(),
+      })
+    ),
+    extra: dashboardData
+      ? {
+          strategistName: dashboardData.strategist?.name || dashboardData.strategist?.email,
+          todoCount: dashboardData.todos?.length ?? 0,
+        }
+      : undefined,
+  });
 
   // Fetch dashboard data from API
   useEffect(() => {
@@ -311,6 +361,19 @@ export default function ClientDashboardPage() {
 
         console.log('[ClientDashboard] Access granted - Agreement signed and payment completed');
 
+        // Fetch real charge amount for the signed agreement
+        if (serviceAgreement) {
+          try {
+            const charges = await getChargesForAgreement(serviceAgreement.id);
+            const charge = charges.find(c => c.status === 'paid') || charges[0];
+            if (charge?.amount && charge.amount > 0) {
+              setChargeAmount(charge.amount);
+            }
+          } catch (e) {
+            console.error('[ClientDashboard] Failed to fetch charges:', e);
+          }
+        }
+
         setError(null);
       } catch (err) {
         console.error('[ClientDashboard] Failed to fetch data:', err);
@@ -386,48 +449,6 @@ export default function ClientDashboardPage() {
   const clientName = clientUser.fullName || clientUser.name || clientUser.email.split('@')[0];
   const businessName = profile?.businessName;
   const createdAt = new Date(clientUser.createdAt);
-
-  // ─── AI Page Context ────────────────────────────────────────
-  useAiPageContext({
-    pageTitle: 'Client Dashboard',
-    userRole: 'CLIENT',
-    client: {
-      id: clientUser.id,
-      name: clientUser.fullName || clientUser.name || null,
-      email: clientUser.email,
-      phoneNumber: profile?.phoneNumber,
-      businessName: profile?.businessName,
-      businessType: profile?.businessType,
-      city: profile?.city,
-      state: profile?.state,
-      estimatedIncome: profile?.estimatedIncome,
-      filingStatus: profile?.filingStatus,
-      dependents: profile?.dependents,
-    },
-    documents: documents?.map(
-      (d): AiDocumentContext => ({
-        id: d.id,
-        name: d.name || 'Document',
-        type: d.type || d.category || 'unknown',
-        status: d.status,
-        category: d.category,
-        createdAt: typeof d.createdAt === 'string' ? d.createdAt : new Date(d.createdAt).toISOString(),
-      })
-    ),
-    agreements: agreements?.map(
-      (a): AiAgreementContext => ({
-        id: a.id,
-        name: a.name || a.title || 'Agreement',
-        status: a.status,
-        price: typeof a.price === 'string' ? parseFloat(a.price) : a.price,
-        createdAt: typeof a.createdAt === 'string' ? a.createdAt : new Date(a.createdAt).toISOString(),
-      })
-    ),
-    extra: {
-      strategistName: strategist?.name || strategist?.email,
-      todoCount: todos?.length ?? 0,
-    },
-  });
 
   // Status priority order (most advanced first)
   const STATUS_PRIORITY: Record<string, number> = {
@@ -555,7 +576,23 @@ export default function ClientDashboardPage() {
     serviceAgreement?.status === AgreementStatus.COMPLETED;
   const hasLateDocRequests = isPastDocumentsStep && pendingDocTodos.length > 0;
 
-  const paymentAmount = serviceAgreement?.paymentAmount || serviceAgreement?.price || 499;
+  // Resolve the display price from real charge data first, then agreement fields.
+  const paymentAmount = (() => {
+    // 1. Prefer the real charge amount (fetched from Charges API, already in dollars)
+    if (chargeAmount && chargeAmount > 0) return chargeAmount;
+    // 2. Fall back to agreement fields
+    const raw = serviceAgreement?.paymentAmount ?? serviceAgreement?.price;
+    if (raw == null) return 499;
+    const n = typeof raw === 'string' ? parseFloat(raw) : raw;
+    return isNaN(n) || n <= 0 ? 499 : n;
+  })();
+
+  const formattedPrice = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(paymentAmount);
 
   // Check if there's a pending action
   const hasPendingAgreement =
@@ -713,9 +750,9 @@ export default function ClientDashboardPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-zinc-900">
                         {step3Complete
-                          ? `Payment completed · $${paymentAmount}`
+                          ? `Payment completed · ${formattedPrice}`
                           : step3Sent
-                            ? `Payment pending · $${paymentAmount}`
+                            ? `Payment pending · ${formattedPrice}`
                             : 'Payment link pending'}
                       </span>
                     </div>

@@ -149,6 +149,25 @@ export function ActivityTimeline({
   const docsTask = client.onboardingTasks.find(t => t.type === 'upload_documents');
   const payment = client.payments[0];
 
+  // Resolve the display price from real API data.
+  // Priority: charge amount (already in dollars) → agreement price → fallback
+  const resolvedPrice = (() => {
+    // 1. Prefer the real charge amount (data layer converts cents → dollars)
+    if (existingCharge?.amount && existingCharge.amount > 0) {
+      return existingCharge.amount;
+    }
+    // 2. Fall back to agreement price / paymentAmount
+    if (signedAgreement) {
+      const raw = signedAgreement.paymentAmount ?? signedAgreement.price;
+      if (raw != null) {
+        const n = typeof raw === 'string' ? parseFloat(raw) : raw;
+        if (!isNaN(n) && n > 0) return n;
+      }
+    }
+    // 3. Last resort
+    return payment?.amount || 499;
+  })();
+
   const step1Complete = true;
   const step2Complete = hasAgreementSigned;
 
@@ -279,9 +298,9 @@ export function ActivityTimeline({
             <div className="flex flex-1 flex-col">
               <span className="font-medium text-zinc-900">
                 {step3Complete
-                  ? `Payment received · ${formatCurrency(payment?.amount || 499)}`
+                  ? `Payment received · ${formatCurrency(resolvedPrice)}`
                   : step3Sent
-                    ? `Payment pending · ${formatCurrency(payment?.amount || 499)}`
+                    ? `Payment pending · ${formatCurrency(resolvedPrice)}`
                     : 'Payment link pending'}
               </span>
               <span className="text-sm text-zinc-500">
