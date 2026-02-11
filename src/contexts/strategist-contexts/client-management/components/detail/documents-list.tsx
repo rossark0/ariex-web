@@ -1,6 +1,13 @@
 'use client';
 
-import { FileIcon, Check as CheckIcon } from '@phosphor-icons/react';
+import {
+  FileIcon,
+  Check as CheckIcon,
+  FileArrowUp,
+  Clock,
+  X as XIcon,
+  SpinnerGapIcon,
+} from '@phosphor-icons/react';
 import { Loader2 } from 'lucide-react';
 import { EmptyDocumentsIllustration } from '@/components/ui/empty-documents-illustration';
 import {
@@ -8,6 +15,18 @@ import {
   groupDocumentsByDate,
 } from '@/contexts/strategist-contexts/client-management/utils/formatters';
 import type { ApiDocument } from '@/lib/api/strategist.api';
+import { AcceptanceStatus } from '@/types/document';
+
+interface DocumentTodo {
+  id: string;
+  title: string;
+  status: string;
+  document?: {
+    id?: string;
+    uploadStatus?: string;
+    acceptanceStatus?: string;
+  };
+}
 
 interface DocumentsListProps {
   documents: ApiDocument[];
@@ -15,8 +34,10 @@ interface DocumentsListProps {
   selectedDocs: Set<string>;
   viewingDocId: string | null;
   todoTitles: Map<string, string>;
+  documentTodos?: DocumentTodo[];
   onToggleSelection: (docId: string) => void;
   onViewDocument: (docId: string) => void;
+  onRequestDocuments?: () => void;
 }
 
 export function DocumentsList({
@@ -25,35 +46,109 @@ export function DocumentsList({
   selectedDocs,
   viewingDocId,
   todoTitles,
+  documentTodos = [],
   onToggleSelection,
   onViewDocument,
+  onRequestDocuments,
 }: DocumentsListProps) {
+  // Separate pending requests from completed uploads
+  const pendingTodos = documentTodos.filter(
+    todo => todo.status !== 'completed' && todo.document?.uploadStatus !== 'FILE_UPLOADED'
+  );
+  const hasContent = documents.length > 0 || pendingTodos.length > 0;
   return (
     <div>
       <div className="flex w-full items-center justify-between">
         <div>
           <h2 className="text-base font-medium text-zinc-900">Documents</h2>
-          {!isLoading && documents.length > 0 && (
+          {!isLoading && hasContent && (
             <p className="text-sm text-zinc-500">
-              {documents.length} document{documents.length !== 1 ? 's' : ''}
+              {documents.length} uploaded
+              {pendingTodos.length > 0 ? ` · ${pendingTodos.length} pending` : ''}
             </p>
           )}
         </div>
+        {onRequestDocuments && (
+          <button
+            onClick={onRequestDocuments}
+            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+          >
+            Request documents
+          </button>
+        )}
       </div>
 
       {isLoading && (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+        <div className="mb-6">
+          <div className="flex items-center justify-center py-12">
+            <SpinnerGapIcon className="h-6 w-6 animate-spin text-emerald-500" />
+          </div>
         </div>
       )}
 
-      {!isLoading && documents.length === 0 && (
+      {!isLoading && !hasContent && (
         <div className="flex flex-col items-center justify-center pt-12 pb-8 text-center">
           <EmptyDocumentsIllustration />
           <p className="text-lg font-semibold text-zinc-800">No documents yet</p>
           <p className="text-sm text-zinc-400">
             When this client uploads a document, it will show up here
           </p>
+        </div>
+      )}
+
+      {/* Pending document requests */}
+      {!isLoading && pendingTodos.length > 0 && (
+        <div className="mt-4 mb-2">
+          <p className="mb-3 text-sm font-medium text-amber-600">
+            Awaiting upload · {pendingTodos.length} request{pendingTodos.length !== 1 ? 's' : ''}
+          </p>
+          <div className="flex flex-col gap-2">
+            {pendingTodos.map(todo => {
+              const isRejected =
+                todo.document?.acceptanceStatus === AcceptanceStatus.REJECTED_BY_STRATEGIST;
+              return (
+                <div
+                  key={todo.id}
+                  className={`flex items-center gap-3 rounded-lg border p-3 ${
+                    isRejected
+                      ? 'border-red-200 bg-red-50'
+                      : 'border-dashed border-zinc-200 bg-zinc-50'
+                  }`}
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                    {isRejected ? (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+                        <XIcon weight="bold" className="h-4 w-4 text-red-500" />
+                      </div>
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-dashed border-zinc-300">
+                        <FileArrowUp className="h-4 w-4 text-zinc-400" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col">
+                    <span
+                      className={`text-sm font-medium ${isRejected ? 'text-red-700' : 'text-zinc-700'}`}
+                    >
+                      {todo.title}
+                    </span>
+                    <span className={`text-xs ${isRejected ? 'text-red-500' : 'text-zinc-400'}`}>
+                      {isRejected
+                        ? 'Declined — waiting for client to re-upload'
+                        : 'Waiting for client to upload'}
+                    </span>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${
+                      isRejected ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                    }`}
+                  >
+                    {isRejected ? 'Re-upload needed' : 'Pending'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

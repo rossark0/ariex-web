@@ -45,7 +45,7 @@ export function ClientInfoCard({
       {/* Bio/Description */}
       <p className="mb-5 text-[15px] leading-relaxed text-zinc-700">
         {clientName} is the owner of {businessName || 'a business'}
-        {businessType ? `, a ${businessType}` : ''} based in {city}, {state}.
+        {/* {businessType ? `, a ${businessType}` : ''} based in {city}, {state}. */}
         {estimatedIncome ? ` Estimated annual income of ${formatCurrency(estimatedIncome)}.` : ''}
         {filingStatus ? ` Filing status: ${filingStatus.replace('_', ' ')}.` : ''}
       </p>

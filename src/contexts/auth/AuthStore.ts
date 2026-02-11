@@ -153,6 +153,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           if (typeof window !== 'undefined') {
             document.cookie = `ariex_user_role=${user.role}; path=/; max-age=86400`;
             document.cookie = `ariex_user_id=${user.id}; path=/; max-age=86400`;
+            localStorage.setItem('ariex_session_start', String(Date.now()));
           }
 
           return { success: true, redirectTo: getRoleHomePath(user.role) };
@@ -196,7 +197,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const maxAge = 60 * 60 * 24; // 24 hours
           document.cookie = `ariex_user_role=${user.role}; path=/; max-age=${maxAge}; SameSite=Lax`;
           document.cookie = `ariex_user_id=${user.id}; path=/; max-age=${maxAge}; SameSite=Lax`;
-          // console.log('[AuthStore] Set client-side cookies: role=', user.role, 'id=', user.id);
+          // Store session start time so AuthProvider can auto-logout on token expiry
+          localStorage.setItem('ariex_session_start', String(Date.now()));
         }
 
         return { success: true, redirectTo: getRoleHomePath(user.role) };
@@ -415,6 +417,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const maxAge = 60 * 60 * 24; // 24 hours
           document.cookie = `ariex_user_role=${user.role}; path=/; max-age=${maxAge}; SameSite=Lax`;
           document.cookie = `ariex_user_id=${user.id}; path=/; max-age=${maxAge}; SameSite=Lax`;
+          // Store session start time so AuthProvider can auto-logout on token expiry
+          localStorage.setItem('ariex_session_start', String(Date.now()));
         }
 
         // For clients completing password, this is their first login - send to onboarding
@@ -455,16 +459,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Clear stored user
     storeUser(null);
 
-    // Clear cookies (for mock auth)
+    // Clear cookies and session tracking
     if (typeof window !== 'undefined') {
       document.cookie = 'ariex_user_role=; path=/; max-age=0';
       document.cookie = 'ariex_user_id=; path=/; max-age=0';
+      localStorage.removeItem('ariex_session_start');
     }
   },
 
   hydrate: async () => {
-    // Simply restore user from localStorage
-    // The authenticatedApiRequest will handle token refresh automatically when needed
+    // Check if the session (access token) has expired before restoring
+    const SESSION_DURATION_MS = 60 * 60 * 1000; // 1 hour - matches access token cookie maxAge
+    if (typeof window !== 'undefined') {
+      const sessionStart = localStorage.getItem('ariex_session_start');
+      if (sessionStart) {
+        const elapsed = Date.now() - parseInt(sessionStart, 10);
+        if (elapsed >= SESSION_DURATION_MS) {
+          console.log('[AuthStore] Session expired during hydrate, clearing auth state');
+          storeUser(null);
+          localStorage.removeItem('ariex_session_start');
+          document.cookie = 'ariex_user_role=; path=/; max-age=0';
+          document.cookie = 'ariex_user_id=; path=/; max-age=0';
+          set({ isHydrated: true });
+          return;
+        }
+      }
+    }
+
     const storedUser = getStoredUser();
 
     if (storedUser) {

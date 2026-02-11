@@ -168,3 +168,84 @@ export async function getDocumentDownloadUrl(documentId: string) {
     return { success: false, error: 'Failed to get download URL' };
   }
 }
+
+// ============================================================================
+// Strategy Compliance/Client Approval Services
+// ============================================================================
+
+/**
+ * Approve a strategy document as compliance.
+ * Delegates to the strategies.actions server action.
+ */
+export async function approveStrategyCompliance(documentId: string) {
+  try {
+    const { approveStrategyAsCompliance } = await import('@/lib/api/strategies.actions');
+    return await approveStrategyAsCompliance(documentId);
+  } catch (error) {
+    console.error('[Service] Failed to approve strategy as compliance:', error);
+    return { success: false, error: 'Failed to approve strategy' };
+  }
+}
+
+/**
+ * Reject a strategy document as compliance.
+ * Delegates to the strategies.actions server action.
+ */
+export async function rejectStrategyCompliance(
+  agreementId: string,
+  documentId: string,
+  reason?: string
+) {
+  try {
+    const { rejectStrategyAsCompliance } = await import('@/lib/api/strategies.actions');
+    return await rejectStrategyAsCompliance(agreementId, documentId, reason);
+  } catch (error) {
+    console.error('[Service] Failed to reject strategy as compliance:', error);
+    return { success: false, error: 'Failed to reject strategy' };
+  }
+}
+
+/**
+ * Approve a strategy document as client.
+ * Delegates to the strategies.actions server action.
+ */
+export async function approveStrategyClient(agreementId: string, documentId: string) {
+  try {
+    const { approveStrategyAsClient } = await import('@/lib/api/strategies.actions');
+    return await approveStrategyAsClient(agreementId, documentId);
+  } catch (error) {
+    console.error('[Service] Failed to approve strategy as client:', error);
+    return { success: false, error: 'Failed to approve strategy' };
+  }
+}
+
+/**
+ * Decline a strategy document as client.
+ * Delegates to the strategies.actions server action.
+ */
+export async function declineStrategyClient(
+  agreementId: string,
+  documentId: string,
+  reason?: string
+) {
+  try {
+    const { declineStrategyAsClient } = await import('@/lib/api/strategies.actions');
+    return await declineStrategyAsClient(agreementId, documentId, reason);
+  } catch (error) {
+    console.error('[Service] Failed to decline strategy as client:', error);
+    return { success: false, error: 'Failed to decline strategy' };
+  }
+}
+
+/**
+ * Get the download URL for a strategy document (for viewing).
+ */
+export async function getStrategyDocUrl(documentId: string) {
+  try {
+    const { getStrategyDocumentUrl } = await import('@/lib/api/strategies.actions');
+    return await getStrategyDocumentUrl(documentId);
+  } catch (error) {
+    console.error('[Service] Failed to get strategy document URL:', error);
+    return { success: false, error: 'Failed to get strategy document URL' };
+  }
+}

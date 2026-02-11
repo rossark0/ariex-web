@@ -185,6 +185,8 @@ export default function ComplianceClientDetailPage({ params }: Props) {
     awaiting_payment: Clock,
     awaiting_documents: Clock,
     ready_for_strategy: Strategy,
+    awaiting_compliance: Clock,
+    awaiting_approval: Clock,
     awaiting_signature: Clock,
     active: Check,
   };

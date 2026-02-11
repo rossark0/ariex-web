@@ -14,8 +14,8 @@ import { AcceptanceStatus } from '@/types/document';
 interface TodoDocument {
   id: string;
   signedStatus?: string;
-  uploadStatus?: 'WAITING_UPLOAD' | 'FILE_UPLOADED' | 'FILE_DELETED';
-  acceptanceStatus?: AcceptanceStatus;
+  uploadStatus?: 'WAITING_UPLOAD' | 'FILE_UPLOADED' | 'FILE_DELETED' | string;
+  acceptanceStatus?: AcceptanceStatus | string;
   files?: Array<{
     id: string;
     originalName: string;

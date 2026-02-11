@@ -12,7 +12,10 @@ export type ActivityType =
   | 'document_uploaded'
   | 'document_requested'
   | 'strategy_sent'
-  | 'strategy_signed'
+  | 'strategy_compliance_approved'
+  | 'strategy_compliance_rejected'
+  | 'strategy_client_approved'
+  | 'strategy_client_declined'
   | 'note_added';
 
 export interface Activity {

@@ -62,6 +62,7 @@ export interface ApiDocument {
   mimeType?: string;
   size?: number;
   todoId?: string; // Link to todo if document was uploaded for a todo request
+  acceptanceStatus?: AcceptanceStatus; // Compliance/client approval status (used by strategy docs)
 }
 
 export interface ApiPayment {

@@ -38,7 +38,6 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
   // Chat store state
   const {
     currentUserId,
-    activeChatId,
     messages,
     isLoadingMessages,
     isSending,
@@ -59,16 +58,11 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
   useEffect(() => {
     if (isExpanded && currentUserId && client.user.id) {
       setHasLoadedOnce(false); // Reset when opening new chat
-      openChatWithUser(client.user.id);
+      openChatWithUser(client.user.id).then(() => {
+        setHasLoadedOnce(true);
+      });
     }
   }, [isExpanded, currentUserId, client.user.id, openChatWithUser]);
-
-  // Track when first load is complete
-  useEffect(() => {
-    if (!isLoadingMessages && activeChatId) {
-      setHasLoadedOnce(true);
-    }
-  }, [isLoadingMessages, activeChatId]);
 
   // Stop polling when collapsed
   useEffect(() => {

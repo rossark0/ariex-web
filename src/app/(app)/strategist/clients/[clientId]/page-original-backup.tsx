@@ -26,7 +26,7 @@ import { sendAgreementToClient } from '@/lib/api/agreements.actions';
 import {
   sendStrategyToClient,
   completeAgreement,
-  getSignedStrategyUrl,
+  getStrategyDocumentUrl,
 } from '@/lib/api/strategies.actions';
 import { AgreementSheet, type AgreementSendData } from '@/components/agreements/agreement-sheet';
 import { StrategySheet, type StrategySendData } from '@/components/strategy/strategy-sheet';
@@ -1059,6 +1059,8 @@ export default function StrategistClientDetailPage({ params }: Props) {
     awaiting_payment: Clock,
     awaiting_documents: Clock,
     ready_for_strategy: Strategy,
+    awaiting_compliance: Clock,
+    awaiting_approval: Clock,
     awaiting_signature: Clock,
     active: Check,
   };
@@ -1651,7 +1653,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
                                         '[UI] Downloading signed strategy for envelope:',
                                         strategyMetadata.strategyEnvelopeId
                                       );
-                                      const result = await getSignedStrategyUrl(
+                                      const result = await getStrategyDocumentUrl(
                                         strategyMetadata.strategyEnvelopeId
                                       );
                                       if (result.success && result.url) {

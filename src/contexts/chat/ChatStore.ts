@@ -179,14 +179,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
 
     console.log('[ChatStore] Opening chat with user:', otherUserId);
-    set({ isLoadingMessages: true });
+    set({ isLoadingMessages: true, messages: [] });
 
     try {
       // createOrGetChat expects: userId1, userId2, createdByUserId
       const chat = await createOrGetChat(currentUserId, otherUserId, currentUserId);
       console.log('[ChatStore] Got/created chat:', chat.id);
 
-      const messages = (chat.messages || []).map(msg => apiMessageToLocal(msg, currentUserId));
+      // Always fetch messages explicitly — createOrGetChat may not include them
+      let messages: ChatMessageData[];
+      if (chat.messages && chat.messages.length > 0) {
+        messages = chat.messages.map(msg => apiMessageToLocal(msg, currentUserId));
+      } else {
+        const freshMessages = await getChatMessages(chat.id);
+        messages = freshMessages.map(msg => apiMessageToLocal(msg, currentUserId));
+      }
 
       set({
         activeChat: chat,

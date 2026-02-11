@@ -25,8 +25,14 @@ import { sendAgreementToClient } from '@/lib/api/agreements.actions';
 import {
   sendStrategyToClient,
   completeAgreement,
-  getSignedStrategyUrl,
+  getStrategyDocumentUrl,
 } from '@/lib/api/strategies.actions';
+import {
+  computeStep5State,
+  parseStrategyMetadata,
+  type Step5State,
+  type StrategyMetadata as ModelStrategyMetadata,
+} from '../models/strategy.model';
 import type { AgreementSendData } from '@/components/agreements/agreement-sheet';
 import type { StrategySendData } from '@/components/strategy/strategy-sheet';
 import {
@@ -42,10 +48,17 @@ import { type ClientStatusKey } from '@/lib/client-status';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
+/**
+ * @deprecated Use StrategyMetadata from strategy.model.ts instead.
+ * Kept for backward compat with ActivityTimelineProps.
+ */
 export interface StrategyMetadata {
   sentAt?: string;
+  /** @deprecated */
   strategyCeremonyUrl?: string;
+  /** @deprecated */
   strategyEnvelopeId?: string;
+  strategyDocumentId?: string;
 }
 
 export interface ClientDetailData {
@@ -105,9 +118,12 @@ export interface ClientDetailData {
   totalDocTodos: number;
   acceptedDocCount: number;
   step5Sent: boolean | string | undefined;
+  /** @deprecated Always false — signing removed. Use step5State instead. */
   step5Signed: boolean;
   step5Complete: boolean | string;
+  step5State: Step5State;
   strategyMetadata: StrategyMetadata | null;
+  strategyDocumentId: string | null;
   strategyDoc: {
     signedAt?: Date;
     createdAt: Date;
@@ -129,6 +145,7 @@ export interface ClientDetailData {
   handleSendPaymentLink: () => Promise<void>;
   handleSendPaymentReminder: () => Promise<void>;
   handleDownloadSignedStrategy: () => Promise<void>;
+  handleViewStrategyDocument: () => Promise<void>;
   handleDeleteTodo: () => Promise<void>;
   handleViewDocument: (docId: string) => Promise<void>;
   refreshAgreements: () => Promise<void>;
@@ -411,38 +428,45 @@ export function useClientDetailData(clientId: string): ClientDetailData {
   const step3Sent = hasAgreementSigned && (hasPaymentSent || hasPaymentReceived);
   const step3Complete = hasPaymentReceived;
 
+  // ─── Step 5: Strategy Compliance → Client Approval ──────────
+
+  // Parse strategy metadata from agreement description
+  const strategyMetadata = parseStrategyMetadata(signedAgreement?.description) as
+    | (StrategyMetadata & ModelStrategyMetadata)
+    | null;
+  const strategyDocumentId = strategyMetadata?.strategyDocumentId ?? null;
+
+  // Find the strategy document from loaded documents (for acceptanceStatus)
+  const strategyApiDoc = strategyDocumentId
+    ? clientDocuments.find(d => d.id === strategyDocumentId) ?? null
+    : null;
+
+  // Compute Step 5 state machine
+  const step5State = computeStep5State(
+    activeAgreement?.status ?? '',
+    strategyApiDoc?.acceptanceStatus ?? null
+  );
+
+  // Backward-compat derived fields (Phase 4 will remove these)
+  const step5Sent: boolean | string | undefined = step5State.strategySent;
+  const step5Signed = false; // DEPRECATED: signing removed, use step5State
+  const step5Complete: boolean | string = step5State.isComplete;
+
+  // Keep old strategyDoc shape for backward compat (from mock client docs)
   const strategyDoc =
     client?.documents.find(
       d => d.category === 'contract' && d.originalName.toLowerCase().includes('strategy')
     ) || null;
 
-  let strategyMetadata: StrategyMetadata | null = null;
-  const metaMatch = signedAgreement?.description?.match(/__STRATEGY_METADATA__:([\s\S]+)$/);
-  if (metaMatch) {
-    try {
-      strategyMetadata = JSON.parse(metaMatch[1]);
-    } catch {
-      /* ignore */
-    }
-  }
-
-  const step5Sent =
-    hasAllDocumentsAccepted &&
-    (strategyDoc?.signatureStatus === 'SENT' ||
-      strategyDoc?.signatureStatus === 'SIGNED' ||
-      strategyMetadata?.sentAt);
-  const step5Signed = signedAgreement?.status === AgreementStatus.PENDING_STRATEGY_REVIEW;
-  const step5Complete =
-    strategyDoc?.signatureStatus === 'SIGNED' ||
-    signedAgreement?.status === AgreementStatus.COMPLETED;
-
-  // Status key
+  // Status key — now uses step5State for strategy sub-phases
   let statusKey: ClientStatusKey;
   if (!hasAgreementSigned) statusKey = 'awaiting_agreement';
   else if (!step3Complete) statusKey = 'awaiting_payment';
   else if (!hasAllDocumentsAccepted) statusKey = 'awaiting_documents';
-  else if (step5Complete) statusKey = 'active';
-  else if (step5Sent) statusKey = 'awaiting_signature';
+  else if (step5State.isComplete) statusKey = 'active';
+  else if (step5State.phase === 'client_review') statusKey = 'awaiting_approval';
+  else if (step5State.phase === 'compliance_review') statusKey = 'awaiting_compliance';
+  else if (step5State.strategySent) statusKey = 'awaiting_compliance';
   else statusKey = 'ready_for_strategy';
 
   // ─── Handlers ────────────────────────────────────────────────
@@ -719,13 +743,15 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     }
   };
 
-  const handleDownloadSignedStrategy = async () => {
-    if (strategyMetadata?.strategyEnvelopeId) {
-      const result = await getSignedStrategyUrl(strategyMetadata.strategyEnvelopeId);
-      if (result.success && result.url) window.open(result.url, '_blank');
-      else alert('Signed document not yet available. Please try again in a moment.');
-    }
+  const handleViewStrategyDocument = async () => {
+    if (!strategyDocumentId) return;
+    const result = await getStrategyDocumentUrl(strategyDocumentId);
+    if (result.success && result.url) window.open(result.url, '_blank');
+    else alert('Strategy document not yet available. Please try again in a moment.');
   };
+
+  // Backward compat alias (Phase 4 will remove)
+  const handleDownloadSignedStrategy = handleViewStrategyDocument;
 
   const handleDeleteTodo = async () => {
     if (!todoToDelete) return;
@@ -796,7 +822,9 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     step5Sent,
     step5Signed: !!step5Signed,
     step5Complete,
+    step5State,
     strategyMetadata,
+    strategyDocumentId,
     strategyDoc: strategyDoc
       ? {
           signedAt: strategyDoc.signedAt ?? undefined,
@@ -818,6 +846,7 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     handleSendPaymentLink,
     handleSendPaymentReminder,
     handleDownloadSignedStrategy,
+    handleViewStrategyDocument,
     handleDeleteTodo,
     handleViewDocument,
     refreshAgreements,

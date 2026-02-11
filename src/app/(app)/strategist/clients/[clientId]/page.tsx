@@ -1,23 +1,45 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
-import { AgreementSheet } from '@/components/agreements/agreement-sheet';
-import { StrategySheet } from '@/components/strategy/strategy-sheet';
-import { RequestDocumentsModal } from '@/components/documents/request-documents-modal';
-import { ClientFloatingChat } from '@/components/chat/client-floating-chat';
 import { AgreementStatus } from '@/types/agreement';
 import { Warning } from '@phosphor-icons/react/dist/ssr';
 import { useRouter } from 'next/navigation';
 
-import {
-  LoadingState,
-  ClientHeader,
-  ClientInfoCard,
-  ActivityTimeline,
-  DocumentsList,
-  PaymentModal,
-  DeleteTodoDialog,
-} from '@/contexts/strategist-contexts/client-management/components';
+// Lazy-load heavy modal/sheet components (TipTap, jsPDF, html2canvas stay out of HMR graph)
+const AgreementSheet = dynamic(
+  () => import('@/components/agreements/agreement-sheet').then(m => ({ default: m.AgreementSheet })),
+  { ssr: false }
+);
+
+const StrategySheet = dynamic(
+  () => import('@/components/strategy/strategy-sheet').then(m => ({ default: m.StrategySheet })),
+  { ssr: false }
+);
+
+const RequestDocumentsModal = dynamic(
+  () =>
+    import('@/components/documents/request-documents-modal').then(m => ({
+      default: m.RequestDocumentsModal,
+    })),
+  { ssr: false }
+);
+
+const ClientFloatingChat = dynamic(
+  () =>
+    import('@/components/chat/client-floating-chat').then(m => ({
+      default: m.ClientFloatingChat,
+    })),
+  { ssr: false }
+);
+
+import { LoadingState } from '@/contexts/strategist-contexts/client-management/components/shared/loading-state';
+import { ClientHeader } from '@/contexts/strategist-contexts/client-management/components/detail/client-header';
+import { ClientInfoCard } from '@/contexts/strategist-contexts/client-management/components/detail/client-info-card';
+import { ActivityTimeline } from '@/contexts/strategist-contexts/client-management/components/detail/activity-timeline';
+import { DocumentsList } from '@/contexts/strategist-contexts/client-management/components/detail/documents-list';
+import { PaymentModal } from '@/contexts/strategist-contexts/client-management/components/detail/payment-modal';
+import { DeleteTodoDialog } from '@/contexts/strategist-contexts/client-management/components/detail/delete-todo-dialog';
 
 import { useClientDetailData } from '@/contexts/strategist-contexts/client-management/hooks/use-client-detail-data';
 
@@ -96,6 +118,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
             step5Sent={data.step5Sent}
             step5Signed={data.step5Signed}
             step5Complete={data.step5Complete}
+            step5State={data.step5State}
             strategyMetadata={data.strategyMetadata}
             strategyDoc={data.strategyDoc}
             onOpenAgreementModal={() => data.setIsAgreementModalOpen(true)}
@@ -106,6 +129,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
             onAdvanceToStrategy={data.handleAdvanceToStrategy}
             onCompleteAgreement={data.handleCompleteAgreement}
             onDownloadSignedStrategy={data.handleDownloadSignedStrategy}
+            onViewStrategyDocument={data.handleViewStrategyDocument}
             onAcceptDocument={data.handleAcceptDocument}
             onDeclineDocument={data.handleDeclineDocument}
             onDeleteTodoRequest={todo => data.setTodoToDelete(todo)}
@@ -117,8 +141,10 @@ export default function StrategistClientDetailPage({ params }: Props) {
             selectedDocs={data.selectedDocs}
             viewingDocId={data.viewingDocId}
             todoTitles={data.todoTitles}
+            documentTodos={data.documentTodos}
             onToggleSelection={data.toggleDocSelection}
             onViewDocument={data.handleViewDocument}
+            onRequestDocuments={() => data.setIsRequestDocsModalOpen(true)}
           />
         </div>
       </div>

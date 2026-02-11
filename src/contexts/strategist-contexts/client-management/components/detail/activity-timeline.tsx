@@ -4,6 +4,7 @@ import type { ApiAgreement } from '@/lib/api/strategist.api';
 import type { FullClientMock } from '@/lib/mocks/client-full';
 import { AgreementStatus } from '@/types/agreement';
 import { AcceptanceStatus } from '@/types/document';
+import type { Step5State } from '../../models/strategy.model';
 import {
   Check as CheckIcon,
   FileArrowDown as FileArrowDownIcon,
@@ -31,8 +32,11 @@ interface TodoItem {
 
 interface StrategyMetadata {
   sentAt?: string;
+  /** @deprecated Legacy — signing removed */
   strategyCeremonyUrl?: string;
+  /** @deprecated Legacy — signing removed */
   strategyEnvelopeId?: string;
+  strategyDocumentId?: string;
 }
 
 export interface ActivityTimelineProps {
@@ -64,8 +68,10 @@ export interface ActivityTimelineProps {
   totalDocTodos: number;
   acceptedDocCount: number;
   step5Sent: boolean | string | undefined;
+  /** @deprecated Use step5State instead — always false now */
   step5Signed: boolean;
   step5Complete: boolean | string;
+  step5State?: Step5State;
   strategyMetadata: StrategyMetadata | null;
   strategyDoc: {
     signedAt?: Date;
@@ -83,6 +89,7 @@ export interface ActivityTimelineProps {
   onAdvanceToStrategy: () => Promise<void>;
   onCompleteAgreement: () => Promise<void>;
   onDownloadSignedStrategy: () => Promise<void>;
+  onViewStrategyDocument?: () => Promise<void>;
   onAcceptDocument: (documentId: string) => Promise<void>;
   onDeclineDocument: (documentId: string) => Promise<void>;
   onDeleteTodoRequest: (todo: { id: string; title: string }) => void;
@@ -113,8 +120,9 @@ export function ActivityTimeline({
   totalDocTodos,
   acceptedDocCount,
   step5Sent,
-  step5Signed,
+  step5Signed: _step5Signed, // deprecated — unused
   step5Complete,
+  step5State,
   strategyMetadata,
   strategyDoc,
   onOpenAgreementModal,
@@ -125,6 +133,7 @@ export function ActivityTimeline({
   onAdvanceToStrategy,
   onCompleteAgreement,
   onDownloadSignedStrategy,
+  onViewStrategyDocument,
   onAcceptDocument,
   onDeclineDocument,
   onDeleteTodoRequest,
@@ -543,85 +552,186 @@ export function ActivityTimeline({
             </div>
           </div>
 
-          {/* ── Step 5: Strategy Phase ── */}
+          {/* ── Step 5: Strategy Phase (Compliance → Client Approval) ── */}
           <div className="relative flex gap-4">
             <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
               <div
-                className={`h-2 w-2 rounded-full ${step5Sent || step5Complete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                className={`h-2 w-2 rounded-full ${step5State?.strategySent || step5State?.isComplete ? 'bg-emerald-500' : step5Sent || step5Complete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
               />
             </div>
             <div className="flex flex-1 flex-col">
+              {/* ── Phase-aware headline ── */}
               <span className="font-medium text-zinc-900">
-                {step5Complete
-                  ? 'Tax strategy approved & signed'
-                  : step5Sent
-                    ? 'Strategy sent for approval'
+                {step5State?.isComplete
+                  ? 'Tax strategy approved'
+                  : step5State?.phase === 'client_review'
+                    ? 'Strategy awaiting client approval'
+                  : step5State?.phase === 'client_declined'
+                    ? 'Client declined strategy'
+                  : step5State?.phase === 'compliance_review'
+                    ? 'Strategy under compliance review'
+                  : step5State?.phase === 'compliance_rejected'
+                    ? 'Compliance rejected strategy'
+                  : step5State?.strategySent || step5Sent
+                    ? 'Strategy sent for review'
                     : 'Tax strategy pending'}
               </span>
               <span className="text-sm text-zinc-500">
-                {step5Complete
-                  ? strategyDoc?.originalName.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan'
-                  : step5Sent
-                    ? 'Awaiting client signature on tax strategy document'
-                    : 'Ready to create personalized tax strategy'}
+                {step5State?.isComplete
+                  ? 'Both compliance and client have approved'
+                  : step5State?.phase === 'client_review'
+                    ? 'Compliance approved — waiting for client to approve or decline'
+                  : step5State?.phase === 'client_declined'
+                    ? 'Client has declined the strategy. Revise and resend.'
+                  : step5State?.phase === 'compliance_review'
+                    ? 'Waiting for compliance team to review and approve'
+                  : step5State?.phase === 'compliance_rejected'
+                    ? 'Compliance has rejected the strategy. Revise and resend.'
+                  : 'Ready to create personalized tax strategy'}
               </span>
               <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                {strategyDoc?.signedAt
-                  ? formatDate(strategyDoc.signedAt)
-                  : strategyDoc?.createdAt
-                    ? formatDate(strategyDoc.createdAt)
-                    : strategyMetadata?.sentAt
-                      ? formatDate(new Date(strategyMetadata.sentAt))
-                      : step5Sent
-                        ? 'Sent'
-                        : 'Not started'}
+                {strategyMetadata?.sentAt
+                  ? formatDate(new Date(strategyMetadata.sentAt))
+                  : 'Not started'}
               </span>
-              {/* Create/Resend strategy button */}
+
+              {/* ── Compliance & Client review sub-steps ── */}
+              {step5State && step5State.strategySent && (
+                <div className="mt-3 flex flex-col gap-2">
+                  {/* Compliance review sub-step */}
+                  <div
+                    className={`rounded-lg border p-2.5 ${
+                      step5State.complianceRejected
+                        ? 'border-red-200 bg-red-50'
+                        : step5State.complianceApproved
+                          ? 'border-emerald-200 bg-emerald-50'
+                          : 'border-amber-200 bg-amber-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {step5State.complianceApproved ? (
+                        <CheckIcon weight="bold" className="h-4 w-4 shrink-0 text-emerald-500" />
+                      ) : step5State.complianceRejected ? (
+                        <XIcon weight="bold" className="h-4 w-4 shrink-0 text-red-500" />
+                      ) : (
+                        <Clock weight="bold" className="h-4 w-4 shrink-0 text-amber-500" />
+                      )}
+                      <span
+                        className={`text-sm font-medium ${
+                          step5State.complianceRejected
+                            ? 'text-red-700'
+                            : step5State.complianceApproved
+                              ? 'text-emerald-700'
+                              : 'text-amber-700'
+                        }`}
+                      >
+                        Compliance review
+                      </span>
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                          step5State.complianceRejected
+                            ? 'bg-red-100 text-red-600'
+                            : step5State.complianceApproved
+                              ? 'bg-emerald-100 text-emerald-600'
+                              : 'bg-amber-100 text-amber-600'
+                        }`}
+                      >
+                        {step5State.complianceRejected
+                          ? 'Rejected'
+                          : step5State.complianceApproved
+                            ? 'Approved'
+                            : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Client review sub-step (only shown if compliance approved) */}
+                  {step5State.complianceApproved && (
+                    <div
+                      className={`rounded-lg border p-2.5 ${
+                        step5State.clientDeclined
+                          ? 'border-red-200 bg-red-50'
+                          : step5State.clientApproved
+                            ? 'border-emerald-200 bg-emerald-50'
+                            : 'border-teal-200 bg-teal-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {step5State.clientApproved ? (
+                          <CheckIcon weight="bold" className="h-4 w-4 shrink-0 text-emerald-500" />
+                        ) : step5State.clientDeclined ? (
+                          <XIcon weight="bold" className="h-4 w-4 shrink-0 text-red-500" />
+                        ) : (
+                          <Clock weight="bold" className="h-4 w-4 shrink-0 text-teal-500" />
+                        )}
+                        <span
+                          className={`text-sm font-medium ${
+                            step5State.clientDeclined
+                              ? 'text-red-700'
+                              : step5State.clientApproved
+                                ? 'text-emerald-700'
+                                : 'text-teal-700'
+                          }`}
+                        >
+                          Client review
+                        </span>
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                            step5State.clientDeclined
+                              ? 'bg-red-100 text-red-600'
+                              : step5State.clientApproved
+                                ? 'bg-emerald-100 text-emerald-600'
+                                : 'bg-teal-100 text-teal-600'
+                          }`}
+                        >
+                          {step5State.clientDeclined
+                            ? 'Declined'
+                            : step5State.clientApproved
+                              ? 'Approved'
+                              : 'Pending'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── Action buttons ── */}
+
+              {/* Create / Revise strategy button */}
               {signedAgreement?.status === AgreementStatus.PENDING_STRATEGY &&
-                !step5Signed &&
-                !step5Complete && (
+                !step5State?.isComplete && (
                   <button
                     onClick={onOpenStrategySheet}
                     className={`mt-2 w-fit rounded px-2 py-1 text-xs font-semibold ${
-                      step5Sent
-                        ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                        : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                      step5State?.complianceRejected || step5State?.clientDeclined
+                        ? 'bg-amber-600 text-white hover:bg-amber-700'
+                        : step5State?.strategySent
+                          ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                          : 'bg-emerald-600 text-white hover:bg-emerald-700'
                     }`}
                   >
-                    {step5Sent ? 'Resend strategy' : 'Create strategy'}
+                    {step5State?.complianceRejected || step5State?.clientDeclined
+                      ? 'Revise & resend strategy'
+                      : step5State?.strategySent
+                        ? 'Resend strategy'
+                        : 'Create strategy'}
                   </button>
                 )}
-              {/* Client signed - show Download and Finish buttons */}
-              {step5Signed && !step5Complete && (
-                <div className="mt-2 flex items-center gap-2">
-                  <button
-                    onClick={() => onDownloadSignedStrategy()}
-                    disabled={!strategyMetadata?.strategyEnvelopeId}
-                    className="w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200 disabled:opacity-50"
-                  >
-                    Download signed document
-                  </button>
-                  <button
-                    onClick={() => onCompleteAgreement()}
-                    disabled={isCompletingAgreement}
-                    className="w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700 disabled:bg-emerald-400"
-                  >
-                    {isCompletingAgreement ? (
-                      <span className="flex items-center gap-1">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        Completing...
-                      </span>
-                    ) : (
-                      'Finish Agreement'
-                    )}
-                  </button>
-                </div>
+
+              {/* View strategy doc button (available whenever strategy has been sent) */}
+              {step5State?.strategySent && onViewStrategyDocument && (
+                <button
+                  onClick={() => onViewStrategyDocument()}
+                  className="mt-2 w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200"
+                >
+                  View strategy document
+                </button>
               )}
-              {step5Complete && (
+
+              {/* Completed state */}
+              {step5State?.isComplete && (
                 <div className="mt-2 flex items-center gap-2">
-                  <button className="w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-200">
-                    View strategy
-                  </button>
                   {signedAgreement?.status !== AgreementStatus.COMPLETED && (
                     <button
                       onClick={() => onCompleteAgreement()}

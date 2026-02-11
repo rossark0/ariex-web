@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { FileIcon, Check, SpinnerGap, Check as CheckIcon } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { EmptyDocumentsIllustration } from '@/components/ui/empty-documents-illustration';
@@ -11,13 +11,17 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useUiStore } from '@/contexts/ui/UiStore';
 import {
   getClientDashboardData,
-  syncAgreementSignatureStatus,
-  syncStrategySignatureStatus,
   getDocumentDownloadUrl,
   type ClientDashboardData,
   type ClientAgreement,
   type ClientDocument,
 } from '@/lib/api/client.api';
+import {
+  approveStrategyAsClient,
+  declineStrategyAsClient,
+  getStrategyDocumentUrl,
+} from '@/lib/api/strategies.actions';
+import { computeStep5State, parseStrategyMetadata } from '@/contexts/strategist-contexts/client-management/models/strategy.model';
 import {
   AgreementStatus,
   isAgreementSigned,
@@ -144,7 +148,6 @@ function groupDocumentsByDate(documents: ClientDocument[]) {
 export default function ClientDashboardPage() {
   useRoleRedirect('CLIENT');
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState<ClientDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -200,44 +203,11 @@ export default function ClientDashboardPage() {
   // SignatureAPI sync state - holds the REAL envelope statuses
   const [envelopeStatuses, setEnvelopeStatuses] = useState<Record<string, string>>({});
   const hasSyncedRef = useRef(false);
-  const hasHandledStrategySignedRef = useRef(false);
 
-  // Handle ?strategy_signed=true redirect from SignatureAPI
-  // This syncs the strategy signature status with the backend
-  useEffect(() => {
-    const strategySigned = searchParams.get('strategy_signed');
-    const ceremonyResult = searchParams.get('ceremony_result');
-    const envelopeId = searchParams.get('envelope_id');
-
-    if (strategySigned === 'true' && envelopeId && !hasHandledStrategySignedRef.current) {
-      hasHandledStrategySignedRef.current = true;
-      console.log('[ClientHome] 🎉 Strategy signed! Syncing with backend...');
-      console.log('[ClientHome] Envelope ID:', envelopeId);
-      console.log('[ClientHome] Ceremony result:', ceremonyResult);
-
-      // Remove query params from URL
-      window.history.replaceState({}, '', '/client/home');
-
-      // Sync strategy signature with backend
-      (async () => {
-        try {
-          const result = await syncStrategySignatureStatus(envelopeId);
-          console.log('[ClientHome] Strategy sync result:', result);
-
-          if (result.success) {
-            console.log('[ClientHome] ✅ Strategy signature synced successfully!');
-            // Refresh dashboard data to show updated status
-            const refreshedData = await getClientDashboardData();
-            setDashboardData(refreshedData);
-          } else {
-            console.error('[ClientHome] ❌ Failed to sync strategy signature:', result.error);
-          }
-        } catch (error) {
-          console.error('[ClientHome] ❌ Error syncing strategy signature:', error);
-        }
-      })();
-    }
-  }, [searchParams]);
+  // Strategy approve/decline loading states
+  const [isApprovingStrategy, setIsApprovingStrategy] = useState(false);
+  const [isDecliningStrategy, setIsDecliningStrategy] = useState(false);
+  const [strategyActionError, setStrategyActionError] = useState<string | null>(null);
 
   // Fetch dashboard data from API
   useEffect(() => {
@@ -453,7 +423,7 @@ export default function ClientDashboardPage() {
   const hasDocTodos = documentTodos.length > 0;
 
   // Find strategy document
-  const strategyDoc = documents.find(d => d.type === 'strategy' || d.category === 'strategy');
+  // (strategyDoc already computed above via computeStep5State block)
 
   // Uploaded documents (excluding agreements/strategies)
   const uploadedDocs = documents.filter(
@@ -509,37 +479,37 @@ export default function ClientDashboardPage() {
     hasDocTodos;
   const step4Complete = hasDocTodos && completedDocTodos.length >= documentTodos.length;
 
-  // Strategy: use PENDING_STRATEGY or PENDING_STRATEGY_REVIEW
-  // PENDING_STRATEGY_REVIEW means client HAS signed, strategist is reviewing
-  const step5Sent =
+  // Strategy: Use computeStep5State for compliance → client approval flow
+  // Find strategy document by metadata ID or by category
+  const strategyMetadata = parseStrategyMetadata(serviceAgreement?.description);
+  const strategyDocumentId = strategyMetadata?.strategyDocumentId ?? null;
+
+  // Find the actual strategy document to get its acceptanceStatus
+  const strategyDoc = strategyDocumentId
+    ? documents.find(d => d.id === strategyDocumentId) ?? null
+    : documents.find(d => d.type === 'strategy' || d.category === 'strategy') ?? null;
+
+  const step5State = computeStep5State(
+    serviceAgreement?.status ?? '',
+    strategyDoc?.acceptanceStatus ?? null
+  );
+
+  const step5Sent = step5State.strategySent;
+  const step5Complete = step5State.isComplete;
+
+  // Client can see the strategy and approve/decline only after compliance approved
+  const step5ClientCanAct = step5State.phase === 'client_review';
+
+  // Pending document todos = not yet uploaded (for showing in documents section & timeline)
+  const pendingDocTodos = documentTodos.filter(
+    todo => todo.status !== 'completed' && todo.document?.uploadStatus !== 'FILE_UPLOADED'
+  );
+  // Agreement has moved past the documents step but still has pending uploads
+  const isPastDocumentsStep =
     serviceAgreement?.status === AgreementStatus.PENDING_STRATEGY ||
     serviceAgreement?.status === AgreementStatus.PENDING_STRATEGY_REVIEW ||
-    serviceAgreement?.status === AgreementStatus.COMPLETED ||
-    strategyDoc?.signatureStatus === 'SENT';
-  
-  // Client has signed the strategy (status moved to PENDING_STRATEGY_REVIEW)
-  const step5ClientSigned =
-    serviceAgreement?.status === AgreementStatus.PENDING_STRATEGY_REVIEW;
-  
-  const step5Complete =
-    serviceAgreement?.status === AgreementStatus.COMPLETED ||
-    strategyDoc?.signatureStatus === 'SIGNED';
-
-  // Parse strategy metadata from agreement description to get ceremony URL and document ID
-  let strategyCeremonyUrl: string | null = null;
-  let strategyDocumentId: string | null = null;
-  const strategyMetadataMatch = serviceAgreement?.description?.match(
-    /__STRATEGY_METADATA__:([\s\S]+)$/
-  );
-  if (strategyMetadataMatch) {
-    try {
-      const metadata = JSON.parse(strategyMetadataMatch[1]);
-      strategyCeremonyUrl = metadata.strategyCeremonyUrl || null;
-      strategyDocumentId = metadata.strategyDocumentId || null;
-    } catch {
-      // Ignore parse errors
-    }
-  }
+    serviceAgreement?.status === AgreementStatus.COMPLETED;
+  const hasLateDocRequests = isPastDocumentsStep && pendingDocTodos.length > 0;
 
   const paymentAmount = serviceAgreement?.paymentAmount || serviceAgreement?.price || 499;
 
@@ -815,7 +785,41 @@ export default function ClientDashboardPage() {
                   </div>
                 </div>
 
-                {/* Step 5: Strategy Phase */}
+                {/* Late Document Requests — shown when agreement passed step 4 but new docs were requested */}
+                {hasLateDocRequests && serviceAgreement && (
+                  <div className="relative flex gap-4 pb-6">
+                    <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
+                      <div className="h-2 w-2 rounded-full bg-amber-500" />
+                    </div>
+                    <div
+                      className={`absolute top-5 bottom-2 -left-[19px] w-0.5 bg-zinc-200`}
+                    />
+                    <div className="flex flex-1 flex-col items-start">
+                      <Badge variant="warning" className="mb-2 w-fit">
+                        Action required
+                      </Badge>
+                      <span className="font-medium text-zinc-900">
+                        Additional documents requested · {pendingDocTodos.length} pending
+                      </span>
+                      <span className="text-sm text-zinc-500">
+                        Your strategist has requested additional documents
+                      </span>
+                      <div className="mt-3 flex w-full flex-col gap-2">
+                        {pendingDocTodos.map(todo => (
+                          <TodoUploadItem
+                            key={todo.id}
+                            todo={todo}
+                            agreementId={serviceAgreement.id}
+                            strategistId={strategist?.id || serviceAgreement.strategistId || ''}
+                            onUploadComplete={refreshDashboard}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 5: Strategy Phase (Compliance → Client Approval) */}
                 <div className="relative flex gap-4">
                   <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
                     {step5Complete ? (
@@ -830,73 +834,174 @@ export default function ClientDashboardPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-zinc-900">
                         {step5Complete
-                          ? 'Tax strategy approved & signed'
+                          ? 'Tax strategy approved'
+                          : step5ClientCanAct
+                            ? 'Strategy ready for your review'
+                          : step5State.phase === 'client_declined'
+                            ? 'Strategy declined — revision in progress'
+                          : step5State.phase === 'compliance_review'
+                            ? 'Strategy under review'
+                          : step5State.phase === 'compliance_rejected'
+                            ? 'Strategy being revised'
                           : step5Sent
-                            ? 'Strategy sent for approval'
+                            ? 'Strategy under review'
                             : 'Tax strategy pending'}
                       </span>
                     </div>
                     <span className="text-sm text-zinc-500">
                       {step5Complete
-                        ? strategyDoc?.name || 'Tax Strategy Plan'
+                        ? 'Your tax strategy has been approved and finalized'
+                        : step5ClientCanAct
+                          ? 'Please review and approve or decline your tax strategy'
+                        : step5State.phase === 'client_declined'
+                          ? 'Your strategist is revising the strategy based on your feedback'
+                        : step5State.phase === 'compliance_review'
+                          ? 'Your strategy is being reviewed by our compliance team'
+                        : step5State.phase === 'compliance_rejected'
+                          ? 'Your strategist is revising the strategy'
                         : step5Sent
-                          ? 'Review and sign your personalized tax strategy'
+                          ? 'Your strategy is being reviewed'
                           : 'Your strategist will create your personalized tax strategy after documents are reviewed'}
                     </span>
                     <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                      {strategyDoc?.createdAt
-                        ? formatDate(strategyDoc.createdAt)
+                      {strategyMetadata?.sentAt
+                        ? formatDate(new Date(strategyMetadata.sentAt))
                         : formatDate(createdAt)}
                     </span>
-                    {/* Show "Action required" only if step 4 complete, strategy sent, but client hasn't signed yet */}
-                    {step4Complete && !step5Complete && !step5ClientSigned && (
-                      <Badge variant={step5Sent ? 'warning' : 'warning'} className="mt-2 w-fit">
-                        {step5Sent ? (
-                          'Action required'
-                        ) : (
-                          <span className="flex items-center gap-1.5">
-                            <span className="relative flex h-1.5 w-1.5">
-                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
-                              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                            </span>
-                            Tax strategist action required
-                          </span>
-                        )}
+
+                    {/* Action required badge — only when client needs to act */}
+                    {step5ClientCanAct && !step5Complete && (
+                      <Badge variant="warning" className="mt-2 w-fit">
+                        Action required
                       </Badge>
                     )}
-                    {/* Show buttons only if step 4 complete (onboarding done) AND strategy is sent but not signed by client */}
-                    {step4Complete && step5Sent && !step5Complete && !step5ClientSigned && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <button
-                          onClick={async () => {
-                            if (strategyDocumentId) {
-                              const url = await getDocumentDownloadUrl(strategyDocumentId);
-                              if (url) window.open(url, '_blank');
-                            }
-                          }}
-                          disabled={!strategyDocumentId}
-                          className="w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200 disabled:opacity-50"
-                        >
-                          View strategy
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (strategyCeremonyUrl) {
-                              window.open(strategyCeremonyUrl, '_blank');
-                            }
-                          }}
-                          disabled={!strategyCeremonyUrl}
-                          className="w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                        >
-                          Sign strategy
-                        </button>
+
+                    {/* Waiting badges — strategy submitted but not yet client's turn */}
+                    {step5Sent && !step5ClientCanAct && !step5Complete && !step5State.clientDeclined && !step5State.complianceRejected && (
+                      <Badge variant="warning" className="mt-2 w-fit">
+                        <span className="flex items-center gap-1.5">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
+                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                          </span>
+                          Under review
+                        </span>
+                      </Badge>
+                    )}
+
+                    {/* Not yet sent — strategist action required */}
+                    {step4Complete && !step5Sent && !step5Complete && (
+                      <Badge variant="warning" className="mt-2 w-fit">
+                        <span className="flex items-center gap-1.5">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
+                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                          </span>
+                          Tax strategist action required
+                        </span>
+                      </Badge>
+                    )}
+
+                    {/* Client action buttons: View + Approve + Decline (only when compliance approved) */}
+                    {step5ClientCanAct && !step5Complete && serviceAgreement && (
+                      <div className="mt-3 flex flex-col gap-2">
+                        {/* View strategy document */}
+                        {strategyDocumentId && (
+                          <button
+                            onClick={async () => {
+                              const result = await getStrategyDocumentUrl(strategyDocumentId!);
+                              if (result.success && result.url) window.open(result.url, '_blank');
+                            }}
+                            className="w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200"
+                          >
+                            View strategy
+                          </button>
+                        )}
+                        {/* Approve / Decline buttons */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={async () => {
+                              if (!strategyDocumentId) return;
+                              setIsApprovingStrategy(true);
+                              setStrategyActionError(null);
+                              try {
+                                const result = await approveStrategyAsClient(
+                                  serviceAgreement.id,
+                                  strategyDocumentId
+                                );
+                                if (result.success) {
+                                  await refreshDashboard();
+                                } else {
+                                  setStrategyActionError(result.error || 'Failed to approve');
+                                }
+                              } catch {
+                                setStrategyActionError('An unexpected error occurred');
+                              } finally {
+                                setIsApprovingStrategy(false);
+                              }
+                            }}
+                            disabled={isApprovingStrategy || isDecliningStrategy || !strategyDocumentId}
+                            className="flex w-fit items-center gap-1 rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            {isApprovingStrategy ? (
+                              <>
+                                <SpinnerGap className="h-3 w-3 animate-spin" />
+                                Approving...
+                              </>
+                            ) : (
+                              <>
+                                <Check weight="bold" className="h-3 w-3" />
+                                Approve strategy
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!strategyDocumentId) return;
+                              const reason = window.prompt('Why are you declining? (optional)');
+                              setIsDecliningStrategy(true);
+                              setStrategyActionError(null);
+                              try {
+                                const result = await declineStrategyAsClient(
+                                  serviceAgreement.id,
+                                  strategyDocumentId,
+                                  reason || undefined
+                                );
+                                if (result.success) {
+                                  await refreshDashboard();
+                                } else {
+                                  setStrategyActionError(result.error || 'Failed to decline');
+                                }
+                              } catch {
+                                setStrategyActionError('An unexpected error occurred');
+                              } finally {
+                                setIsDecliningStrategy(false);
+                              }
+                            }}
+                            disabled={isApprovingStrategy || isDecliningStrategy || !strategyDocumentId}
+                            className="flex w-fit items-center gap-1 rounded bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-200 disabled:opacity-50"
+                          >
+                            {isDecliningStrategy ? (
+                              <>
+                                <SpinnerGap className="h-3 w-3 animate-spin" />
+                                Declining...
+                              </>
+                            ) : (
+                              'Decline'
+                            )}
+                          </button>
+                        </div>
+                        {strategyActionError && (
+                          <span className="text-xs text-red-500">{strategyActionError}</span>
+                        )}
                       </div>
                     )}
-                    {/* Show message when client has signed but strategist hasn't completed */}
-                    {step5ClientSigned && !step5Complete && (
+
+                    {/* Completed state */}
+                    {step5Complete && (
                       <div className="mt-2">
                         <Badge variant="default" className="bg-emerald-100 text-emerald-700">
-                          ✓ Strategy signed - awaiting final approval
+                          ✓ Strategy approved — Agreement completed
                         </Badge>
                       </div>
                     )}
@@ -910,9 +1015,30 @@ export default function ClientDashboardPage() {
         {/* Bottom Section - Recent Documents */}
         <div className="bg-white pb-42">
           <div className="mx-auto flex w-full max-w-[642px] flex-col py-6">
-            <h2 className="mb-4 text-lg font-medium text-zinc-900">Documents uploaded</h2>
+            <h2 className="mb-4 text-lg font-medium text-zinc-900">Documents</h2>
+
+            {/* Pending document requests */}
+            {pendingDocTodos.length > 0 && serviceAgreement && (
+              <div className="mb-6">
+                <p className="mb-3 text-sm font-medium text-amber-600">
+                  Pending requests · {pendingDocTodos.length} document{pendingDocTodos.length !== 1 ? 's' : ''} needed
+                </p>
+                <div className="flex flex-col gap-2">
+                  {pendingDocTodos.map(todo => (
+                    <TodoUploadItem
+                      key={todo.id}
+                      todo={todo}
+                      agreementId={serviceAgreement.id}
+                      strategistId={strategist?.id || serviceAgreement.strategistId || ''}
+                      onUploadComplete={refreshDashboard}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Empty State - No documents yet */}
-            {uploadedDocs.length === 0 && (
+            {uploadedDocs.length === 0 && pendingDocTodos.length === 0 && (
               <div className="flex flex-col items-center justify-center pt-24 pb-12 text-center">
                 {/* Empty */}
                 <EmptyDocumentsIllustration />

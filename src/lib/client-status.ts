@@ -6,7 +6,11 @@
  * 2. Agreement signed
  * 3. Payment received
  * 4. Documents uploaded
- * 5. Strategy signed
+ * 5. Strategy approved (compliance → client sequential approval)
+ *
+ * NOTE: getStatusKey() still uses `awaiting_signature` for mock-based flows.
+ * The real flow uses computeClientStatus() from status-helpers.ts which
+ * returns `awaiting_compliance` / `awaiting_approval` instead.
  */
 
 import type { FullClientMock } from '@/lib/mocks/client-full';
@@ -20,7 +24,9 @@ export type ClientStatusKey =
   | 'awaiting_payment' 
   | 'awaiting_documents' 
   | 'ready_for_strategy' 
-  | 'awaiting_signature' 
+  | 'awaiting_compliance'
+  | 'awaiting_approval'
+  | 'awaiting_signature' // @deprecated — replaced by awaiting_compliance/awaiting_approval; kept for mock-based compliance pages
   | 'active';
 
 export interface ClientStatusConfig {
@@ -75,6 +81,20 @@ export const CLIENT_STATUS_CONFIG: Record<ClientStatusKey, ClientStatusConfig> =
     badgeClassName: 'bg-zinc-100 text-zinc-600',
     borderClassName: 'border-zinc-300',
     textClassName: 'text-zinc-500',
+  },
+  awaiting_compliance: {
+    label: 'strategy · compliance review',
+    badgeColor: 'bg-amber-500',
+    badgeClassName: 'bg-amber-100 text-amber-700',
+    borderClassName: 'border-amber-400',
+    textClassName: 'text-amber-600',
+  },
+  awaiting_approval: {
+    label: 'strategy · pending client approval',
+    badgeColor: 'bg-teal-500',
+    badgeClassName: 'bg-teal-100 text-teal-700',
+    borderClassName: 'border-teal-500',
+    textClassName: 'text-teal-600',
   },
   awaiting_signature: {
     label: 'strategy · pending signature',

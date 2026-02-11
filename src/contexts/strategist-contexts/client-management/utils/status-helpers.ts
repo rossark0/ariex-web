@@ -7,13 +7,19 @@ import {
 } from '@/types/agreement';
 import { type ClientStatusKey } from '@/lib/client-status';
 import { AcceptanceStatus } from '@/types/document';
+import { computeStep5State, type Step5State } from '../models/strategy.model';
 
 /**
- * Compute the overall client status based on their agreement progress
+ * Compute the overall client status based on agreement progress + strategy document state.
+ *
+ * @param client - The API client
+ * @param agreements - All agreements for this client
+ * @param strategyDocAcceptanceStatus - The acceptanceStatus on the strategy document (if any)
  */
 export function computeClientStatus(
   client: ApiClient | null,
-  agreements: ApiAgreement[]
+  agreements: ApiAgreement[],
+  strategyDocAcceptanceStatus?: AcceptanceStatus | string | null
 ): ClientStatusKey {
   if (!client || agreements.length === 0) {
     return 'awaiting_agreement';
@@ -24,6 +30,15 @@ export function computeClientStatus(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
   const activeAgreement = sortedAgreements[0];
+
+  // For PENDING_STRATEGY_REVIEW, use Step 5 state to differentiate
+  // compliance review vs client review
+  if (activeAgreement.status === AgreementStatus.PENDING_STRATEGY_REVIEW) {
+    const step5 = computeStep5State(activeAgreement.status, strategyDocAcceptanceStatus);
+    if (step5.isComplete) return 'active';
+    if (step5.phase === 'client_review') return 'awaiting_approval';
+    return 'awaiting_compliance'; // compliance_review or fallback
+  }
 
   // Map agreement status to client status
   switch (activeAgreement.status) {
@@ -37,8 +52,6 @@ export function computeClientStatus(
       return 'awaiting_documents';
     case AgreementStatus.PENDING_STRATEGY:
       return 'ready_for_strategy';
-    case AgreementStatus.PENDING_STRATEGY_REVIEW:
-      return 'awaiting_signature';
     case AgreementStatus.COMPLETED:
       return 'active';
     case AgreementStatus.CANCELLED:
@@ -105,9 +118,23 @@ export function canSendStrategy(agreement: ApiAgreement | null): boolean {
 }
 
 /**
- * Check if strategist can complete the agreement (finalize)
+ * Check if agreement can be completed (both compliance + client approved)
  */
-export function canCompleteAgreement(agreement: ApiAgreement | null): boolean {
+export function canCompleteAgreement(
+  agreement: ApiAgreement | null,
+  strategyDocAcceptanceStatus?: AcceptanceStatus | string | null
+): boolean {
   if (!agreement) return false;
-  return agreement.status === AgreementStatus.PENDING_STRATEGY_REVIEW;
+  if (agreement.status !== AgreementStatus.PENDING_STRATEGY_REVIEW) return false;
+
+  // Both compliance and client must have approved
+  const step5 = computeStep5State(agreement.status, strategyDocAcceptanceStatus);
+  return step5.isComplete;
 }
+
+/**
+ * Compute the full Step 5 state for use in components.
+ * Re-exports from strategy.model for convenience.
+ */
+export { computeStep5State } from '../models/strategy.model';
+export type { Step5State, StrategyPhase } from '../models/strategy.model';
