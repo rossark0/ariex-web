@@ -27,6 +27,8 @@ import {
   isAgreementSigned,
   isAgreementPaid,
 } from '@/types/agreement';
+import { useAiPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
+import type { AiDocumentContext, AiAgreementContext } from '@/contexts/ai/AiPageContextStore';
 
 // ============================================================================
 // ANIMATED DOTS COMPONENT
@@ -384,6 +386,48 @@ export default function ClientDashboardPage() {
   const clientName = clientUser.fullName || clientUser.name || clientUser.email.split('@')[0];
   const businessName = profile?.businessName;
   const createdAt = new Date(clientUser.createdAt);
+
+  // ─── AI Page Context ────────────────────────────────────────
+  useAiPageContext({
+    pageTitle: 'Client Dashboard',
+    userRole: 'CLIENT',
+    client: {
+      id: clientUser.id,
+      name: clientUser.fullName || clientUser.name || null,
+      email: clientUser.email,
+      phoneNumber: profile?.phoneNumber,
+      businessName: profile?.businessName,
+      businessType: profile?.businessType,
+      city: profile?.city,
+      state: profile?.state,
+      estimatedIncome: profile?.estimatedIncome,
+      filingStatus: profile?.filingStatus,
+      dependents: profile?.dependents,
+    },
+    documents: documents?.map(
+      (d): AiDocumentContext => ({
+        id: d.id,
+        name: d.name || 'Document',
+        type: d.type || d.category || 'unknown',
+        status: d.status,
+        category: d.category,
+        createdAt: typeof d.createdAt === 'string' ? d.createdAt : new Date(d.createdAt).toISOString(),
+      })
+    ),
+    agreements: agreements?.map(
+      (a): AiAgreementContext => ({
+        id: a.id,
+        name: a.name || a.title || 'Agreement',
+        status: a.status,
+        price: typeof a.price === 'string' ? parseFloat(a.price) : a.price,
+        createdAt: typeof a.createdAt === 'string' ? a.createdAt : new Date(a.createdAt).toISOString(),
+      })
+    ),
+    extra: {
+      strategistName: strategist?.name || strategist?.email,
+      todoCount: todos?.length ?? 0,
+    },
+  });
 
   // Status priority order (most advanced first)
   const STATUS_PRIORITY: Record<string, number> = {

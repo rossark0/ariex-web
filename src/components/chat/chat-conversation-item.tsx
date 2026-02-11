@@ -102,10 +102,10 @@ export function ChatConversationItem({
             {conversation.title}
           </span>
           <span className="shrink-0 text-[10px] text-zinc-400">
-            {conversation.isLoading ? '' : formatTime(conversation.lastMessageAt)}
+            {conversation.isLoading ? '' : `Last message ${formatTime(conversation.lastMessageAt)}`}
           </span>
         </div>
-        {conversation.isLoading ? (
+        {/* {conversation.isLoading ? (
           <div className="flex items-center gap-1 text-xs text-zinc-400">
             <SpinnerGap className="h-3 w-3 animate-spin" />
             <span>Loading...</span>
@@ -119,7 +119,7 @@ export function ChatConversationItem({
           >
             {conversation.lastMessage}
           </p>
-        )}
+        )} */}
       </div>
     </button>
   );

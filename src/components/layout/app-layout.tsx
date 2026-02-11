@@ -9,6 +9,7 @@ import ChatSidebar from './chat-sidebar';
 import { SidebarToggle } from './sidebar-toggle';
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
+import { useAiBasicPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
 import { DesktopIcon, DeviceMobileCamera } from '@phosphor-icons/react';
 
 interface AppLayoutProps {
@@ -31,6 +32,10 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
     isDeletingSelection,
   } = useUiStore();
   const { user } = useAuth();
+
+  // Provide basic page context (route + role) to AI chatbot for all pages.
+  // Individual pages can override with richer context via useAiPageContext.
+  useAiBasicPageContext(user?.role || 'UNKNOWN');
 
   // Mobile detection (below lg breakpoint - 1024px)
   const [isMobile, setIsMobile] = useState(false);

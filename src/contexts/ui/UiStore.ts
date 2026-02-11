@@ -1,6 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
+import { useAiPageContextStore } from '@/contexts/ai/AiPageContextStore';
 
 export interface AiMessage {
   id: string;
@@ -39,10 +40,15 @@ interface UiState {
   // AI chat state
   aiMessages: AiMessage[];
   isAiChatOpen: boolean;
+  isAiLoading: boolean;
+  aiAbortController: AbortController | null;
   setAiChatOpen: (open: boolean) => void;
   addAiMessage: (message: Omit<AiMessage, 'id' | 'timestamp'>) => void;
+  updateLastAiMessage: (content: string) => void;
   clearAiMessages: () => void;
+  sendAiMessage: (userMessage: string) => Promise<void>;
   askAriexWithContext: (contextType: string, count: number) => void;
+  stopAiGeneration: () => void;
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -81,6 +87,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   // AI chat state
   aiMessages: [],
   isAiChatOpen: false,
+  isAiLoading: false,
+  aiAbortController: null,
   setAiChatOpen: open => set({ isAiChatOpen: open }),
   addAiMessage: message =>
     set(state => ({
@@ -93,30 +101,161 @@ export const useUiStore = create<UiState>((set, get) => ({
         },
       ],
     })),
+  updateLastAiMessage: (content: string) =>
+    set(state => {
+      const msgs = [...state.aiMessages];
+      const lastIdx = msgs.length - 1;
+      if (lastIdx >= 0 && msgs[lastIdx].role === 'assistant') {
+        msgs[lastIdx] = { ...msgs[lastIdx], content };
+      }
+      return { aiMessages: msgs };
+    }),
   clearAiMessages: () => set({ aiMessages: [] }),
-  askAriexWithContext: (contextType, count) => {
-    const { addAiMessage, setAiChatOpen, onClearSelection } = get();
 
-    // Add user message with context
-    const userMessage = `Analyze my ${count} selected ${contextType}${count > 1 ? 's' : ''}`;
-    addAiMessage({ role: 'user', content: userMessage, context: { type: contextType, count } });
+  stopAiGeneration: () => {
+    const { aiAbortController } = get();
+    if (aiAbortController) {
+      aiAbortController.abort();
+      set({ aiAbortController: null, isAiLoading: false });
+    }
+  },
+
+  sendAiMessage: async (userMessage: string) => {
+    const { addAiMessage, updateLastAiMessage, aiMessages } = get();
+
+    // Add user message
+    addAiMessage({ role: 'user', content: userMessage });
+
+    // Create abort controller for this request
+    const abortController = new AbortController();
+    set({ isAiLoading: true, aiAbortController: abortController });
+
+    // Prepare messages history (use current + new user message)
+    const messagesForApi = [
+      ...aiMessages
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => ({ role: m.role, content: m.content })),
+      { role: 'user' as const, content: userMessage },
+    ];
+
+    // Get page context from the AI context store
+    const pageContext = useAiPageContextStore.getState().pageContext;
+
+    try {
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: messagesForApi, pageContext }),
+        signal: abortController.signal,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || `Request failed (${response.status})`);
+      }
+
+      // Add empty assistant message to stream into
+      addAiMessage({ role: 'assistant', content: '' });
+
+      // Stream the response
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response stream');
+
+      const decoder = new TextDecoder();
+      let accumulated = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        accumulated += decoder.decode(value, { stream: true });
+        updateLastAiMessage(accumulated);
+      }
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        // User cancelled — don't add error message
+        return;
+      }
+      console.error('[AI Chat] Stream error:', error);
+      addAiMessage({
+        role: 'assistant',
+        content: `Sorry, I encountered an error: ${error.message || 'Please try again.'}`,
+      });
+    } finally {
+      set({ isAiLoading: false, aiAbortController: null });
+    }
+  },
+
+  askAriexWithContext: (contextType, count) => {
+    const { sendAiMessage, setAiChatOpen, onClearSelection, addAiMessage } = get();
+
+    // Build a contextual user message
+    const userMessage = `Analyze my ${count} selected ${contextType}${count > 1 ? 's' : ''} and provide insights, recommendations, and any action items.`;
+
+    // Add user message with visual context indicator
+    addAiMessage({
+      role: 'user',
+      content: userMessage,
+      context: { type: contextType, count },
+    });
 
     // Open the chat
     setAiChatOpen(true);
 
-    // Simulate AI response after a short delay
-    setTimeout(() => {
-      const mockResponses: Record<string, string> = {
-        payment: `I've analyzed your ${count} selected payment${count > 1 ? 's' : ''}. Here's what I found:\n\n• **Total amount**: The selected payments total varies based on your selection\n• **Status overview**: I can see the payment statuses and due dates\n• **Recommendations**: Consider setting up automatic payments for recurring invoices to avoid late fees\n\nWould you like me to provide more details about any specific payment, or help you understand your payment history better?`,
-        agreement: `I've reviewed your ${count} selected agreement${count > 1 ? 's' : ''}. Here's my analysis:\n\n• **Document status**: I can see the signature status of each agreement\n• **Key terms**: These agreements outline your tax advisory services with Ariex\n• **Action items**: ${count > 1 ? 'Some agreements may require your signature' : 'Check if this agreement requires any action'}\n\nWould you like me to summarize the key points of any specific agreement, or explain any terms in detail?`,
-        document: `I've analyzed your ${count} selected document${count > 1 ? 's' : ''}. Here's what I found:\n\n• **Document types**: Tax-related documents for your strategy\n• **Upload dates**: Recently uploaded files are ready for review\n• **Next steps**: Your tax strategist will review these documents\n\nWould you like me to help categorize these documents or explain how they'll be used in your tax strategy?`,
-      };
+    // Create abort controller for this request
+    const abortController = new AbortController();
+    set({ isAiLoading: true, aiAbortController: abortController });
 
-      const response =
-        mockResponses[contextType] ||
-        `I've analyzed your ${count} selected item${count > 1 ? 's' : ''}. How can I help you with ${count > 1 ? 'them' : 'it'}?`;
-      addAiMessage({ role: 'assistant', content: response });
-    }, 1000);
+    // Prepare messages for API (just this one user message for a fresh analysis)
+    const messagesForApi = [{ role: 'user' as const, content: userMessage }];
+
+    // Get page context
+    const pageContext = useAiPageContextStore.getState().pageContext;
+
+    // Fire the streaming request
+    (async () => {
+      try {
+        const response = await fetch('/api/ai/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: messagesForApi,
+            pageContext,
+            selectedItems: { type: contextType, count },
+          }),
+          signal: abortController.signal,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          throw new Error(errorData?.error || `Request failed (${response.status})`);
+        }
+
+        addAiMessage({ role: 'assistant', content: '' });
+
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('No response stream');
+
+        const decoder = new TextDecoder();
+        let accumulated = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          accumulated += decoder.decode(value, { stream: true });
+          get().updateLastAiMessage(accumulated);
+        }
+      } catch (error: any) {
+        if (error.name === 'AbortError') return;
+        console.error('[AI Chat] Stream error:', error);
+        addAiMessage({
+          role: 'assistant',
+          content: `Sorry, I encountered an error: ${error.message || 'Please try again.'}`,
+        });
+      } finally {
+        set({ isAiLoading: false, aiAbortController: null });
+      }
+    })();
 
     // Clear selection after asking
     if (onClearSelection) {

@@ -42,6 +42,8 @@ import { PaymentModal } from '@/contexts/strategist-contexts/client-management/c
 import { DeleteTodoDialog } from '@/contexts/strategist-contexts/client-management/components/detail/delete-todo-dialog';
 
 import { useClientDetailData } from '@/contexts/strategist-contexts/client-management/hooks/use-client-detail-data';
+import { useAiPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
+import type { AiDocumentContext, AiAgreementContext } from '@/contexts/ai/AiPageContextStore';
 
 interface Props {
   params: { clientId: string };
@@ -50,6 +52,67 @@ interface Props {
 export default function StrategistClientDetailPage({ params }: Props) {
   const router = useRouter();
   const data = useClientDetailData(params.clientId);
+
+  // ─── AI Page Context ────────────────────────────────────────
+
+  useAiPageContext({
+    pageTitle: data.client
+      ? `Client: ${data.client.user.name || data.client.user.email}`
+      : 'Client Detail',
+    userRole: 'STRATEGIST',
+    client: data.client
+      ? {
+          id: data.client.user.id,
+          name: data.client.user.name,
+          email: data.client.user.email,
+          phoneNumber: data.client.profile.phoneNumber,
+          businessName: data.client.profile.businessName,
+          businessType: data.client.profile.businessType,
+          city: data.client.profile.city,
+          state: data.client.profile.state,
+          estimatedIncome: data.client.profile.estimatedIncome,
+          filingStatus: data.client.profile.filingStatus,
+          dependents: data.client.profile.dependents,
+          statusKey: data.statusKey,
+        }
+      : null,
+    documents: data.clientDocuments.map(
+      (d): AiDocumentContext => ({
+        id: d.id,
+        name: d.name,
+        type: d.type,
+        status: d.status,
+        category: d.category,
+        acceptanceStatus: d.acceptanceStatus,
+        uploadedBy: d.uploadedByName || d.uploadedBy,
+        createdAt: d.createdAt,
+      })
+    ),
+    agreements: data.agreements.map(
+      (a): AiAgreementContext => ({
+        id: a.id,
+        name: a.name,
+        status: a.status,
+        price: typeof a.price === 'string' ? parseFloat(a.price) : a.price,
+        createdAt: a.createdAt,
+      })
+    ),
+    strategy: data.step5State
+      ? {
+          sent: !!data.step5State.strategySent,
+          phase: data.step5State.phase,
+          isComplete: !!data.step5State.isComplete,
+        }
+      : null,
+    extra: {
+      hasAgreementSigned: data.hasAgreementSigned,
+      hasPaymentReceived: !!data.existingCharge && data.existingCharge.status === 'paid',
+      hasAllDocumentsAccepted: data.hasAllDocumentsAccepted,
+      uploadedDocCount: data.uploadedDocCount,
+      totalDocTodos: data.totalDocTodos,
+      acceptedDocCount: data.acceptedDocCount,
+    },
+  });
 
   // ─── Loading / Not Found ────────────────────────────────────
 
