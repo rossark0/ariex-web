@@ -1,12 +1,14 @@
 'use client';
 
 import type { ApiAgreement } from '@/lib/api/strategist.api';
+import { getDownloadUrl } from '@/lib/api/strategist.api';
 import type { FullClientMock } from '@/lib/mocks/client-full';
 import { AgreementStatus } from '@/types/agreement';
 import { AcceptanceStatus } from '@/types/document';
 import type { Step5State } from '../../models/strategy.model';
 import {
   Check as CheckIcon,
+  Eye,
   FileArrowDown as FileArrowDownIcon,
   SpinnerGap,
   X as XIcon,
@@ -15,6 +17,7 @@ import { Clock } from '@phosphor-icons/react/dist/ssr';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { DocumentPreviewModal } from '@/components/ui/document-preview-modal';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -143,6 +146,22 @@ export function ActivityTimeline({
   const [decliningDocId, setDecliningDocId] = useState<string | null>(null);
   const [deletingTodoId, setDeletingTodoId] = useState<string | null>(null);
   const [isAdvancingToStrategy, setIsAdvancingToStrategy] = useState(false);
+  // Preview state
+  const [previewDoc, setPreviewDoc] = useState<{
+    name: string;
+    url: string | null;
+    loading: boolean;
+  } | null>(null);
+
+  const handlePreviewDoc = async (docId: string, fileName: string) => {
+    setPreviewDoc({ name: fileName, url: null, loading: true });
+    try {
+      const url = await getDownloadUrl(docId);
+      setPreviewDoc(prev => (prev ? { ...prev, url: url || null, loading: false } : null));
+    } catch {
+      setPreviewDoc(prev => (prev ? { ...prev, loading: false } : null));
+    }
+  };
 
   // Derived data from client
   const agreementTask = client.onboardingTasks.find(t => t.type === 'sign_agreement');
@@ -510,6 +529,21 @@ export function ActivityTimeline({
                               )}
                             </button>
                           )}
+                          {/* Preview button for uploaded docs */}
+                          {isUploaded && documentId && (
+                            <button
+                              onClick={() =>
+                                handlePreviewDoc(
+                                  documentId,
+                                  uploadedFile?.originalName || todo.title
+                                )
+                              }
+                              className="rounded p-1 text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-200 hover:text-zinc-600"
+                              title="Preview document"
+                            >
+                              <Eye weight="bold" className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                           {/* Delete button - only show if not uploaded */}
                           {!isUploaded && (
                             <button
@@ -585,28 +619,28 @@ export function ActivityTimeline({
                   ? 'Tax strategy approved'
                   : step5State?.phase === 'client_review'
                     ? 'Strategy awaiting client approval'
-                  : step5State?.phase === 'client_declined'
-                    ? 'Client declined strategy'
-                  : step5State?.phase === 'compliance_review'
-                    ? 'Strategy under compliance review'
-                  : step5State?.phase === 'compliance_rejected'
-                    ? 'Compliance rejected strategy'
-                  : step5State?.strategySent || step5Sent
-                    ? 'Strategy sent for review'
-                    : 'Tax strategy pending'}
+                    : step5State?.phase === 'client_declined'
+                      ? 'Client declined strategy'
+                      : step5State?.phase === 'compliance_review'
+                        ? 'Strategy under compliance review'
+                        : step5State?.phase === 'compliance_rejected'
+                          ? 'Compliance rejected strategy'
+                          : step5State?.strategySent || step5Sent
+                            ? 'Strategy sent for review'
+                            : 'Tax strategy pending'}
               </span>
               <span className="text-sm text-zinc-500">
                 {step5State?.isComplete
                   ? 'Both compliance and client have approved'
                   : step5State?.phase === 'client_review'
                     ? 'Compliance approved — waiting for client to approve or decline'
-                  : step5State?.phase === 'client_declined'
-                    ? 'Client has declined the strategy. Revise and resend.'
-                  : step5State?.phase === 'compliance_review'
-                    ? 'Waiting for compliance team to review and approve'
-                  : step5State?.phase === 'compliance_rejected'
-                    ? 'Compliance has rejected the strategy. Revise and resend.'
-                  : 'Ready to create personalized tax strategy'}
+                    : step5State?.phase === 'client_declined'
+                      ? 'Client has declined the strategy. Revise and resend.'
+                      : step5State?.phase === 'compliance_review'
+                        ? 'Waiting for compliance team to review and approve'
+                        : step5State?.phase === 'compliance_rejected'
+                          ? 'Compliance has rejected the strategy. Revise and resend.'
+                          : 'Ready to create personalized tax strategy'}
               </span>
               <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                 {strategyMetadata?.sentAt
@@ -778,6 +812,14 @@ export function ActivityTimeline({
           </div>
         </div>
       </div>
+      {/* Preview Modal */}
+      <DocumentPreviewModal
+        isOpen={!!previewDoc}
+        onClose={() => setPreviewDoc(null)}
+        url={previewDoc?.url || null}
+        fileName={previewDoc?.name || ''}
+        isLoading={previewDoc?.loading}
+      />
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   listClientAgreements,
   listAgreementDocuments,
   getAgreementEnvelopeStatus,
+  getDocumentById,
   getDownloadUrl,
   createCharge,
   generatePaymentLink,
@@ -261,6 +262,21 @@ export function useClientDetailData(clientId: string): ClientDetailData {
       setIsLoadingDocuments(true);
       try {
         const docs = await listAgreementDocuments(first.id);
+
+        // Ensure the agreement's contract document is included
+        // (it may be missing if the agreementId linkage failed during creation)
+        if (first.contractDocumentId) {
+          const alreadyIncluded = docs.some(d => d.id === first.contractDocumentId);
+          if (!alreadyIncluded) {
+            try {
+              const contractDoc = await getDocumentById(first.contractDocumentId);
+              if (contractDoc) docs.unshift(contractDoc);
+            } catch {
+              // Contract doc fetch failed — continue with what we have
+            }
+          }
+        }
+
         setClientDocuments(docs);
       } catch (error) {
         console.error('[Hook] Failed to load documents:', error);
@@ -438,7 +454,7 @@ export function useClientDetailData(clientId: string): ClientDetailData {
 
   // Find the strategy document from loaded documents (for acceptanceStatus)
   const strategyApiDoc = strategyDocumentId
-    ? clientDocuments.find(d => d.id === strategyDocumentId) ?? null
+    ? (clientDocuments.find(d => d.id === strategyDocumentId) ?? null)
     : null;
 
   // Compute Step 5 state machine
