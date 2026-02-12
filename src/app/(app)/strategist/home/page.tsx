@@ -20,10 +20,6 @@ interface ClientActivity {
   date: Date;
 }
 
-
-
-
-
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
@@ -56,13 +52,9 @@ function formatRelativeTime(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-
-
 // ============================================================================
 // COMPONENTS
 // ============================================================================
-
-
 
 function ActivityRow({ activity }: { activity: ClientActivity }) {
   const router = useRouter();
@@ -194,7 +186,7 @@ export default function StrategistDashboardPage() {
               Welcome back{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
             </h1>
             <p className="mb-6 text-zinc-500">
-              {clients.length > 0
+              {clients?.length > 0
                 ? `You have ${clients.length} client${clients.length !== 1 ? 's' : ''}`
                 : 'Get started by adding your first client'}
             </p>

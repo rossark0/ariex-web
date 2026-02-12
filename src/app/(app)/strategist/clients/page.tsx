@@ -10,11 +10,13 @@ import {
   User,
   X,
 } from '@phosphor-icons/react/dist/ssr';
-import { ChevronDown, ChevronDownIcon } from 'lucide-react';
+import { Check, ChevronDown, ChevronDownIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { listClients, createClient, type ApiClient } from '@/lib/api/strategist.api';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { listClients, listAgreements, createClient, type ApiClient, type ApiAgreement } from '@/lib/api/strategist.api';
 import { useAuth } from '@/contexts/auth/AuthStore';
+import { CLIENT_STATUS_CONFIG, type ClientStatusKey } from '@/lib/client-status';
+import { computeClientStatus } from '@/contexts/strategist-contexts/client-management/utils/status-helpers';
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -30,48 +32,19 @@ function getInitials(name: string | null): string {
     .slice(0, 2);
 }
 
-function getClientStatus(client: ApiClient): {
-  label: string;
-  key: string;
-  badgeColor: string;
-  textClassName: string;
-} {
-  // Check user status first (invited, active, suspended)
-  if (client.status === 'invited') {
-    return {
-      label: 'Invited',
-      key: 'invited',
-      badgeColor: 'bg-blue-500',
-      textClassName: 'text-blue-700',
-    };
-  }
-
-  if (client.status === 'suspended') {
-    return {
-      label: 'Suspended',
-      key: 'suspended',
-      badgeColor: 'bg-red-500',
-      textClassName: 'text-red-700',
-    };
-  }
-
-  // For active users, check onboarding status
-  const isOnboarding = !client.clientProfile?.onboardingComplete;
-
-  if (isOnboarding) {
-    return {
-      label: 'Onboarding',
-      key: 'onboarding',
-      badgeColor: 'bg-amber-500',
-      textClassName: 'text-amber-700',
-    };
-  }
-
+/** Derive status for a client based on their agreements */
+function getClientStatusFromAgreements(
+  client: ApiClient,
+  allAgreements: ApiAgreement[]
+): { key: ClientStatusKey; label: string; badgeColor: string; textClassName: string } {
+  const clientAgreements = allAgreements.filter(a => a.clientId === client.id);
+  const statusKey = computeClientStatus(client, clientAgreements);
+  const config = CLIENT_STATUS_CONFIG[statusKey];
   return {
-    label: 'Active',
-    key: 'active',
-    badgeColor: 'bg-emerald-500',
-    textClassName: 'text-emerald-700',
+    key: statusKey,
+    label: config.label,
+    badgeColor: config.badgeColor,
+    textClassName: config.textClassName,
   };
 }
 
@@ -79,10 +52,9 @@ function getClientStatus(client: ApiClient): {
 // CLIENT CARD COMPONENT
 // ============================================================================
 
-function ClientCard({ client }: { client: ApiClient }) {
+function ClientCard({ client, status }: { client: ApiClient; status: { key: ClientStatusKey; label: string; badgeColor: string; textClassName: string } }) {
   const router = useRouter();
   const initials = getInitials(client.name);
-  const status = getClientStatus(client);
 
   const description =
     client.clientProfile?.city && client.clientProfile?.state
@@ -398,20 +370,66 @@ function EmptyState({ onAddClient }: { onAddClient: () => void }) {
 // MAIN PAGE COMPONENT
 // ============================================================================
 
+type StatusFilterOption = 'all' | ClientStatusKey;
+
+const STATUS_FILTER_OPTIONS: { key: StatusFilterOption; label: string; color: string }[] = [
+  { key: 'all', label: 'All Clients', color: 'bg-zinc-500' },
+  { key: 'awaiting_agreement', label: 'Pending Signature', color: 'bg-amber-500' },
+  { key: 'awaiting_payment', label: 'Pending Payment', color: 'bg-amber-500' },
+  { key: 'awaiting_documents', label: 'Pending Documents', color: 'bg-amber-500' },
+  { key: 'ready_for_strategy', label: 'Ready for Strategy', color: 'bg-zinc-500' },
+  { key: 'awaiting_compliance', label: 'Compliance Review', color: 'bg-amber-500' },
+  { key: 'awaiting_approval', label: 'Client Approval', color: 'bg-teal-500' },
+  { key: 'active', label: 'Active', color: 'bg-emerald-500' },
+];
+
+/** Ordered sections for grouped display */
+const STATUS_SECTION_ORDER: ClientStatusKey[] = [
+  'awaiting_agreement',
+  'awaiting_payment',
+  'awaiting_documents',
+  'ready_for_strategy',
+  'awaiting_compliance',
+  'awaiting_approval',
+  'active',
+];
+
+function groupClientsByStatus(
+  clients: ApiClient[],
+  allAgreements: ApiAgreement[]
+): Record<string, ApiClient[]> {
+  const groups: Record<string, ApiClient[]> = {};
+  for (const client of clients) {
+    const status = getClientStatusFromAgreements(client, allAgreements);
+    if (!groups[status.key]) groups[status.key] = [];
+    groups[status.key].push(client);
+  }
+  return groups;
+}
+
 export default function StrategistClientsPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilterOption>('all');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [clients, setClients] = useState<ApiClient[]>([]);
+  const [agreements, setAgreements] = useState<ApiAgreement[]>([]);
 
   const loadClients = async () => {
     try {
-      const data = await listClients();
-      setClients(data || []); // Ensure we always set an array
+      const [clientsData, agreementsData] = await Promise.all([
+        listClients(),
+        listAgreements(),
+      ]);
+      setClients(clientsData || []);
+      setAgreements(agreementsData || []);
     } catch (error) {
       console.error('Failed to load clients:', error);
-      setClients([]); // Reset to empty array on error
+      setClients([]);
+      setAgreements([]);
     } finally {
       setIsLoading(false);
     }
@@ -421,11 +439,26 @@ export default function StrategistClientsPage() {
     loadClients();
   }, []);
 
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setIsFilterOpen(false);
+      }
+    }
+    if (isFilterOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isFilterOpen]);
+
   const filteredClients = clients.filter(client => {
-    if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
-    return client.name?.toLowerCase().includes(q) || client.email?.toLowerCase().includes(q);
+    const matchesSearch = !searchQuery || client.name?.toLowerCase().includes(q) || client.email?.toLowerCase().includes(q);
+    const matchesStatus = statusFilter === 'all' || getClientStatusFromAgreements(client, agreements).key === statusFilter;
+    return matchesSearch && matchesStatus;
   });
+
+  const groupedClients = groupClientsByStatus(filteredClients, agreements);
+  const activeFilterLabel = STATUS_FILTER_OPTIONS.find(o => o.key === statusFilter);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -458,14 +491,46 @@ export default function StrategistClientsPage() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <button className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50">
+                {/* <button className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50">
                   <span>Folder</span>
                   <ChevronDown className="h-4 w-4" />
-                </button>
-                <button className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50">
-                  <span>Filter</span>
-                  <ChevronDownIcon className="h-4 w-4" />
-                </button>
+                </button> */}
+                <div ref={filterRef} className="relative">
+                  <button
+                    onClick={() => setIsFilterOpen(prev => !prev)}
+                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-1 text-sm font-medium transition-colors ${
+                      statusFilter !== 'all'
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                        : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50'
+                    }`}
+                  >
+                    {statusFilter !== 'all' && (
+                      <div className={`h-1.5 w-1.5 rounded-full ${activeFilterLabel?.color}`} />
+                    )}
+                    <span>{statusFilter === 'all' ? 'Filter' : activeFilterLabel?.label}</span>
+                    <ChevronDownIcon className={`h-4 w-4 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {isFilterOpen && (
+                    <div className="absolute right-0 z-50 mt-1 w-48 overflow-hidden rounded-xl border border-zinc-200 bg-white py-1 shadow-lg">
+                      {STATUS_FILTER_OPTIONS.map(option => (
+                        <button
+                          key={option.key}
+                          onClick={() => {
+                            setStatusFilter(option.key);
+                            setIsFilterOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                        >
+                          <div className={`h-2 w-2 rounded-full ${option.color}`} />
+                          <span className="flex-1">{option.label}</span>
+                          {statusFilter === option.key && (
+                            <Check className="h-3.5 w-3.5 text-emerald-500" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={() => setIsAddClientModalOpen(true)}
                   className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-500 bg-emerald-500 px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-emerald-600"
@@ -487,13 +552,31 @@ export default function StrategistClientsPage() {
             ) : filteredClients.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <p className="mb-1 text-lg font-semibold text-zinc-800">No clients found</p>
-                <p className="text-sm text-zinc-400">Try adjusting your search</p>
+                <p className="text-sm text-zinc-400">Try adjusting your search or filter</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {filteredClients.map(client => (
-                  <ClientCard key={client.id} client={client} />
-                ))}
+              <div className="space-y-8">
+                {STATUS_SECTION_ORDER.map(statusKey => {
+                  const group = groupedClients[statusKey];
+                  if (!group || group.length === 0) return null;
+                  const meta = STATUS_FILTER_OPTIONS.find(o => o.key === statusKey)!;
+                  return (
+                    <div key={statusKey}>
+                      <div className="mb-3 flex items-center gap-2">
+                        <div className={`h-2 w-2 rounded-full ${meta.color}`} />
+                        <h2 className="text-sm font-semibold text-zinc-700">{meta.label}</h2>
+                        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">
+                          {group.length}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {group.map(client => (
+                          <ClientCard key={client.id} client={client} status={getClientStatusFromAgreements(client, agreements)} />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

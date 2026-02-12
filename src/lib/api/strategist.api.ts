@@ -1,3 +1,4 @@
+
 'use server';
 
 import { API_URL } from '@/lib/cognito-config';
@@ -62,6 +63,7 @@ export interface ApiDocument {
   mimeType?: string;
   size?: number;
   todoId?: string; // Link to todo if document was uploaded for a todo request
+  acceptanceStatus?: AcceptanceStatus; // Compliance/client approval status (used by strategy docs)
 }
 
 export interface ApiPayment {
@@ -1174,12 +1176,28 @@ export async function createCharge(data: {
 
     console.log('🔵 [API] Creating charge - Request body:', JSON.stringify(requestBody, null, 2));
 
-    const charge = await apiRequest<Charge>('/charges', {
+
+    const raw = await apiRequest<any>('/charges', {
       method: 'POST',
       body: JSON.stringify(requestBody),
     });
 
-    console.log('🔵 [API] Charge created - Response:', JSON.stringify(charge, null, 2));
+    console.log('🔵 [API] Charge created - Response:', JSON.stringify(raw, null, 2));
+
+    // Map backend amountCents → frontend amount in dollars
+    const charge: Charge = {
+      id: raw.id,
+      agreementId: raw.agreementId,
+      amount: raw.amountCents ? raw.amountCents / 100 : raw.amount || data.amount,
+      currency: raw.currency || 'usd',
+      status: raw.status,
+      description: raw.description,
+      paymentLink: raw.paymentLink,
+      stripePaymentIntentId: raw.stripePaymentIntentId,
+      createdAt: raw.createdAt,
+      updatedAt: raw.updatedAt,
+    };
+
     return charge;
   } catch (error) {
     console.error('🔵 [API] Failed to create charge:', error);
@@ -1192,7 +1210,23 @@ export async function createCharge(data: {
  */
 export async function getChargesForAgreement(agreementId: string): Promise<Charge[]> {
   try {
-    const charges = await apiRequest<Charge[]>(`/charges/agreement/${agreementId}`);
+
+    const rawCharges = await apiRequest<any[]>(`/charges/agreement/${agreementId}`);
+
+    // Map backend fields (amountCents) → frontend interface (amount in dollars)
+    const charges: Charge[] = rawCharges.map(c => ({
+      id: c.id,
+      agreementId: c.agreementId,
+      amount: c.amountCents ? c.amountCents / 100 : c.amount || 0,
+      currency: c.currency || 'usd',
+      status: c.status,
+      description: c.description,
+      paymentLink: c.paymentLink,
+      stripePaymentIntentId: c.stripePaymentIntentId,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    }));
+
     return charges;
   } catch (error) {
     console.error('[API] Failed to get charges for agreement:', error);
@@ -1205,8 +1239,20 @@ export async function getChargesForAgreement(agreementId: string): Promise<Charg
  */
 export async function getCharge(chargeId: string): Promise<Charge | null> {
   try {
-    const charge = await apiRequest<Charge>(`/charges/${chargeId}`);
-    return charge;
+
+    const raw = await apiRequest<any>(`/charges/${chargeId}`);
+    return {
+      id: raw.id,
+      agreementId: raw.agreementId,
+      amount: raw.amountCents ? raw.amountCents / 100 : raw.amount || 0,
+      currency: raw.currency || 'usd',
+      status: raw.status,
+      description: raw.description,
+      paymentLink: raw.paymentLink,
+      stripePaymentIntentId: raw.stripePaymentIntentId,
+      createdAt: raw.createdAt,
+      updatedAt: raw.updatedAt,
+    };
   } catch (error) {
     console.error('[API] Failed to get charge:', error);
     return null;

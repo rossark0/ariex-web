@@ -1,12 +1,16 @@
 /**
  * Client Status Logic
- * 
+ *
  * Computes client status based on the 5-step timeline:
  * 1. Account Created (always complete)
  * 2. Agreement signed
  * 3. Payment received
  * 4. Documents uploaded
- * 5. Strategy signed
+ * 5. Strategy approved (compliance → client sequential approval)
+ *
+ * NOTE: getStatusKey() still uses `awaiting_signature` for mock-based flows.
+ * The real flow uses computeClientStatus() from status-helpers.ts which
+ * returns `awaiting_compliance` / `awaiting_approval` instead.
  */
 
 import type { FullClientMock } from '@/lib/mocks/client-full';
@@ -15,12 +19,14 @@ import type { FullClientMock } from '@/lib/mocks/client-full';
 // TYPES
 // ============================================================================
 
-export type ClientStatusKey = 
-  | 'awaiting_agreement' 
-  | 'awaiting_payment' 
-  | 'awaiting_documents' 
-  | 'ready_for_strategy' 
-  | 'awaiting_signature' 
+export type ClientStatusKey =
+  | 'awaiting_agreement'
+  | 'awaiting_payment'
+  | 'awaiting_documents'
+  | 'ready_for_strategy'
+  | 'awaiting_compliance'
+  | 'awaiting_approval'
+  | 'awaiting_signature' // @deprecated — replaced by awaiting_compliance/awaiting_approval; kept for mock-based compliance pages
   | 'active';
 
 export interface ClientStatusConfig {
@@ -76,8 +82,22 @@ export const CLIENT_STATUS_CONFIG: Record<ClientStatusKey, ClientStatusConfig> =
     borderClassName: 'border-zinc-300',
     textClassName: 'text-zinc-500',
   },
+  awaiting_compliance: {
+    label: 'strategy · compliance review',
+    badgeColor: 'bg-amber-500',
+    badgeClassName: 'bg-amber-100 text-amber-700',
+    borderClassName: 'border-amber-400',
+    textClassName: 'text-amber-600',
+  },
+  awaiting_approval: {
+    label: 'strategy · pending client approval',
+    badgeColor: 'bg-teal-500',
+    badgeClassName: 'bg-teal-100 text-teal-700',
+    borderClassName: 'border-teal-500',
+    textClassName: 'text-teal-600',
+  },
   awaiting_signature: {
-    label: 'strategy · pending signature',
+    label: 'strategy · pending review',
     badgeColor: 'bg-teal-500',
     badgeClassName: 'bg-teal-100 text-teal-700',
     borderClassName: 'border-teal-500',
@@ -103,8 +123,8 @@ export function getTimelineState(client: FullClientMock): TimelineStepState {
   const agreementTask = client.onboardingTasks.find(t => t.type === 'sign_agreement');
   const docsTask = client.onboardingTasks.find(t => t.type === 'upload_documents');
   const payment = client.payments[0];
-  const agreementDoc = client.documents.find(d => 
-    d.category === 'contract' && d.id === agreementTask?.agreementDocumentId
+  const agreementDoc = client.documents.find(
+    d => d.category === 'contract' && d.id === agreementTask?.agreementDocumentId
   );
   const strategyDoc = client.documents.find(
     d => d.category === 'contract' && d.originalName.toLowerCase().includes('strategy')
@@ -112,13 +132,15 @@ export function getTimelineState(client: FullClientMock): TimelineStepState {
 
   // Step completion states (client has completed their part)
   const step1Complete = true; // Account created is always complete
-  const step2Complete = agreementTask?.status === 'completed' || agreementDoc?.signatureStatus === 'SIGNED';
+  const step2Complete =
+    agreementTask?.status === 'completed' || agreementDoc?.signatureStatus === 'SIGNED';
   const step3Complete = payment?.status === 'completed';
   const step4Complete = docsTask?.status === 'completed';
   const step5Complete = strategyDoc?.signatureStatus === 'SIGNED';
 
   // Strategist has acted on each step
-  const step2Sent = agreementDoc?.signatureStatus === 'SENT' || agreementDoc?.signatureStatus === 'SIGNED';
+  const step2Sent =
+    agreementDoc?.signatureStatus === 'SENT' || agreementDoc?.signatureStatus === 'SIGNED';
   const step3Sent = step2Complete && !!payment?.paymentLinkUrl;
   const step4Sent = step3Complete;
   const step5Sent = step4Complete && (strategyDoc?.signatureStatus === 'SENT' || step5Complete);
@@ -151,7 +173,9 @@ export function getStatusKey(state: TimelineStepState): ClientStatusKey {
 /**
  * Get the full status configuration for a client
  */
-export function getClientStatus(client: FullClientMock): ClientStatusConfig & { key: ClientStatusKey } {
+export function getClientStatus(
+  client: FullClientMock
+): ClientStatusConfig & { key: ClientStatusKey } {
   const state = getTimelineState(client);
   const key = getStatusKey(state);
   return { ...CLIENT_STATUS_CONFIG[key], key };
@@ -164,11 +188,10 @@ export function getClientTimelineAndStatus(client: FullClientMock) {
   const state = getTimelineState(client);
   const key = getStatusKey(state);
   const config = CLIENT_STATUS_CONFIG[key];
-  
+
   return {
     ...state,
     statusKey: key,
     statusConfig: config,
   };
 }
-

@@ -815,7 +815,7 @@ export async function getChargesForAgreement(agreementId: string): Promise<Clien
     const charges: ClientCharge[] = rawCharges.map(c => ({
       id: c.id,
       agreementId: c.agreementId,
-      amount: c.amountCents || c.amount || 0,
+      amount: c.amountCents ? c.amountCents / 100 : c.amount || 0,
       currency: c.currency || 'usd',
       status: c.status,
       description: c.description,

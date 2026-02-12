@@ -1070,7 +1070,7 @@ export function StrategySheet({
                     <span>Sending...</span>
                   </>
                 ) : (
-                  <span>Send to client</span>
+                  <span>Send to compliance</span>
                 )}
               </button>
             </div>

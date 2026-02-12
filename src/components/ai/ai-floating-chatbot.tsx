@@ -1,29 +1,25 @@
 'use client';
 
-import { cn } from '@/lib/utils';
-import {
-  MinusIcon,
-  X,
-  CaretUp,
-  Paperclip,
-  ArrowUp,
-  Robot,
-  User,
-  ClipboardIcon,
-  PaperclipIcon,
-  DownloadSimple,
-  Trash,
-} from '@phosphor-icons/react';
-import { useEffect, useRef, useState } from 'react';
-import { Loader2 } from 'lucide-react';
-import { EmptyMessagesIllustration } from '@/components/ui/empty-messages-illustration';
 import { MarkdownContent } from '@/components/ui/markdown-content';
 import {
   MiniDocumentStack,
-  MiniPaymentStack,
   MiniFileStack,
+  MiniPaymentStack,
 } from '@/components/ui/mini-document-illustration';
-import { useUiStore, type AiMessage } from '@/contexts/ui/UiStore';
+import { useAiPageContextStore } from '@/contexts/ai/AiPageContextStore';
+import { useUiStore } from '@/contexts/ui/UiStore';
+import { cn } from '@/lib/utils';
+import {
+  ArrowUp,
+  DownloadSimple,
+  MinusIcon,
+  Paperclip,
+  Stop,
+  Trash,
+  X
+} from '@phosphor-icons/react';
+import { Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 interface AiFloatingChatbotProps {
   selectedCount?: number;
@@ -47,11 +43,15 @@ export function AiFloatingChatbot({
   const {
     aiMessages,
     isAiChatOpen,
+    isAiLoading,
     setAiChatOpen,
     addAiMessage,
+    sendAiMessage,
     askAriexWithContext,
     clearAiMessages,
+    stopAiGeneration,
   } = useUiStore();
+  const { pageContext } = useAiPageContextStore();
   const [input, setInput] = useState('');
   const [isMultiLine, setIsMultiLine] = useState(false);
   const [showSelectionBar, setShowSelectionBar] = useState(false);
@@ -60,6 +60,9 @@ export function AiFloatingChatbot({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Determine if the current user is a client
+  const isClient = pageContext?.userRole === 'CLIENT';
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -145,19 +148,10 @@ export function AiFloatingChatbot({
   }, [isAiChatOpen, input]);
 
   const handleSendMessage = () => {
-    if (!input.trim()) return;
-
-    addAiMessage({ role: 'user', content: input.trim() });
+    if (!input.trim() || isAiLoading) return;
+    const message = input.trim();
     setInput('');
-
-    // Simulate AI response
-    setTimeout(() => {
-      addAiMessage({
-        role: 'assistant',
-        content:
-          "I understand your question. As your AI tax assistant, I'm here to help you understand your tax documents, payments, and agreements. Is there anything specific you'd like me to explain or help you with?",
-      });
-    }, 1000);
+    sendAiMessage(message);
   };
 
   const handleAskAriex = () => {
@@ -192,7 +186,7 @@ export function AiFloatingChatbot({
               onClick={handleAskAriex}
               className="flex cursor-pointer items-center gap-1.5 rounded-full border border-zinc-200 bg-white py-1.5 pr-3 pl-3 text-sm font-medium text-teal-600 shadow-lg transition-colors hover:bg-teal-50"
             >
-              <span>Ask Ariex</span>
+              <span>Analyze with AI</span>
             </button>
 
             {/* Download button - shows when onDownload handler is provided */}
@@ -239,9 +233,20 @@ export function AiFloatingChatbot({
           <div className="z-50 flex flex-col gap-3 rounded-[36px] border border-zinc-200 bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-4">
               <div className="flex flex-col pl-2">
-                <span className="text-sm font-medium text-zinc-500">
-                  Ask questions or generate strategy notes
+                <span className="text-sm font-medium text-zinc-900">
+                  {isClient ? 'Tax Assistant' : 'Tax Strategy Assistant'}
                 </span>
+                {pageContext ? (
+                  <span className="mt-0.5 text-xs text-emerald-600">
+                    ● {pageContext.pageTitle}
+                  </span>
+                ) : (
+                  <span className="mt-0.5 text-xs text-zinc-400">
+                    {isClient
+                      ? 'Ask questions, track progress & understand your taxes'
+                      : 'Analyze docs, suggest deductions & build strategies'}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 {aiMessages.length > 0 && (
@@ -265,9 +270,110 @@ export function AiFloatingChatbot({
               {aiMessages.length === 0 ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3">
                   <div className="text-center">
-                    <p className="text-sm font-medium text-zinc-700">No messages yet</p>
-                    <p className="mt-1 text-xs text-zinc-500">Ask Ariex anything to get started</p>
+                    <p className="text-sm font-medium text-zinc-700">
+                      {isClient ? 'Your Tax Assistant' : 'Your Tax Strategy Assistant'}
+                    </p>
+                    <p className="mt-1 max-w-xs text-xs text-zinc-500">
+                      {isClient
+                        ? 'I can help you understand your tax situation, track your progress, and answer questions about documents, deadlines, and next steps.'
+                        : 'I can analyze client documents, suggest deductions & credits, identify missing filings, and help you build tax strategies.'}
+                    </p>
                   </div>
+                  {/* Context-aware quick actions */}
+                  {pageContext?.client && !isClient && (
+                    <div className="mt-2 flex flex-wrap justify-center gap-2">
+                      <button
+                        onClick={() => {
+                          const name = pageContext.client?.name || 'this client';
+                          sendAiMessage(`Based on ${name}'s profile, uploaded documents, and filing status, suggest personalized tax-saving strategies with estimated savings.`);
+                        }}
+                        className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                      >
+                        Suggest strategies
+                      </button>
+                      <button
+                        onClick={() => {
+                          const name = pageContext.client?.name || 'this client';
+                          sendAiMessage(`Summarize ${name}'s current status in the Ariex lifecycle (agreement, payment, documents, strategy) and tell me the next steps I should take.`);
+                        }}
+                        className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                      >
+                        Status & next steps
+                      </button>
+                      {(pageContext.documents?.length ?? 0) > 0 && (
+                        <button
+                          onClick={() => {
+                            sendAiMessage('Review the uploaded documents: list what we have, identify any missing standard documents (W-2, 1099s, prior returns), and flag anything that needs attention before I create a strategy.');
+                          }}
+                          className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                        >
+                          Audit documents
+                        </button>
+                      )}
+                      {pageContext.client?.estimatedIncome && (
+                        <button
+                          onClick={() => {
+                            const name = pageContext.client?.name || 'this client';
+                            sendAiMessage(`Given ${name}'s estimated income, filing status, and business type, what are the top deductions and credits they should maximize this tax year?`);
+                          }}
+                          className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                        >
+                          Deductions & credits
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {/* Client-specific quick actions */}
+                  {isClient && (
+                    <div className="mt-2 flex flex-wrap justify-center gap-2">
+                      <button
+                        onClick={() => {
+                          sendAiMessage("What is my current status? Walk me through where I am in the process and what I need to do next.");
+                        }}
+                        className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                      >
+                        My progress
+                      </button>
+                      <button
+                        onClick={() => {
+                          sendAiMessage('What documents do I still need to upload, and why are they important for my tax strategy?');
+                        }}
+                        className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                      >
+                        What to upload
+                      </button>
+                      <button
+                        onClick={() => {
+                          sendAiMessage('Are there any important tax deadlines coming up that I should be aware of?');
+                        }}
+                        className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                      >
+                        Upcoming deadlines
+                      </button>
+                      {(pageContext?.documents?.length ?? 0) > 0 && (
+                        <button
+                          onClick={() => {
+                            sendAiMessage('Can you explain what each of my uploaded documents is and how they help with my taxes?');
+                          }}
+                          className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                        >
+                          Explain my docs
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {!pageContext?.client && !isClient && pageContext && (
+                    <div className="mt-2 flex flex-wrap justify-center gap-2">
+                      <button
+                        onClick={() => {
+                          sendAiMessage('Give me an overview of what I see on this page and suggest the most important actions I should take next.');
+                        }}
+                        className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                      >
+                        Page overview
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>
@@ -298,10 +404,32 @@ export function AiFloatingChatbot({
                         </div>
                       ) : (
                         <div className="flex flex-col items-start gap-3">
-                          <MarkdownContent content={message.content} />
-                          <button className="rounded-full border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
-                            Say more
-                          </button>
+                          {message.content ? (
+                            <MarkdownContent content={message.content} />
+                          ) : (
+                            <div className="flex items-center gap-2 text-sm text-zinc-400">
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <span>Analyzing…</span>
+                            </div>
+                          )}
+                          {/* Show streaming cursor for the last assistant message while loading */}
+                          {isAiLoading && message.id === aiMessages[aiMessages.length - 1]?.id && message.content ? (
+                            <span className="inline-block h-4 w-1.5 animate-pulse rounded-sm bg-emerald-500" />
+                          ) : null}
+                          {!isAiLoading && message.content && (
+                            <button
+                              onClick={() => {
+                                sendAiMessage(
+                                  isClient
+                                    ? 'Can you explain that in more detail? What does this mean for me and what should I do?'
+                                    : 'Expand on that — include specific IRS rules, estimated dollar savings, and any deadlines I should be aware of.'
+                                );
+                              }}
+                              className="rounded-full border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+                            >
+                              {isClient ? 'Tell me more' : 'Go deeper'}
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -322,7 +450,9 @@ export function AiFloatingChatbot({
             <textarea
               ref={textareaRef}
               rows={1}
-              placeholder="Ask anything..."
+              placeholder={isClient
+                ? "Ask about your documents, deadlines, next steps…"
+                : "Ask about deductions, strategies, missing docs…"}
               value={input}
               onChange={e => setInput(e.target.value)}
               onInput={autoResize}
@@ -347,16 +477,27 @@ export function AiFloatingChatbot({
               <Paperclip size={20} weight="bold" />
             </button>
 
-            {/* Send Button */}
-            <button
-              type="button"
-              disabled={!input.trim()}
-              onClick={handleSendMessage}
-              className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
-              aria-label="Send message"
-            >
-              <ArrowUp size={20} weight="bold" />
-            </button>
+            {/* Send / Stop Button */}
+            {isAiLoading ? (
+              <button
+                type="button"
+                onClick={stopAiGeneration}
+                className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white transition-all hover:bg-red-600"
+                aria-label="Stop generation"
+              >
+                <Stop size={20} weight="fill" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={!input.trim()}
+                onClick={handleSendMessage}
+                className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+                aria-label="Send message"
+              >
+                <ArrowUp size={20} weight="bold" />
+              </button>
+            )}
           </div>
         </div>
       ) : (
@@ -366,7 +507,9 @@ export function AiFloatingChatbot({
             <textarea
               ref={textareaRef}
               rows={1}
-              placeholder="Press '/' to use AriexAI..."
+              placeholder={isClient
+                ? "Press '/' to ask your Tax Assistant…"
+                : "Press '/' to ask Tax Strategy Assistant…"}
               value={input}
               onChange={e => setInput(e.target.value)}
               onClick={() => setAiChatOpen(true)}
@@ -394,7 +537,7 @@ export function AiFloatingChatbot({
                 <div className="flex h-5 w-8 items-center justify-center rounded-md bg-emerald-100">
                   <kbd className="text-xs font-extrabold text-emerald-600">TAB</kbd>
                 </div>
-                <span className="text-sm font-medium text-zinc-700">Ask AriexAI</span>
+                <span className="text-sm font-medium text-zinc-700">Tax Assistant</span>
               </button>
             )}
           </div>

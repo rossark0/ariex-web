@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Ariex AI - Tax Strategy Platform',
   description:
-    'A comprehensive web platform for tax strategists to manage clients, documents, payments, and tax strategies with AI assistance',
+    'A comprehensive web platform for tax strategists to manage clients, documents, payments, and tax strategies with AI assistance.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

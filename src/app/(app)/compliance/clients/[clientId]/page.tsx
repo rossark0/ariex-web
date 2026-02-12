@@ -185,6 +185,8 @@ export default function ComplianceClientDetailPage({ params }: Props) {
     awaiting_payment: Clock,
     awaiting_documents: Clock,
     ready_for_strategy: Strategy,
+    awaiting_compliance: Clock,
+    awaiting_approval: Clock,
     awaiting_signature: Clock,
     active: Check,
   };
@@ -446,7 +448,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                     <div className="flex flex-1 flex-col">
                       <span className="font-medium text-zinc-900">
                         {step5Complete
-                          ? 'Tax strategy approved & signed'
+                          ? 'Tax strategy approved'
                           : step5Sent
                             ? 'Strategy sent for approval'
                             : 'Tax strategy pending'}
@@ -456,7 +458,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                           ? strategyDoc?.originalName.replace(/\.[^/.]+$/, '') ||
                             'Tax Strategy Plan'
                           : step5Sent
-                            ? 'Awaiting client signature on tax strategy document'
+                            ? 'Awaiting compliance review of tax strategy'
                             : 'Ready to create personalized tax strategy'}
                       </span>
                       <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
