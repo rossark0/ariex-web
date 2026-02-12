@@ -1,3 +1,4 @@
+
 'use server';
 
 import { API_URL } from '@/lib/cognito-config';
@@ -1175,7 +1176,7 @@ export async function createCharge(data: {
 
     console.log('🔵 [API] Creating charge - Request body:', JSON.stringify(requestBody, null, 2));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const raw = await apiRequest<any>('/charges', {
       method: 'POST',
       body: JSON.stringify(requestBody),
@@ -1209,7 +1210,7 @@ export async function createCharge(data: {
  */
 export async function getChargesForAgreement(agreementId: string): Promise<Charge[]> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const rawCharges = await apiRequest<any[]>(`/charges/agreement/${agreementId}`);
 
     // Map backend fields (amountCents) → frontend interface (amount in dollars)
@@ -1238,7 +1239,7 @@ export async function getChargesForAgreement(agreementId: string): Promise<Charg
  */
 export async function getCharge(chargeId: string): Promise<Charge | null> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const raw = await apiRequest<any>(`/charges/${chargeId}`);
     return {
       id: raw.id,
