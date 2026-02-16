@@ -1549,3 +1549,86 @@ export async function getAllDocuments(): Promise<StrategistDocument[]> {
     return [];
   }
 }
+
+// ============================================================================
+// Compliance Invite API (Strategist-side)
+// ============================================================================
+
+export interface InviteComplianceData {
+  email: string;
+  profileData?: Record<string, unknown>;
+  clientIds?: string[];
+}
+
+export interface ComplianceInvitationResponse {
+  token: string;
+  complianceUserId: string;
+  strategistUserId: string;
+  expiresAt: string;
+  message: string;
+}
+
+/**
+ * Invite a compliance user.
+ *
+ * This creates a Cognito user with COMPLIANCE role, sends temp password email,
+ * and returns a token for scope vinculation.
+ */
+export async function inviteComplianceUser(
+  data: InviteComplianceData
+): Promise<ComplianceInvitationResponse> {
+  return apiRequest<ComplianceInvitationResponse>('/users/compliance/invite', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Get all compliance users linked to this strategist
+ */
+export async function getLinkedComplianceUsers(): Promise<ApiClient[]> {
+  try {
+    const result = await apiRequest<ApiClient[] | { data: ApiClient[] }>(
+      '/compliance/strategist/allowed-compliance'
+    );
+    return Array.isArray(result) ? result : result.data ?? [];
+  } catch (error) {
+    console.error('[API] Failed to get linked compliance users:', error);
+    return [];
+  }
+}
+
+/**
+ * Remove a compliance user from strategist scope
+ */
+export async function removeComplianceUser(mappingId: string): Promise<boolean> {
+  try {
+    await apiRequest(`/compliance/strategist/allowed-compliance/${mappingId}`, {
+      method: 'DELETE',
+    });
+    return true;
+  } catch (error) {
+    console.error('[API] Failed to remove compliance user:', error);
+    return false;
+  }
+}
+
+/**
+ * Update which clients a compliance user can access.
+ * Called by strategist to manage compliance scope.
+ */
+export async function updateComplianceClientAccess(
+  complianceUserId: string,
+  clientIds: string[]
+): Promise<boolean> {
+  try {
+    await apiRequest(`/users/strategist/${complianceUserId}/clients`, {
+      method: 'POST',
+      body: JSON.stringify(clientIds),
+    });
+    return true;
+  } catch (error) {
+    console.error('[API] Failed to update compliance client access:', error);
+    return false;
+  }
+}
