@@ -12,6 +12,9 @@ import {
   Paperclip,
   ArrowUp,
   Sparkle,
+  CheckCircle,
+  XCircle,
+  ChatCircle,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { XIcon } from 'lucide-react';
@@ -22,6 +25,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { MiniFileStack } from '@/components/ui/mini-document-illustration';
 import type { FullClientMock } from '@/lib/mocks/client-full';
+import { Button } from '@/components/ui/button';
 
 // ============================================================================
 // TYPES
@@ -32,13 +36,39 @@ interface Page {
   content: string;
 }
 
-interface StrategySheetProps {
+export interface ReviewComment {
+  id: string;
+  body: string;
+  createdAt: string;
+  userName?: string;
+}
+
+interface StrategySheetEditProps {
+  mode?: 'edit';
   client: FullClientMock;
   agreementId: string;
   isOpen: boolean;
   onClose: () => void;
   onSend: (data: StrategySendData) => Promise<void>;
 }
+
+interface StrategySheetReviewProps {
+  mode: 'review';
+  isOpen: boolean;
+  onClose: () => void;
+  pdfUrl: string;
+  documentTitle?: string;
+  comments?: ReviewComment[];
+  isLoadingComments?: boolean;
+  onAddComment?: (body: string) => Promise<boolean>;
+  onApprove?: () => void;
+  onReject?: () => void;
+  isApproving?: boolean;
+  isRejecting?: boolean;
+  userRole?: 'COMPLIANCE' | 'STRATEGIST';
+}
+
+type StrategySheetProps = StrategySheetEditProps | StrategySheetReviewProps;
 
 export interface StrategySendData {
   title: string;
@@ -659,16 +689,331 @@ function AiAssistant({
 }
 
 // ============================================================================
+// COMMENTS THREAD COMPONENT (Review Mode)
+// ============================================================================
+
+function formatCommentTime(dateInput: string): string {
+  const date = new Date(dateInput);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  }
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+interface CommentsThreadProps {
+  comments: ReviewComment[];
+  isLoading: boolean;
+  onAddComment?: (body: string) => Promise<boolean>;
+  readOnly?: boolean;
+}
+
+function CommentsThread({ comments, isLoading, onAddComment, readOnly }: CommentsThreadProps) {
+  const [newComment, setNewComment] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const sortedComments = [...comments].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [comments.length]);
+
+  const handleSubmit = async () => {
+    if (!newComment.trim() || !onAddComment) return;
+    setIsSending(true);
+    const success = await onAddComment(newComment.trim());
+    if (success) setNewComment('');
+    setIsSending(false);
+  };
+
+  return (
+    <div className="relative flex h-full flex-col rounded-xl bg-white">
+      <div className="flex items-center gap-2 border-b border-zinc-100 px-4 py-3">
+        <ChatCircle weight="fill" className="h-4 w-4 text-emerald-500" />
+        <span className="text-sm font-semibold text-zinc-700">Comments</span>
+        {comments.length > 0 && (
+          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">
+            {comments.length}
+          </span>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4">
+        {isLoading ? (
+          <div className="flex items-center gap-2 py-8 text-sm text-zinc-400">
+            <SpinnerGap className="h-4 w-4 animate-spin" />
+            Loading comments…
+          </div>
+        ) : sortedComments.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <ChatCircle className="mb-3 h-10 w-10 text-zinc-200" />
+            <p className="text-sm font-medium text-zinc-400">No comments yet</p>
+            {!readOnly && (
+              <p className="mt-1 text-xs text-zinc-300">
+                Add a comment to share feedback on this strategy
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {sortedComments.map(c => (
+              <div
+                key={c.id}
+                className="rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3"
+              >
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-sm font-medium text-zinc-700">
+                    {c.userName || 'Compliance'}
+                  </span>
+                  <span className="text-xs text-zinc-400">{formatCommentTime(c.createdAt)}</span>
+                </div>
+                <p className="text-sm leading-relaxed text-zinc-600">{c.body}</p>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+      </div>
+
+      {!readOnly && onAddComment && (
+        <div className="border-t border-zinc-100 p-3">
+          <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 focus-within:ring-2 focus-within:ring-zinc-300 hover:bg-white">
+            <textarea
+              value={newComment}
+              onChange={e => setNewComment(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+              placeholder="Add a comment…"
+              rows={1}
+              disabled={isSending}
+              className="min-h-14 flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-zinc-700 placeholder:text-zinc-500 focus:outline-none"
+            />
+            <button
+              type="button"
+              disabled={!newComment.trim() || isSending}
+              onClick={handleSubmit}
+              className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+              aria-label="Send comment"
+            >
+              {isSending ? (
+                <SpinnerGap size={20} weight="bold" className="animate-spin" />
+              ) : (
+                <ArrowUp size={20} weight="bold" />
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // MAIN STRATEGY SHEET COMPONENT
 // ============================================================================
 
-export function StrategySheet({
+export function StrategySheet(props: StrategySheetProps) {
+  const isReviewMode = props.mode === 'review';
+
+  if (isReviewMode) {
+    return <StrategySheetReview {...props} />;
+  }
+
+  return <StrategySheetEdit {...(props as StrategySheetEditProps)} />;
+}
+
+// ============================================================================
+// REVIEW MODE COMPONENT
+// ============================================================================
+
+function StrategySheetReview({
+  isOpen,
+  onClose,
+  pdfUrl,
+  documentTitle,
+  comments = [],
+  isLoadingComments = false,
+  onAddComment,
+  onApprove,
+  onReject,
+  isApproving = false,
+  isRejecting = false,
+  userRole = 'COMPLIANCE',
+}: StrategySheetReviewProps) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => setIsVisible(true), 10);
+      return () => clearTimeout(timer);
+    } else {
+      setIsVisible(false);
+      setIsClosing(false);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  const handleClose = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+      setIsClosing(false);
+    }, 300);
+  }, [onClose]);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleEscape);
+    }
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, handleClose]);
+
+  if (!isOpen) return null;
+
+  const isCompliance = userRole === 'COMPLIANCE';
+  const showActions = isCompliance && onApprove && onReject;
+
+  return (
+    <div className="fixed inset-0 z-[99999] flex flex-col">
+      <div
+        onClick={handleClose}
+        className={cn(
+          'absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300',
+          isVisible && !isClosing ? 'opacity-100' : 'opacity-0'
+        )}
+      />
+
+      <div className="h-4 shrink-0" />
+
+      <div
+        className={cn(
+          'relative flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 ease-out',
+          isVisible && !isClosing ? 'translate-y-0' : 'translate-y-full'
+        )}
+      >
+        <div className="absolute top-4 left-4 z-50 flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center gap-2 rounded-md hover:bg-zinc-100">
+            <XIcon onClick={handleClose} className="h-4 w-4 cursor-pointer text-zinc-500" />
+          </div>
+          <kbd className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500">
+            ESC
+          </kbd>
+        </div>
+
+        <div className="flex flex-1 overflow-hidden">
+          <div className="relative flex flex-1 flex-col overflow-hidden">
+            {showActions && (
+              <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
+                <Button
+                  onClick={onApprove}
+                  disabled={isApproving || isRejecting}
+                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                  size="sm"
+                >
+                  {isApproving ? (
+                    <>
+                      <SpinnerGap className="mr-1.5 h-4 w-4 animate-spin" />
+                      Approving…
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-1.5 h-4 w-4" weight="fill" />
+                      Approve Strategy
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={onReject}
+                  disabled={isApproving || isRejecting}
+                  size="sm"
+                  className="border-red-200 text-red-600 hover:bg-red-50"
+                >
+                  {isRejecting ? (
+                    <>
+                      <SpinnerGap className="mr-1.5 h-4 w-4 animate-spin" />
+                      Rejecting…
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="mr-1.5 h-4 w-4" weight="fill" />
+                      Reject
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-auto pt-16 pr-8 pb-8 pl-16">
+              {documentTitle && (
+                <h1 className="mb-4 text-2xl font-semibold text-zinc-900">{documentTitle}</h1>
+              )}
+              <div className="flex h-full min-h-[calc(100vh-200px)] flex-col rounded-lg border border-zinc-200 bg-zinc-50">
+                <iframe
+                  src={pdfUrl}
+                  title="Strategy Document"
+                  className="h-full w-full flex-1 rounded-lg"
+                  style={{ minHeight: 'calc(100vh - 280px)' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="w-[400px] shrink-0 border-l border-zinc-200 bg-white p-4">
+            <CommentsThread
+              comments={comments}
+              isLoading={isLoadingComments}
+              onAddComment={onAddComment}
+              readOnly={userRole === 'STRATEGIST'}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// EDIT MODE COMPONENT
+// ============================================================================
+
+function StrategySheetEdit({
   client,
   agreementId,
   isOpen,
   onClose,
   onSend,
-}: StrategySheetProps) {
+}: StrategySheetEditProps) {
   const strategistName = 'Ariex Tax Strategist';
   const clientName = client.user.name || 'Client';
   const businessName = client.profile.businessName;

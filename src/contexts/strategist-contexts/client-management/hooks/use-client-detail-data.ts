@@ -28,6 +28,8 @@ import {
   completeAgreement,
   getStrategyDocumentUrl,
 } from '@/lib/api/strategies.actions';
+import { getDocumentComments } from '@/lib/api/compliance.api';
+import type { ReviewComment } from '@/components/strategy/strategy-sheet';
 import {
   computeStep5State,
   parseStrategyMetadata,
@@ -150,6 +152,13 @@ export interface ClientDetailData {
   handleDeleteTodo: () => Promise<void>;
   handleViewDocument: (docId: string) => Promise<void>;
   refreshAgreements: () => Promise<void>;
+
+  // Strategy review (compliance comments)
+  strategyReviewPdfUrl: string | null;
+  strategyComments: ReviewComment[];
+  isLoadingStrategyComments: boolean;
+  isStrategyReviewOpen: boolean;
+  setIsStrategyReviewOpen: (open: boolean) => void;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────
@@ -759,11 +768,62 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     }
   };
 
-  const handleViewStrategyDocument = async () => {
+  // ─── Strategy Review Sheet (with compliance comments) ─────
+  const [strategyReviewPdfUrl, setStrategyReviewPdfUrl] = useState<string | null>(null);
+  const [strategyComments, setStrategyComments] = useState<ReviewComment[]>([]);
+  const [isLoadingStrategyComments, setIsLoadingStrategyComments] = useState(false);
+  const [isStrategyReviewOpen, setIsStrategyReviewOpen] = useState(false);
+
+  useEffect(() => {
     if (!strategyDocumentId) return;
-    const result = await getStrategyDocumentUrl(strategyDocumentId);
-    if (result.success && result.url) window.open(result.url, '_blank');
-    else alert('Strategy document not yet available. Please try again in a moment.');
+    let cancelled = false;
+    (async () => {
+      const result = await getStrategyDocumentUrl(strategyDocumentId);
+      if (!cancelled && result.success && result.url) {
+        setStrategyReviewPdfUrl(result.url);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [strategyDocumentId]);
+
+  useEffect(() => {
+    if (!strategyDocumentId) return;
+    let cancelled = false;
+    setIsLoadingStrategyComments(true);
+    (async () => {
+      try {
+        const comments = await getDocumentComments(strategyDocumentId);
+        if (!cancelled) {
+          setStrategyComments(
+            comments.map(c => ({
+              id: c.id,
+              body: c.body,
+              createdAt: c.createdAt,
+              userName: undefined,
+            }))
+          );
+        }
+      } catch {
+        // Non-critical
+      } finally {
+        if (!cancelled) setIsLoadingStrategyComments(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [strategyDocumentId]);
+
+  const handleViewStrategyDocument = async () => {
+    if (strategyReviewPdfUrl) {
+      setIsStrategyReviewOpen(true);
+    } else if (strategyDocumentId) {
+      const result = await getStrategyDocumentUrl(strategyDocumentId);
+      if (result.success && result.url) {
+        setStrategyReviewPdfUrl(result.url);
+        setIsStrategyReviewOpen(true);
+      } else {
+        alert('Strategy document not yet available. Please try again in a moment.');
+      }
+    }
   };
 
   // Backward compat alias (Phase 4 will remove)
@@ -866,5 +926,10 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     handleDeleteTodo,
     handleViewDocument,
     refreshAgreements,
+    strategyReviewPdfUrl,
+    strategyComments,
+    isLoadingStrategyComments,
+    isStrategyReviewOpen,
+    setIsStrategyReviewOpen,
   };
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
@@ -18,6 +19,7 @@ import {
   XCircle,
   SpinnerGap,
   WarningCircle,
+  StarFour as StarFourIcon,
 } from '@phosphor-icons/react';
 import { Check, Clock, Strategy, Warning } from '@phosphor-icons/react/dist/ssr';
 import { Button } from '@/components/ui/button';
@@ -33,6 +35,11 @@ import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
 import { useAiPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
 import { useUiStore } from '@/contexts/ui/UiStore';
 import { ChevronDown } from 'lucide-react';
+
+const StrategySheet = dynamic(
+  () => import('@/components/strategy/strategy-sheet').then(m => ({ default: m.StrategySheet })),
+  { ssr: false }
+);
 
 interface Props {
   params: { clientId: string };
@@ -138,7 +145,7 @@ function RejectStrategyModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/40">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
         <h3 className="mb-1 text-lg font-semibold text-zinc-900">Reject Strategy</h3>
         <p className="mb-4 text-sm text-zinc-500">
@@ -191,7 +198,7 @@ function ApproveStrategyModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/40">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
         <h3 className="mb-1 text-lg font-semibold text-zinc-900">Approve Strategy</h3>
         <p className="mb-4 text-sm text-zinc-500">
@@ -355,6 +362,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [isStrategySheetOpen, setIsStrategySheetOpen] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<{
     type: 'success' | 'error';
     message: string;
@@ -509,7 +517,14 @@ export default function ComplianceClientDetailPage({ params }: Props) {
       : agreement.price
     : null;
 
-  const nonStrategyDocs = documents.filter(d => d.type !== 'STRATEGY');
+  const nonStrategyDocs = documents.filter(d => {
+    const type = (d.type || '').toUpperCase();
+    const category = (d.category || '').toLowerCase();
+    const name = (d.name || '').toLowerCase();
+    if (type === 'STRATEGY' || name.includes('strategy')) return false;
+    if (category === 'contract' || type === 'AGREEMENT') return false;
+    return true;
+  });
   const uploadedCount = nonStrategyDocs.length;
 
   const statusIconMap: Record<ClientStatusKey, typeof Clock> = {
@@ -608,18 +623,19 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                 </button>
               </div>
 
-              {/* Strategy PDF link */}
-              {strategyPdfUrl && (
-                <a
-                  href={strategyPdfUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-emerald-600 px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-                >
-                  <ChatCircle className="h-4 w-4" />
-                  <span>View Strategy</span>
-                </a>
-              )}
+              {/* Strategy button — same position as strategist's client-header.tsx */}
+              <button
+                disabled={!strategyPdfUrl}
+                onClick={strategyPdfUrl ? () => setIsStrategySheetOpen(true) : undefined}
+                className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-sm font-medium transition-colors ${
+                  strategyPdfUrl
+                    ? 'cursor-pointer border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600'
+                    : 'cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400'
+                }`}
+              >
+                <StarFourIcon weight="fill" className="h-4 w-4" />
+                <span>Strategy</span>
+              </button>
             </div>
 
             {/* Compliance Review Action Bar */}
@@ -783,7 +799,9 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                             : 'Send service agreement to client'}
                       </span>
                       <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                        {formatDate(agreement?.updatedAt || client.createdAt)}
+                        {step2Complete
+                          ? formatDate(agreement?.updatedAt)
+                          : formatDate(agreement?.createdAt || client.createdAt)}
                       </span>
                     </div>
                   </div>
@@ -814,7 +832,11 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                             : 'Send payment link to client'}
                       </span>
                       <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                        {formatDate(agreement?.updatedAt || client.createdAt)}
+                        {step3Complete
+                          ? formatDate(agreement?.updatedAt)
+                          : step3Sent
+                            ? 'Pending'
+                            : formatDate(client.createdAt)}
                       </span>
                     </div>
                   </div>
@@ -845,12 +867,16 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                             : 'Request documents from client'}
                       </span>
                       <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                        {formatDate(agreement?.updatedAt || client.createdAt)}
+                        {step4Complete && nonStrategyDocs.length > 0
+                          ? formatDate(nonStrategyDocs[nonStrategyDocs.length - 1]?.createdAt)
+                          : step4Sent
+                            ? 'Pending'
+                            : formatDate(client.createdAt)}
                       </span>
                     </div>
                   </div>
 
-                  {/* Step 5: Strategy Phase */}
+                  {/* Step 5: Strategy Phase (Compliance -> Client Approval) */}
                   <div className="relative flex gap-4">
                     <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
                       <div
@@ -861,39 +887,143 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                       <span className="font-medium text-zinc-900">
                         {step5State.isComplete
                           ? 'Tax strategy approved'
-                          : step5State.complianceRejected
-                            ? 'Strategy rejected by compliance'
-                            : step5State.clientDeclined
-                              ? 'Strategy declined by client'
-                              : step5State.complianceApproved
-                                ? 'Strategy approved by compliance — awaiting client'
-                                : step5State.strategySent
-                                  ? 'Strategy sent for compliance review'
-                                  : 'Tax strategy pending'}
+                          : step5State.phase === 'client_review'
+                            ? 'Strategy awaiting client approval'
+                            : step5State.phase === 'client_declined'
+                              ? 'Client declined strategy'
+                              : step5State.phase === 'compliance_review'
+                                ? 'Strategy under compliance review'
+                                : step5State.phase === 'compliance_rejected'
+                                  ? 'Compliance rejected strategy'
+                                  : step5State.strategySent
+                                    ? 'Strategy sent for review'
+                                    : 'Tax strategy pending'}
                       </span>
                       <span className="text-sm text-zinc-500">
                         {step5State.isComplete
-                          ? strategyDocName
-                          : step5State.complianceRejected
-                            ? 'Strategist needs to revise and resubmit'
-                            : step5State.strategySent
-                              ? 'Awaiting compliance review of tax strategy'
-                              : 'Ready to create personalized tax strategy'}
+                          ? 'Both compliance and client have approved'
+                          : step5State.phase === 'client_review'
+                            ? 'Compliance approved — waiting for client to approve or decline'
+                            : step5State.phase === 'client_declined'
+                              ? 'Client has declined the strategy. Strategist must revise.'
+                              : step5State.phase === 'compliance_review'
+                                ? 'Waiting for compliance team to review and approve'
+                                : step5State.phase === 'compliance_rejected'
+                                  ? 'Compliance has rejected the strategy. Strategist must revise.'
+                                  : 'Ready to create personalized tax strategy'}
                       </span>
                       <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                         {strategyDocument?.createdAt
                           ? formatDate(strategyDocument.createdAt)
                           : 'Not started'}
                       </span>
+
+                      {/* Compliance & Client review sub-steps */}
+                      {step5State.strategySent && (
+                        <div className="mt-3 flex flex-col gap-2">
+                          <div
+                            className={`rounded-lg border p-2.5 ${
+                              step5State.complianceRejected
+                                ? 'border-red-200 bg-red-50'
+                                : step5State.complianceApproved
+                                  ? 'border-emerald-200 bg-emerald-50'
+                                  : 'border-amber-200 bg-amber-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {step5State.complianceApproved ? (
+                                <CheckIcon weight="bold" className="h-4 w-4 shrink-0 text-emerald-500" />
+                              ) : step5State.complianceRejected ? (
+                                <XCircle weight="bold" className="h-4 w-4 shrink-0 text-red-500" />
+                              ) : (
+                                <Clock weight="bold" className="h-4 w-4 shrink-0 text-amber-500" />
+                              )}
+                              <span
+                                className={`text-sm font-medium ${
+                                  step5State.complianceRejected
+                                    ? 'text-red-700'
+                                    : step5State.complianceApproved
+                                      ? 'text-emerald-700'
+                                      : 'text-amber-700'
+                                }`}
+                              >
+                                Compliance review
+                              </span>
+                              <span
+                                className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                                  step5State.complianceRejected
+                                    ? 'bg-red-100 text-red-600'
+                                    : step5State.complianceApproved
+                                      ? 'bg-emerald-100 text-emerald-600'
+                                      : 'bg-amber-100 text-amber-600'
+                                }`}
+                              >
+                                {step5State.complianceRejected
+                                  ? 'Rejected'
+                                  : step5State.complianceApproved
+                                    ? 'Approved'
+                                    : 'Pending'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {step5State.complianceApproved && (
+                            <div
+                              className={`rounded-lg border p-2.5 ${
+                                step5State.clientDeclined
+                                  ? 'border-red-200 bg-red-50'
+                                  : step5State.clientApproved
+                                    ? 'border-emerald-200 bg-emerald-50'
+                                    : 'border-teal-200 bg-teal-50'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {step5State.clientApproved ? (
+                                  <CheckIcon weight="bold" className="h-4 w-4 shrink-0 text-emerald-500" />
+                                ) : step5State.clientDeclined ? (
+                                  <XCircle weight="bold" className="h-4 w-4 shrink-0 text-red-500" />
+                                ) : (
+                                  <Clock weight="bold" className="h-4 w-4 shrink-0 text-teal-500" />
+                                )}
+                                <span
+                                  className={`text-sm font-medium ${
+                                    step5State.clientDeclined
+                                      ? 'text-red-700'
+                                      : step5State.clientApproved
+                                        ? 'text-emerald-700'
+                                        : 'text-teal-700'
+                                  }`}
+                                >
+                                  Client review
+                                </span>
+                                <span
+                                  className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                                    step5State.clientDeclined
+                                      ? 'bg-red-100 text-red-600'
+                                      : step5State.clientApproved
+                                        ? 'bg-emerald-100 text-emerald-600'
+                                        : 'bg-teal-100 text-teal-600'
+                                  }`}
+                                >
+                                  {step5State.clientDeclined
+                                    ? 'Declined'
+                                    : step5State.clientApproved
+                                      ? 'Approved'
+                                      : 'Pending'}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {strategyPdfUrl && (
-                        <a
-                          href={strategyPdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          onClick={() => setIsStrategySheetOpen(true)}
                           className="mt-2 w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-200"
                         >
-                          View strategy
-                        </a>
+                          View strategy document
+                        </button>
                       )}
                     </div>
                   </div>
@@ -1118,6 +1248,30 @@ export default function ComplianceClientDetailPage({ params }: Props) {
         onClose={() => setIsApproveModalOpen(false)}
         onApprove={onApprove}
       />
+
+      {/* Strategy Review Sheet */}
+      {strategyPdfUrl && (
+        <StrategySheet
+          mode="review"
+          isOpen={isStrategySheetOpen}
+          onClose={() => setIsStrategySheetOpen(false)}
+          pdfUrl={strategyPdfUrl}
+          documentTitle={strategyDocument?.name?.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan'}
+          comments={comments.map(c => ({
+            id: c.id,
+            body: c.body,
+            createdAt: c.createdAt,
+            userName: 'userName' in c ? String((c as unknown as { userName: string }).userName) : undefined,
+          }))}
+          isLoadingComments={isLoadingComments}
+          onAddComment={handleAddComment}
+          onApprove={isComplianceReview ? () => setIsApproveModalOpen(true) : undefined}
+          onReject={isComplianceReview ? () => setIsRejectModalOpen(true) : undefined}
+          isApproving={isApproving}
+          isRejecting={isRejecting}
+          userRole="COMPLIANCE"
+        />
+      )}
     </div>
   );
 }

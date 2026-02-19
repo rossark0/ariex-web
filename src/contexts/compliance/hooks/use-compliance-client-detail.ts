@@ -26,6 +26,7 @@ import {
 import { parseStrategyMetadata } from '@/contexts/strategist-contexts/client-management/models/strategy.model';
 import { CLIENT_STATUS_CONFIG, type ClientStatusKey } from '@/lib/client-status';
 import { getStrategyDocumentUrl } from '@/lib/api/strategies.actions';
+import { getComplianceDocumentUrl } from '@/lib/api/compliance.api';
 
 export function useComplianceClientDetail(clientId: string, strategistId: string) {
   const [isApproving, setIsApproving] = useState(false);
@@ -50,26 +51,6 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
     fetchClientDetail(clientId, strategistId);
   }, [clientId, strategistId]);
 
-  // Fetch comments when strategy document is found
-  useEffect(() => {
-    if (strategyDocument?.id) {
-      fetchComments(strategyDocument.id);
-    }
-  }, [strategyDocument?.id]);
-
-  // Get strategy PDF URL when strategy document exists
-  useEffect(() => {
-    async function loadPdfUrl() {
-      if (strategyDocument?.id) {
-        const result = await getStrategyDocumentUrl(strategyDocument.id);
-        if (result.success && result.url) {
-          setStrategyPdfUrl(result.url);
-        }
-      }
-    }
-    loadPdfUrl();
-  }, [strategyDocument?.id]);
-
   // Compute timeline state from real data
   const timeline: RealTimelineState = useMemo(
     () => computeTimelineState(selectedAgreement, strategyDocument),
@@ -81,6 +62,47 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
     () => parseStrategyMetadata(selectedAgreement?.description ?? null),
     [selectedAgreement?.description]
   );
+
+  // Resolve the strategy document ID: prefer the document found in the
+  // compliance documents list; fall back to the ID stored in agreement metadata.
+  const resolvedStrategyDocId = strategyDocument?.id ?? strategyMetadata?.strategyDocumentId ?? null;
+
+  // Fetch comments when strategy document is identified
+  useEffect(() => {
+    if (resolvedStrategyDocId) {
+      fetchComments(resolvedStrategyDocId);
+    }
+  }, [resolvedStrategyDocId]);
+
+  // Get strategy PDF URL via compliance-scoped endpoints
+  // (the generic /documents/{id} returns 403 for compliance users).
+  useEffect(() => {
+    if (!resolvedStrategyDocId) return;
+    let cancelled = false;
+
+    // Fast path: look up downloadUrl from the already-loaded files list
+    const stratDoc = clientDocuments.find(d => d.id === resolvedStrategyDocId);
+    if (stratDoc?.fileId) {
+      const matchingFile = clientFiles.find(f => f.id === stratDoc.fileId);
+      if (matchingFile?.downloadUrl) {
+        setStrategyPdfUrl(matchingFile.downloadUrl);
+        return;
+      }
+    }
+
+    // Otherwise fetch via the compliance-specific API helper
+    (async () => {
+      const url = await getComplianceDocumentUrl(
+        resolvedStrategyDocId,
+        selectedAgreement?.id
+      );
+      if (!cancelled && url) {
+        setStrategyPdfUrl(url);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [resolvedStrategyDocId, clientDocuments, clientFiles, selectedAgreement?.id]);
 
   // Status config for badge display
   const statusConfig = useMemo(
@@ -127,11 +149,11 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
     async (body: string): Promise<boolean> => {
       return addComment({
         strategistUserId: strategistId,
-        documentId: strategyDocument?.id,
+        documentId: resolvedStrategyDocId ?? undefined,
         body,
       });
     },
-    [strategistId, strategyDocument?.id]
+    [strategistId, resolvedStrategyDocId]
   );
 
   return {

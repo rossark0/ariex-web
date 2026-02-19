@@ -212,7 +212,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Strategy Sheet */}
+      {/* Strategy Sheet (edit mode) */}
       {data.signedAgreement && (
         <StrategySheet
           client={data.client}
@@ -220,6 +220,20 @@ export default function StrategistClientDetailPage({ params }: Props) {
           isOpen={data.isStrategySheetOpen}
           onClose={() => data.setIsStrategySheetOpen(false)}
           onSend={data.handleSendStrategy}
+        />
+      )}
+
+      {/* Strategy Review Sheet (view sent strategy + compliance comments) */}
+      {data.strategyReviewPdfUrl && (
+        <StrategySheet
+          mode="review"
+          isOpen={data.isStrategyReviewOpen}
+          onClose={() => data.setIsStrategyReviewOpen(false)}
+          pdfUrl={data.strategyReviewPdfUrl}
+          documentTitle={data.strategyDoc?.originalName?.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan'}
+          comments={data.strategyComments}
+          isLoadingComments={data.isLoadingStrategyComments}
+          userRole="STRATEGIST"
         />
       )}
 
