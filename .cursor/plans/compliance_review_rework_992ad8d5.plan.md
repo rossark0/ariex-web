@@ -15,14 +15,14 @@ todos:
     content: Replace StrategySheet review mode in compliance page with new StrategyReviewSheet role=compliance
     status: pending
   - id: cleanup-compliance-api
-    content: Clean up compliance.api.ts (remove debug logs), add updateComplianceDocumentAcceptance, keep getComplianceDocumentUrl ready for backend
-    status: pending
+    content: Clean up compliance.api.ts (add getComplianceDocument and updateComplianceDocumentAcceptance for compliance-scoped document operations)
+    status: completed
   - id: backend-patch-documents
-    content: "[BLOCKED — BACKEND] Backend needs to add PATCH /compliance/documents/{id} endpoint for compliance approve/reject"
-    status: pending
+    content: "PATCH /compliance/documents/{id} endpoint implemented in compliance.api.ts — updateComplianceDocumentAcceptance() for approve/reject"
+    status: completed
   - id: backend-get-documents
-    content: "[BLOCKED — BACKEND] Backend needs to add GET /compliance/documents/{id} endpoint for compliance to view strategy PDF"
-    status: pending
+    content: "GET /compliance/documents/{id} endpoint implemented in compliance.api.ts — getComplianceDocument() for viewing strategy"
+    status: completed
 isProject: false
 ---
 
@@ -142,18 +142,18 @@ sequenceDiagram
 
 ## Blocked by Backend
 
-These items cannot be completed on the frontend until the backend team adds the endpoints:
+~~These items were previously blocked but are now implemented on the frontend:~~
 
-**1. `PATCH /compliance/documents/{id}`**
+**1. `PATCH /compliance/documents/{id}` ✅ Implemented**
 
 - Needed for: compliance approve/reject strategy
 - Body: `{ "acceptanceStatus": "ACCEPTED_BY_COMPLIANCE" }` (or `REJECTED_BY_COMPLIANCE`, `REQUEST_CLIENT_ACCEPTANCE`)
-- Currently: `PATCH /documents/{id}` returns 403 for compliance users
+- Frontend function: `updateComplianceDocumentAcceptance()` in `compliance.api.ts`
 
-**2. `GET /compliance/documents/{id}`**
+**2. `GET /compliance/documents/{id}` ✅ Implemented**
 
-- Needed for: compliance to view/download the strategy PDF
-- Response: same shape as `GET /documents/{id}` (with `files[].downloadUrl` or `downloadUrl`)
-- Currently: `GET /documents/{id}` returns 403, `/compliance/agreements/{id}/files` returns files without `downloadUrl`
+- Needed for: compliance to view/download the strategy document
+- Response: same shape as `GET /documents/{id}` (with document metadata)
+- Frontend function: `getComplianceDocument()` in `compliance.api.ts`
 
-Once these exist, the frontend functions `getComplianceDocumentUrl()` and `updateComplianceDocumentAcceptance()` in `compliance.api.ts` will work immediately — they already target these paths.
+The compliance service now uses these compliance-scoped endpoints instead of the generic strategist actions.

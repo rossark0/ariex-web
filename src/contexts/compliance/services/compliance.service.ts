@@ -20,11 +20,8 @@ import {
   addComplianceComment as apiAddComment,
   getDocumentComments,
   acceptComplianceInvitation as apiAcceptInvitation,
+  updateComplianceDocumentAcceptance,
 } from '@/lib/api/compliance.api';
-import {
-  approveStrategyAsCompliance,
-  rejectStrategyAsCompliance,
-} from '@/lib/api/strategies.actions';
 import {
   toStrategistView,
   toClientView,
@@ -193,12 +190,16 @@ export async function fetchClientDetail(
 
 /**
  * Approve strategy as compliance officer.
- * Uses the already-built server action from strategies.actions.ts.
+ * Uses the compliance-scoped document endpoint.
  */
 export async function approveStrategy(documentId: string): Promise<boolean> {
   try {
-    const result = await approveStrategyAsCompliance(documentId);
-    if (result.success) {
+    const doc = await updateComplianceDocumentAcceptance(
+      documentId,
+      'ACCEPTED_BY_COMPLIANCE'
+    );
+    
+    if (doc) {
       // Refresh the strategy document status in store
       const store = complianceStore.getState();
       const agreement = store.selectedAgreement;
@@ -210,8 +211,9 @@ export async function approveStrategy(documentId: string): Promise<boolean> {
         const updated = await getComplianceAgreement(agreement.id);
         if (updated) store.setSelectedAgreement(updated);
       }
+      return true;
     }
-    return result.success;
+    return false;
   } catch (error) {
     console.error('[Compliance] Failed to approve strategy:', error);
     return false;
@@ -220,7 +222,7 @@ export async function approveStrategy(documentId: string): Promise<boolean> {
 
 /**
  * Reject strategy as compliance officer.
- * Uses the already-built server action from strategies.actions.ts.
+ * Uses the compliance-scoped document endpoint.
  */
 export async function rejectStrategy(
   agreementId: string,
@@ -228,8 +230,12 @@ export async function rejectStrategy(
   reason: string
 ): Promise<boolean> {
   try {
-    const result = await rejectStrategyAsCompliance(agreementId, documentId, reason);
-    if (result.success) {
+    const doc = await updateComplianceDocumentAcceptance(
+      documentId,
+      'REJECTED_BY_COMPLIANCE'
+    );
+    
+    if (doc) {
       // Refresh data
       const store = complianceStore.getState();
       const [documents, agreement] = await Promise.all([
@@ -239,8 +245,9 @@ export async function rejectStrategy(
       store.setClientDocuments(documents);
       store.setStrategyDocument(findStrategyDocument(documents));
       if (agreement) store.setSelectedAgreement(agreement);
+      return true;
     }
-    return result.success;
+    return false;
   } catch (error) {
     console.error('[Compliance] Failed to reject strategy:', error);
     return false;

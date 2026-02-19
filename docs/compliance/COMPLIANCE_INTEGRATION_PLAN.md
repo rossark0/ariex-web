@@ -128,7 +128,7 @@ STRATEGIST                          BACKEND                         COMPLIANCE
 ```
 src/
 ├── lib/api/
-│   ├── compliance.api.ts                        ✅ 503 lines, 24+ server functions
+│   ├── compliance.api.ts                        ✅ 580+ lines, 26+ server functions
 │   └── strategist.api.ts                        ✅ inviteComplianceUser() added
 ├── contexts/compliance/                         ✅ Full context
 │   ├── ComplianceStore.ts                       ✅ 176 lines — Zustand vanilla store
@@ -183,27 +183,27 @@ src/
 | 14 | `GET` | `/compliance/agreements/{id}/todo-lists` | List todo lists for agreement | `getAgreementTodoLists()` | ✅ |
 | 15 | `GET` | `/compliance/agreements/{id}/todos` | List todos for agreement | `getAgreementTodos()` | ✅ |
 
+### Document Endpoints (Compliance-Scoped)
+
+| # | Method | Endpoint | Purpose | API Function | Status |
+|---|--------|----------|---------|--------------|--------|
+| 16 | `GET` | `/compliance/documents/{id}` | Get document by ID within compliance scope | `getComplianceDocument()` | ✅ |
+| 17 | `PATCH` | `/compliance/documents/{id}` | Update document acceptance status | `updateComplianceDocumentAcceptance()` | ✅ |
+| 18 | `GET` | `/compliance/documents/{id}` | Get document download URL | `getComplianceDocumentUrl()` | ✅ |
+
 ### User/Invite Endpoints (Used by Strategist)
 
 | # | Method | Endpoint | Purpose | API Function | Status |
 |---|--------|----------|---------|--------------|--------|
-| 16 | `POST` | `/users/compliance/invite` | Invite compliance user | `inviteComplianceUser()` | ✅ |
-| 17 | `POST` | `/users/strategist/{id}/clients` | Update client access for compliance user | `updateComplianceClientAccess()` | ✅ |
+| 19 | `POST` | `/users/compliance/invite` | Invite compliance user | `inviteComplianceUser()` | ✅ |
+| 20 | `POST` | `/users/strategist/{id}/clients` | Update client access for compliance user | `updateComplianceClientAccess()` | ✅ |
 
 ### Profile Endpoints
 
 | # | Method | Endpoint | Purpose | API Function | Status |
 |---|--------|----------|---------|--------------|--------|
-| 18 | `POST` | `/users/{id}/compliance-profile` | Create/update compliance profile | `updateComplianceProfile()` | ✅ |
-| 19 | `GET` | `/users/{id}/compliance-profile` | Get compliance profile | `getComplianceProfile()` | ✅ |
-
-### Strategy Actions (Already existed before compliance work)
-
-| # | Method | Endpoint | Function | Status |
-|---|--------|----------|----------|--------|
-| 20 | `PATCH` | `/documents/{id}` | `approveStrategyAsCompliance()` | ✅ Done |
-| 21 | `PATCH` | `/documents/{id}` | `rejectStrategyAsCompliance()` | ✅ Done |
-| 22 | `PATCH` | `/agreements/{id}` | Update agreement status on rejection | ✅ Done |
+| 21 | `POST` | `/users/{id}/compliance-profile` | Create/update compliance profile | `updateComplianceProfile()` | ✅ |
+| 22 | `GET` | `/users/{id}/compliance-profile` | Get compliance profile | `getComplianceProfile()` | ✅ |
 
 ### AI Assistant Endpoints
 
@@ -279,7 +279,7 @@ src/
 
 ## Phase 2 — API Service Layer ✅ DONE
 
-### File: `src/lib/api/compliance.api.ts` — 503 lines
+### File: `src/lib/api/compliance.api.ts` — 580+ lines
 
 All endpoints are wrapped with proper auth token handling. Full function list:
 
@@ -291,7 +291,8 @@ All endpoints are wrapped with proper auth token handling. Full function list:
 | **Clients** | `getComplianceClients`, `getComplianceClientById` |
 | **Scope Mgmt** | `addClientToScope`, `getLinkedComplianceUsers`, `removeComplianceUser` |
 | **Agreements** | `getStrategistAgreements`, `getComplianceAgreement` |
-| **Docs & Files** | `getAgreementDocuments`, `getAgreementFiles` |
+| **Docs & Files** | `getAgreementDocuments`, `getAgreementFiles`, `getComplianceDocument`, `getComplianceDocumentUrl` |
+| **Document Actions** | `updateComplianceDocumentAcceptance` |
 | **Todos** | `getAgreementTodoLists`, `getAgreementTodos` |
 | **Comments** | `addComplianceComment`, `getDocumentComments` |
 | **AI** | `createComplianceChat`, `sendComplianceChatMessage` |

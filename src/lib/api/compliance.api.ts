@@ -86,7 +86,7 @@ async function getAccessToken(): Promise<string | null> {
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const accessToken = await getAccessToken();
 
-  console.log('[Compliance API] Request to', endpoint, '- has token:', !!accessToken);
+  console.log('[Compliance API] Request', options.method ?? 'GET', options.body, endpoint, '- has token:', !!accessToken);
 
   if (!accessToken) {
     throw new Error('User not authenticated. Please provide a valid access token.');
@@ -411,71 +411,91 @@ export async function getAgreementTodos(agreementId: string): Promise<ApiTodo[]>
 }
 
 // ============================================================================
-// Document Download (compliance-scoped)
+// Documents (compliance-scoped)
 // ============================================================================
 
 /**
+ * Get a document by ID within compliance scope.
+ * Returns full document metadata including files with download URLs.
+ */
+export async function getComplianceDocument(documentId: string): Promise<ApiDocument | null> {
+  try {
+    const doc = await apiRequest<ApiDocument>(`/compliance/documents/${documentId}`);
+    return doc;
+  } catch (error) {
+    console.error('[Compliance API] Failed to get document:', error);
+    return null;
+  }
+}
+
+/**
+ * Update document acceptance status within compliance scope.
+ * Used for approving/rejecting strategy documents.
+ */
+export async function updateComplianceDocumentAcceptance(
+  documentId: string,
+  acceptanceStatus: 'ACCEPTED_BY_COMPLIANCE' | 'REJECTED_BY_COMPLIANCE' | 'REQUEST_CLIENT_ACCEPTANCE'
+): Promise<ApiDocument | null> {
+  try {
+    const doc = await apiRequest<ApiDocument>(`/compliance/documents/${documentId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ acceptanceStatus }),
+    });
+    return doc;
+  } catch (error) {
+    console.error('[Compliance API] Failed to update document acceptance:', error);
+    return null;
+  }
+}
+
+/**
  * Get a document download URL using compliance-scoped endpoints.
- * The generic /documents/{id} is 403 for compliance users,
- * so we try /compliance/documents/{id} first, then fall back to
- * matching the file via the agreement files list.
+ * Attempts to get the document via /compliance/documents/{id} endpoint
+ * and extract the download URL from the response.
  */
 export async function getComplianceDocumentUrl(
   documentId: string,
   agreementId?: string
 ): Promise<string | null> {
-  console.log('[Compliance] getComplianceDocumentUrl:', { documentId, agreementId });
-
-  // Attempt 1: compliance-specific single document endpoint
+  // Attempt 1: Get document via compliance endpoint
   try {
-    console.log('[Compliance] Trying /compliance/documents/' + documentId);
-    const doc = await apiRequest<{
-      id: string;
-      files?: Array<{ downloadUrl?: string; url?: string }>;
-      downloadUrl?: string;
-      url?: string;
-    }>(`/compliance/documents/${documentId}`);
-    console.log('[Compliance] Document response:', JSON.stringify(doc, null, 2));
-    const url =
-      doc.downloadUrl ??
-      doc.url ??
-      doc.files?.[0]?.downloadUrl ??
-      doc.files?.[0]?.url ??
-      null;
-    if (url) return url;
+    const doc = await getComplianceDocument(documentId);
+    if (doc) {
+      // Check for download URL in various possible locations
+      const docAny = doc as any;
+      const url =
+        docAny.downloadUrl ??
+        docAny.url ??
+        docAny.files?.[0]?.downloadUrl ??
+        docAny.files?.[0]?.url ??
+        null;
+      if (url) return url;
+    }
   } catch (err) {
-    console.log('[Compliance] /compliance/documents/ failed, trying fallback:', err instanceof Error ? err.message : err);
+    console.error('[Compliance] Failed to get document via compliance endpoint:', err);
   }
 
-  // Attempt 2: search the agreement's files for a match
+  // Attempt 2: Fallback to searching agreement files
   if (agreementId) {
     try {
-      console.log('[Compliance] Trying agreement files match for agreement:', agreementId);
       const docs = await getAgreementDocuments(agreementId);
-      console.log('[Compliance] Agreement docs count:', docs.length, 'Looking for docId:', documentId);
       const matchingDoc = docs.find(d => d.id === documentId);
-      console.log('[Compliance] Matching doc found:', !!matchingDoc, 'fileId:', matchingDoc?.fileId);
       if (matchingDoc?.fileId) {
         const files = await getAgreementFiles(agreementId);
-        console.log('[Compliance] Files count:', files.length);
         const matchingFile = files.find(f => f.id === matchingDoc.fileId);
-        console.log('[Compliance] Matching file found:', !!matchingFile, 'has downloadUrl:', !!matchingFile?.downloadUrl);
         if (matchingFile?.downloadUrl) return matchingFile.downloadUrl;
       }
       // Try matching any file named "strategy"
       const files = await getAgreementFiles(agreementId);
-      console.log('[Compliance] All files:', files.map(f => ({ id: f.id, name: f.originalName, url: !!f.downloadUrl })));
       const stratFile = files.find(f => f.originalName?.toLowerCase().includes('strategy'));
       if (stratFile?.downloadUrl) {
-        console.log('[Compliance] Found strategy file by name:', stratFile.originalName);
         return stratFile.downloadUrl;
       }
     } catch (err) {
-      console.log('[Compliance] Agreement files fallback failed:', err instanceof Error ? err.message : err);
+      console.error('[Compliance] Agreement files fallback failed:', err);
     }
   }
 
-  console.log('[Compliance] Could not resolve document URL');
   return null;
 }
 
