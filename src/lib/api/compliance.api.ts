@@ -342,6 +342,26 @@ export async function getComplianceAgreement(
   }
 }
 
+/**
+ * Update an agreement within compliance scope (status, description/metadata).
+ * Uses PATCH /compliance/agreements/{id}.
+ */
+export async function updateComplianceAgreement(
+  agreementId: string,
+  updates: { status?: string; description?: string }
+): Promise<boolean> {
+  try {
+    await apiRequest(`/compliance/agreements/${agreementId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+    return true;
+  } catch (error) {
+    console.error('[Compliance API] Failed to update agreement:', error);
+    return false;
+  }
+}
+
 // ============================================================================
 // Documents & Files (compliance scope)
 // ============================================================================

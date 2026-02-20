@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
 import { useRouter } from 'next/navigation';
-import { FileIcon, Check, SpinnerGap, Check as CheckIcon } from '@phosphor-icons/react';
+import { FileIcon, Check, SpinnerGap, Check as CheckIcon, DownloadSimple } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { EmptyDocumentsIllustration } from '@/components/ui/empty-documents-illustration';
 import { TodoUploadItem } from '@/components/documents/todo-upload-item';
@@ -13,6 +13,7 @@ import {
   getClientDashboardData,
   getDocumentDownloadUrl,
   getChargesForAgreement,
+  getSignedDocumentDownloadUrl,
   type ClientDashboardData,
   type ClientAgreement,
   type ClientDocument,
@@ -205,6 +206,7 @@ export default function ClientDashboardPage() {
 
   // Charge amount fetched from the real Charges API (in dollars)
   const [chargeAmount, setChargeAmount] = useState<number | null>(null);
+  const [signedAgreementUrl, setSignedAgreementUrl] = useState<string | null>(null);
 
   // SignatureAPI sync state - holds the REAL envelope statuses
   const [envelopeStatuses, setEnvelopeStatuses] = useState<Record<string, string>>({});
@@ -361,7 +363,7 @@ export default function ClientDashboardPage() {
 
         console.log('[ClientDashboard] Access granted - Agreement signed and payment completed');
 
-        // Fetch real charge amount for the signed agreement
+        // Fetch real charge amount and signed document URL for the signed agreement
         if (serviceAgreement) {
           try {
             const charges = await getChargesForAgreement(serviceAgreement.id);
@@ -371,6 +373,18 @@ export default function ClientDashboardPage() {
             }
           } catch (e) {
             console.error('[ClientDashboard] Failed to fetch charges:', e);
+          }
+
+          if (agreementSigned) {
+            try {
+              const url = await getSignedDocumentDownloadUrl(
+                serviceAgreement.signedDocumentFileId,
+                serviceAgreement.signatureEnvelopeId
+              );
+              if (url) setSignedAgreementUrl(url);
+            } catch (e) {
+              console.error('[ClientDashboard] Failed to fetch signed doc URL:', e);
+            }
           }
         }
 
@@ -695,6 +709,16 @@ export default function ClientDashboardPage() {
                     <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                       {formatDate(serviceAgreement?.updatedAt || createdAt)}
                     </span>
+                    {step2Complete && signedAgreementUrl && (
+                      <a
+                        href={signedAgreementUrl}
+                        download
+                        className="mt-2 flex w-fit items-center gap-1.5 rounded bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+                      >
+                        <DownloadSimple weight="bold" className="h-3.5 w-3.5" />
+                        Download signed agreement
+                      </a>
+                    )}
                     {step1Complete && !step2Complete && (
                       <Badge variant={step2Sent ? 'warning' : 'warning'} className="mt-2 w-fit">
                         {step2Sent ? (

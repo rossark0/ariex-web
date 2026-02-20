@@ -83,6 +83,13 @@ export interface ActivityTimelineProps {
     signatureStatus?: string;
   } | null;
 
+  // Strategist signing
+  strategistCeremonyUrl?: string | null;
+  strategistHasSigned?: boolean;
+  clientHasSigned?: boolean;
+  signedAgreementDocUrl?: string | null;
+  onStrategistSign?: () => void;
+
   // Action callbacks
   onOpenAgreementModal: () => void;
   onOpenPaymentModal: () => void;
@@ -128,6 +135,11 @@ export function ActivityTimeline({
   step5State,
   strategyMetadata,
   strategyDoc,
+  strategistCeremonyUrl,
+  strategistHasSigned,
+  clientHasSigned,
+  signedAgreementDocUrl,
+  onStrategistSign,
   onOpenAgreementModal,
   onOpenPaymentModal,
   onSendPaymentReminder,
@@ -278,26 +290,95 @@ export function ActivityTimeline({
               </span>
               <span className="text-sm text-zinc-500">
                 {hasAgreementSigned
-                  ? 'Ariex Service Agreement 2024 was signed '
+                  ? 'Both parties have signed the agreement'
                   : hasAgreementSent
-                    ? 'Waiting for client to review and sign'
+                    ? 'Waiting for signatures'
                     : 'Send service agreement to client'}
               </span>
               <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                 {formatDate(agreementTask?.updatedAt || client.user.createdAt)}
               </span>
-              {step1Complete && !hasAgreementSigned && (
-                <button
-                  onClick={onOpenAgreementModal}
-                  className={`mt-2 flex w-fit items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${
-                    hasAgreementSent
-                      ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                  }`}
-                >
-                  {hasAgreementSent ? 'Resend agreement' : 'Send agreement'}
-                </button>
+
+              {/* Signature status sub-steps (only shown for dual-signing envelopes) */}
+              {hasAgreementSent && !hasAgreementSigned && strategistCeremonyUrl && (
+                <div className="mt-2 flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    {clientHasSigned ? (
+                      <CheckIcon weight="bold" className="h-3.5 w-3.5 text-emerald-500" />
+                    ) : (
+                      <Clock weight="bold" className="h-3.5 w-3.5 text-zinc-400" />
+                    )}
+                    <span
+                      className={`text-xs font-medium ${clientHasSigned ? 'text-emerald-600' : 'text-zinc-500'}`}
+                    >
+                      Client {clientHasSigned ? 'signed' : 'pending'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {strategistHasSigned ? (
+                      <CheckIcon weight="bold" className="h-3.5 w-3.5 text-emerald-500" />
+                    ) : (
+                      <Clock weight="bold" className="h-3.5 w-3.5 text-zinc-400" />
+                    )}
+                    <span
+                      className={`text-xs font-medium ${strategistHasSigned ? 'text-emerald-600' : 'text-zinc-500'}`}
+                    >
+                      Strategist {strategistHasSigned ? 'signed' : 'pending'}
+                    </span>
+                  </div>
+                </div>
               )}
+
+              {/* Signed state: badge + download link */}
+              {hasAgreementSigned && strategistHasSigned && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="flex w-fit items-center gap-1 rounded bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+                    <CheckIcon weight="bold" className="h-3 w-3" />
+                    You signed
+                  </span>
+                  {signedAgreementDocUrl && (
+                    <a
+                      href={signedAgreementDocUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex w-fit items-center gap-1 rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200"
+                    >
+                      <FileArrowDownIcon weight="fill" className="h-3.5 w-3.5" />
+                      Download signed agreement
+                    </a>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                {/* Send / Resend agreement button */}
+                {step1Complete && !hasAgreementSigned && (
+                  <button
+                    onClick={onOpenAgreementModal}
+                    className={`mt-2 flex w-fit items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${
+                      hasAgreementSent
+                        ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                        : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                    }`}
+                  >
+                    {hasAgreementSent ? 'Resend agreement' : 'Send agreement'}
+                  </button>
+                )}
+
+                {/* Strategist sign button */}
+                {hasAgreementSent &&
+                  !strategistHasSigned &&
+                  strategistCeremonyUrl &&
+                  onStrategistSign && (
+                    <button
+                      onClick={onStrategistSign}
+                      className="mt-2 flex w-fit items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                    >
+                      Sign agreement
+                    </button>
+                  )}
+              </div>
+
               {agreementError && (
                 <span className="mt-1 text-xs text-red-500">{agreementError}</span>
               )}
@@ -696,6 +777,28 @@ export function ActivityTimeline({
                             : 'Pending'}
                       </span>
                     </div>
+
+                    {step5State.complianceRejected && (
+                      <div className="mt-2 flex flex-col gap-2 border-t border-red-200 pt-2">
+                        {/* {strategyMetadata?.rejectionReason && (
+                          <p className="text-sm text-red-700">
+                            <span className="font-medium">Reason:</span>{' '}
+                            {strategyMetadata.rejectionReason}
+                          </p>
+                        )}
+                        {strategyMetadata?.rejectedAt && (
+                          <span className="text-xs text-red-500">
+                            {formatDate(new Date(strategyMetadata.rejectedAt))}
+                          </span>
+                        )} */}
+                        <button
+                          onClick={onOpenStrategySheet}
+                          className="mt-1 w-fit rounded bg-amber-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-amber-700"
+                        >
+                          Revise strategy
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Client review sub-step (only shown if compliance approved) */}
@@ -772,15 +875,18 @@ export function ActivityTimeline({
                   </button>
                 )}
 
-              {/* View strategy doc button (available whenever strategy has been sent) */}
-              {step5State?.strategySent && onViewStrategyDocument && (
-                <button
-                  onClick={() => onViewStrategyDocument()}
-                  className="mt-2 w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200"
-                >
-                  View strategy document
-                </button>
-              )}
+              {/* View strategy doc button (available whenever strategy has been sent and not rejected) */}
+              {step5State?.strategySent &&
+                onViewStrategyDocument &&
+                !step5State?.complianceRejected &&
+                !step5State?.clientDeclined && (
+                  <button
+                    onClick={() => onViewStrategyDocument()}
+                    className="mt-2 w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200"
+                  >
+                    View strategy document
+                  </button>
+                )}
 
               {/* Completed state */}
               {step5State?.isComplete && (

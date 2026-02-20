@@ -217,6 +217,34 @@ export function computeStep5State(
       };
     }
 
+    // Compliance rejected (document updated but agreement status not yet reverted)
+    if (status === AcceptanceStatus.REJECTED_BY_COMPLIANCE) {
+      return {
+        phase: 'compliance_rejected',
+        strategySent: true,
+        complianceApproved: false,
+        complianceRejected: true,
+        clientApproved: false,
+        clientDeclined: false,
+        isComplete: false,
+        acceptanceStatus: status,
+      };
+    }
+
+    // Client declined (document updated but agreement status not yet reverted)
+    if (status === AcceptanceStatus.REJECTED_BY_CLIENT) {
+      return {
+        phase: 'client_declined',
+        strategySent: true,
+        complianceApproved: false,
+        complianceRejected: false,
+        clientApproved: false,
+        clientDeclined: true,
+        isComplete: false,
+        acceptanceStatus: status,
+      };
+    }
+
     // Fallback: strategy review without a known doc status — assume compliance pending
     return {
       phase: 'compliance_review',

@@ -8,12 +8,21 @@ import { useRouter } from 'next/navigation';
 
 // Lazy-load heavy modal/sheet components (TipTap, jsPDF, html2canvas stay out of HMR graph)
 const AgreementSheet = dynamic(
-  () => import('@/components/agreements/agreement-sheet').then(m => ({ default: m.AgreementSheet })),
+  () =>
+    import('@/components/agreements/agreement-sheet').then(m => ({ default: m.AgreementSheet })),
   { ssr: false }
 );
 
 const StrategySheet = dynamic(
   () => import('@/components/strategy/strategy-sheet').then(m => ({ default: m.StrategySheet })),
+  { ssr: false }
+);
+
+const StrategyReviewSheet = dynamic(
+  () =>
+    import('@/components/compliance/strategy-review-sheet').then(m => ({
+      default: m.StrategyReviewSheet,
+    })),
   { ssr: false }
 );
 
@@ -184,6 +193,11 @@ export default function StrategistClientDetailPage({ params }: Props) {
             step5State={data.step5State}
             strategyMetadata={data.strategyMetadata}
             strategyDoc={data.strategyDoc}
+            strategistCeremonyUrl={data.strategistCeremonyUrl}
+            strategistHasSigned={data.strategistHasSigned}
+            clientHasSigned={data.clientHasSigned}
+            signedAgreementDocUrl={data.signedAgreementDocUrl}
+            onStrategistSign={data.handleStrategistSign}
             onOpenAgreementModal={() => data.setIsAgreementModalOpen(true)}
             onOpenPaymentModal={data.handleOpenPaymentModal}
             onSendPaymentReminder={data.handleSendPaymentReminder}
@@ -205,6 +219,8 @@ export default function StrategistClientDetailPage({ params }: Props) {
             viewingDocId={data.viewingDocId}
             todoTitles={data.todoTitles}
             documentTodos={data.documentTodos}
+            signedDocumentUrl={data.signedAgreementDocUrl}
+            contractDocumentId={data.signedAgreement?.contractDocumentId}
             onToggleSelection={data.toggleDocSelection}
             onViewDocument={data.handleViewDocument}
             onRequestDocuments={() => data.setIsRequestDocsModalOpen(true)}
@@ -220,20 +236,26 @@ export default function StrategistClientDetailPage({ params }: Props) {
           isOpen={data.isStrategySheetOpen}
           onClose={() => data.setIsStrategySheetOpen(false)}
           onSend={data.handleSendStrategy}
+          rejectedPdfUrl={data.strategyReviewPdfUrl}
+          complianceUserId={data.complianceUserId}
+          complianceUsers={data.complianceUsers}
         />
       )}
 
-      {/* Strategy Review Sheet (view sent strategy + compliance comments) */}
-      {data.strategyReviewPdfUrl && (
-        <StrategySheet
-          mode="review"
+      {/* Strategy Review Sheet (edit + chat with compliance) */}
+      {data.signedAgreement && data.client && (
+        <StrategyReviewSheet
+          role="strategist"
           isOpen={data.isStrategyReviewOpen}
           onClose={() => data.setIsStrategyReviewOpen(false)}
-          pdfUrl={data.strategyReviewPdfUrl}
-          documentTitle={data.strategyDoc?.originalName?.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan'}
-          comments={data.strategyComments}
-          isLoadingComments={data.isLoadingStrategyComments}
-          userRole="STRATEGIST"
+          client={data.client}
+          agreementId={data.signedAgreement.id}
+          documentTitle={
+            data.strategyDoc?.originalName?.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan'
+          }
+          otherUserId={data.complianceUserId}
+          complianceUsers={data.complianceUsers}
+          onSend={data.handleSendRevisedStrategy}
         />
       )}
 

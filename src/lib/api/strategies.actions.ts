@@ -146,9 +146,19 @@ export async function sendStrategyToClient(params: {
       sentAt: new Date().toISOString(),
     };
 
+    // Preserve existing description (HTML + __SIGNATURE_METADATA__),
+    // only replace the __STRATEGY_METADATA__ block.
+    const currentAgreement = await getAgreement(agreementId);
+    const baseDesc = (currentAgreement?.description ?? '')
+      .replace(/__STRATEGY_METADATA__:[\s\S]+$/, '')
+      .trimEnd();
+    const newDesc = baseDesc
+      ? `${baseDesc}\n${serializeStrategyMetadata(strategyMetadata)}`
+      : serializeStrategyMetadata(strategyMetadata);
+
     const updated = await updateAgreementWithMetadata(agreementId, {
       status: AgreementStatus.PENDING_STRATEGY_REVIEW,
-      description: serializeStrategyMetadata(strategyMetadata),
+      description: newDesc,
     });
 
     if (updated) {
@@ -249,19 +259,23 @@ export async function rejectStrategyAsCompliance(
       console.warn('[Strategies] Document rejected but failed to revert agreement status');
     }
 
-    // Store rejection reason in metadata, preserving original sentAt
+    // Store rejection reason in metadata, preserving existing description content
     if (reason) {
       const agreement = await getAgreement(agreementId);
       const existing = parseStrategyMetadata(agreement?.description);
+      const newBlock = serializeStrategyMetadata({
+        type: 'STRATEGY',
+        strategyDocumentId: documentId,
+        sentAt: existing?.sentAt ?? new Date().toISOString(),
+        rejectedBy: 'compliance',
+        rejectionReason: reason,
+        rejectedAt: new Date().toISOString(),
+      });
+      const baseDesc = (agreement?.description ?? '')
+        .replace(/__STRATEGY_METADATA__:[\s\S]+$/, '')
+        .trimEnd();
       await updateAgreementWithMetadata(agreementId, {
-        description: serializeStrategyMetadata({
-          type: 'STRATEGY',
-          strategyDocumentId: documentId,
-          sentAt: existing?.sentAt ?? new Date().toISOString(),
-          rejectedBy: 'compliance',
-          rejectionReason: reason,
-          rejectedAt: new Date().toISOString(),
-        }),
+        description: baseDesc ? `${baseDesc}\n${newBlock}` : newBlock,
       });
     }
 
@@ -358,19 +372,23 @@ export async function declineStrategyAsClient(
       console.warn('[Strategies] Document declined but failed to revert agreement status');
     }
 
-    // Store decline reason in metadata, preserving original sentAt
+    // Store decline reason in metadata, preserving existing description content
     if (reason) {
       const agreement = await getAgreement(agreementId);
       const existing = parseStrategyMetadata(agreement?.description);
+      const newBlock = serializeStrategyMetadata({
+        type: 'STRATEGY',
+        strategyDocumentId: documentId,
+        sentAt: existing?.sentAt ?? new Date().toISOString(),
+        rejectedBy: 'client',
+        rejectionReason: reason,
+        rejectedAt: new Date().toISOString(),
+      });
+      const baseDesc = (agreement?.description ?? '')
+        .replace(/__STRATEGY_METADATA__:[\s\S]+$/, '')
+        .trimEnd();
       await updateAgreementWithMetadata(agreementId, {
-        description: serializeStrategyMetadata({
-          type: 'STRATEGY',
-          strategyDocumentId: documentId,
-          sentAt: existing?.sentAt ?? new Date().toISOString(),
-          rejectedBy: 'client',
-          rejectionReason: reason,
-          rejectedAt: new Date().toISOString(),
-        }),
+        description: baseDesc ? `${baseDesc}\n${newBlock}` : newBlock,
       });
     }
 

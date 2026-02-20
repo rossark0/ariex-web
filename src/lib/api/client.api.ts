@@ -94,8 +94,9 @@ export interface ClientAgreement {
       status: string;
       document?: {
         id: string;
-        signedStatus: string;
-        uploadStatus: string;
+        signedStatus?: string;
+        uploadStatus?: string;
+        acceptanceStatus?: string;
         files?: Array<{
           id: string;
           originalName: string;
@@ -604,19 +605,13 @@ export async function syncAgreementSignatureStatus(
       return { success: false, error: 'Could not get envelope details from SignatureAPI' };
     }
 
-    // Check if envelope is completed OR if the client recipient has completed
-    // SignatureAPI envelope status: processing, in_progress, completed, failed, canceled
-    // SignatureAPI recipient status: awaiting, pending, sent, completed, rejected, etc.
+    // Only advance to PENDING_PAYMENT when the envelope is fully completed
+    // (all signers have signed). With dual signing (client + strategist), the
+    // envelope stays in_progress until both finish. Individual recipient status
+    // of "completed" is NOT enough — we need ALL parties to have signed.
     const isEnvelopeCompleted = envelopeDetails.status === 'completed';
 
-    // Also check if the client recipient has completed
-    const clientRecipient = envelopeDetails.recipients?.find(
-      r => r.key === 'client' || r.type === 'signer'
-    );
-    const isRecipientCompleted = clientRecipient?.status === 'completed';
-
-    // If envelope is completed OR client recipient has completed, mark as signed
-    if (isEnvelopeCompleted || isRecipientCompleted) {
+    if (isEnvelopeCompleted) {
       let documentSignSuccess = false;
       let agreementUpdateSuccess = false;
 
@@ -712,7 +707,7 @@ export async function syncStrategySignatureStatus(
     // Find the agreement that has this strategy envelope ID
     // The envelope ID is stored in the agreement's description as metadata
     const agreements = await getClientAgreements();
-    
+
     // Find agreement with matching strategy envelope ID in its metadata
     const targetAgreement = agreements.find(a => {
       // Check if description contains strategy metadata with this envelope ID
@@ -733,7 +728,12 @@ export async function syncStrategySignatureStatus(
       return { success: false, error: 'Agreement not found for this envelope' };
     }
 
-    console.log('[API] Found agreement:', targetAgreement.id, 'Current status:', targetAgreement.status);
+    console.log(
+      '[API] Found agreement:',
+      targetAgreement.id,
+      'Current status:',
+      targetAgreement.status
+    );
 
     // Update agreement status to PENDING_STRATEGY_REVIEW (client signed, strategist reviews)
     // Strategist will manually complete it by clicking "Finish Agreement"
@@ -743,17 +743,24 @@ export async function syncStrategySignatureStatus(
       return { success: true, agreementId: targetAgreement.id };
     } catch (updateError) {
       console.error('[API] Failed to update agreement status:', updateError);
-      
+
       // Try fallback with PATCH
       try {
         await apiRequest(`/agreements/${targetAgreement.id}`, {
           method: 'PATCH',
           body: JSON.stringify({ status: AgreementStatus.PENDING_STRATEGY_REVIEW }),
         });
-        console.log('[API] ✅ Agreement updated to PENDING_STRATEGY_REVIEW (via PATCH):', targetAgreement.id);
+        console.log(
+          '[API] ✅ Agreement updated to PENDING_STRATEGY_REVIEW (via PATCH):',
+          targetAgreement.id
+        );
         return { success: true, agreementId: targetAgreement.id };
       } catch {
-        return { success: false, agreementId: targetAgreement.id, error: 'Failed to update agreement status' };
+        return {
+          success: false,
+          agreementId: targetAgreement.id,
+          error: 'Failed to update agreement status',
+        };
       }
     }
   } catch (error) {
@@ -950,7 +957,7 @@ export async function getClientDashboardData(): Promise<ClientDashboardData | nu
                 // Attach document info to todo (including acceptanceStatus)
                 todo.document = {
                   id: matchingDoc.id,
-                  uploadStatus: matchingDoc.uploadStatus,
+                  uploadStatus: matchingDoc.uploadStatus || 'PENDING',
                   acceptanceStatus: matchingDoc.acceptanceStatus,
                   files: matchingDoc.files,
                 };

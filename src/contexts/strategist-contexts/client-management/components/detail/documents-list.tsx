@@ -9,6 +9,7 @@ import {
   X as XIcon,
   SpinnerGapIcon,
   Eye,
+  Seal as SealIcon,
 } from '@phosphor-icons/react';
 import { Loader2 } from 'lucide-react';
 import { EmptyDocumentsIllustration } from '@/components/ui/empty-documents-illustration';
@@ -39,6 +40,8 @@ interface DocumentsListProps {
   viewingDocId: string | null;
   todoTitles: Map<string, string>;
   documentTodos?: DocumentTodo[];
+  signedDocumentUrl?: string | null;
+  contractDocumentId?: string | null;
   onToggleSelection: (docId: string) => void;
   onViewDocument: (docId: string) => void;
   onRequestDocuments?: () => void;
@@ -51,6 +54,8 @@ export function DocumentsList({
   viewingDocId,
   todoTitles,
   documentTodos = [],
+  signedDocumentUrl,
+  contractDocumentId,
   onToggleSelection,
   onViewDocument,
   onRequestDocuments,
@@ -63,7 +68,7 @@ export function DocumentsList({
   } | null>(null);
 
   const handlePreview = async (doc: ApiDocument) => {
-    setPreviewDoc({ name: doc.name || doc.originalName || 'Document', url: null, loading: true });
+    setPreviewDoc({ name: doc.name || 'Document', url: null, loading: true });
     try {
       const url = await getDownloadUrl(doc.id);
       setPreviewDoc(prev => (prev ? { ...prev, url: url || null, loading: false } : null));
@@ -185,6 +190,7 @@ export function DocumentsList({
               <div className="flex flex-col">
                 {group.documents.map(doc => {
                   const isSelected = selectedDocs.has(doc.id);
+                  const isContractDoc = contractDocumentId && doc.id === contractDocumentId;
                   return (
                     <div key={doc.id} className="group relative">
                       <div
@@ -210,7 +216,14 @@ export function DocumentsList({
                           <FileIcon className="h-5 w-5 text-zinc-400" />
                         </div>
                         <div className="flex flex-1 flex-col gap-0.5">
-                          <span className="font-medium text-zinc-900">{doc.name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-zinc-900">{doc.name}</span>
+                            {isContractDoc && signedDocumentUrl && (
+                              <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-700">
+                                Signed
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-zinc-500">
                               {doc.todoId && todoTitles.get(doc.todoId)
@@ -232,6 +245,19 @@ export function DocumentsList({
                             </p>
                           )}
                         </div>
+                        {isContractDoc && signedDocumentUrl && (
+                          <a
+                            href={signedDocumentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            className="flex h-8 shrink-0 items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
+                            title="View signed copy"
+                          >
+                            <SealIcon weight="fill" className="h-3.5 w-3.5" />
+                            View signed copy
+                          </a>
+                        )}
                         <button
                           onClick={e => {
                             e.stopPropagation();

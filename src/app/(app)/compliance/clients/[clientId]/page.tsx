@@ -36,8 +36,11 @@ import { useAiPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
 import { useUiStore } from '@/contexts/ui/UiStore';
 import { ChevronDown } from 'lucide-react';
 
-const StrategySheet = dynamic(
-  () => import('@/components/strategy/strategy-sheet').then(m => ({ default: m.StrategySheet })),
+const StrategyReviewSheet = dynamic(
+  () =>
+    import('@/components/compliance/strategy-review-sheet').then(m => ({
+      default: m.StrategyReviewSheet,
+    })),
   { ssr: false }
 );
 
@@ -265,10 +268,7 @@ function CommentsPanel({
       ) : (
         <div className="mb-4 flex flex-col gap-3">
           {comments.map(c => (
-            <div
-              key={c.id}
-              className="rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3"
-            >
+            <div key={c.id} className="rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3">
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-sm font-medium text-zinc-700">
                   {c.userName || 'Compliance'}
@@ -344,18 +344,15 @@ export default function ComplianceClientDetailPage({ params }: Props) {
     strategyDocument,
     strategyMetadata,
     strategyPdfUrl,
-    comments,
     timeline,
     statusKey,
     statusConfig,
     isLoading,
-    isLoadingComments,
     isApproving,
     isRejecting,
     error,
     handleApproveStrategy,
     handleRejectStrategy,
-    handleAddComment,
     refresh,
   } = useComplianceClientDetail(params.clientId, strategistId);
 
@@ -404,7 +401,8 @@ export default function ComplianceClientDetailPage({ params }: Props) {
             id: agreement.id,
             name: agreement.name,
             status: agreement.status,
-            price: typeof agreement.price === 'string' ? parseFloat(agreement.price) : agreement.price,
+            price:
+              typeof agreement.price === 'string' ? parseFloat(agreement.price) : agreement.price,
             createdAt: agreement.createdAt,
           },
         ]
@@ -444,11 +442,18 @@ export default function ComplianceClientDetailPage({ params }: Props) {
   const onApprove = useCallback(async () => {
     const success = await handleApproveStrategy();
     setIsApproveModalOpen(false);
+    setIsStrategySheetOpen(false);
     if (success) {
-      setActionFeedback({ type: 'success', message: 'Strategy approved — sent to client for review.' });
+      setActionFeedback({
+        type: 'success',
+        message: 'Strategy approved — sent to client for review.',
+      });
       refresh();
     } else {
-      setActionFeedback({ type: 'error', message: 'Failed to approve strategy. Please try again.' });
+      setActionFeedback({
+        type: 'error',
+        message: 'Failed to approve strategy. Please try again.',
+      });
     }
   }, [handleApproveStrategy, refresh]);
 
@@ -456,6 +461,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
     async (reason: string) => {
       const success = await handleRejectStrategy(reason);
       setIsRejectModalOpen(false);
+      setIsStrategySheetOpen(false);
       if (success) {
         setActionFeedback({
           type: 'success',
@@ -463,7 +469,10 @@ export default function ComplianceClientDetailPage({ params }: Props) {
         });
         refresh();
       } else {
-        setActionFeedback({ type: 'error', message: 'Failed to reject strategy. Please try again.' });
+        setActionFeedback({
+          type: 'error',
+          message: 'Failed to reject strategy. Please try again.',
+        });
       }
     },
     [handleRejectStrategy, refresh]
@@ -477,9 +486,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
     return (
       <section className="flex flex-col items-center justify-center gap-4 p-12">
         <Warning className="h-12 w-12 text-amber-500" weight="duotone" />
-        <h1 className="text-xl font-semibold text-zinc-900">
-          {error || 'Client Not Found'}
-        </h1>
+        <h1 className="text-xl font-semibold text-zinc-900">{error || 'Client Not Found'}</h1>
         <p className="text-zinc-500">
           {error
             ? 'There was a problem loading this client.'
@@ -645,7 +652,8 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                   Compliance Review Required
                 </h3>
                 <p className="mb-4 text-sm text-amber-700">
-                  Review the tax strategy document and approve or reject it before it&apos;s sent to the client.
+                  Review the tax strategy document and approve or reject it before it&apos;s sent to
+                  the client.
                 </p>
                 <div className="flex gap-2">
                   <Button
@@ -687,7 +695,9 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                 </h3>
                 <p className="text-sm text-red-700">{strategyMetadata.rejectionReason}</p>
                 {strategyMetadata.rejectedAt && (
-                  <p className="mt-1 text-xs text-red-500">{formatDate(strategyMetadata.rejectedAt)}</p>
+                  <p className="mt-1 text-xs text-red-500">
+                    {formatDate(strategyMetadata.rejectedAt)}
+                  </p>
                 )}
               </div>
             )}
@@ -932,7 +942,10 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                           >
                             <div className="flex items-center gap-2">
                               {step5State.complianceApproved ? (
-                                <CheckIcon weight="bold" className="h-4 w-4 shrink-0 text-emerald-500" />
+                                <CheckIcon
+                                  weight="bold"
+                                  className="h-4 w-4 shrink-0 text-emerald-500"
+                                />
                               ) : step5State.complianceRejected ? (
                                 <XCircle weight="bold" className="h-4 w-4 shrink-0 text-red-500" />
                               ) : (
@@ -979,9 +992,15 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                             >
                               <div className="flex items-center gap-2">
                                 {step5State.clientApproved ? (
-                                  <CheckIcon weight="bold" className="h-4 w-4 shrink-0 text-emerald-500" />
+                                  <CheckIcon
+                                    weight="bold"
+                                    className="h-4 w-4 shrink-0 text-emerald-500"
+                                  />
                                 ) : step5State.clientDeclined ? (
-                                  <XCircle weight="bold" className="h-4 w-4 shrink-0 text-red-500" />
+                                  <XCircle
+                                    weight="bold"
+                                    className="h-4 w-4 shrink-0 text-red-500"
+                                  />
                                 ) : (
                                   <Clock weight="bold" className="h-4 w-4 shrink-0 text-teal-500" />
                                 )}
@@ -1070,8 +1089,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                 <div>
                   {groupDocumentsByDate(
                     [...nonStrategyDocs].sort(
-                      (a, b) =>
-                        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                     )
                   )
                     .slice(0, 2)
@@ -1127,103 +1145,14 @@ export default function ComplianceClientDetailPage({ params }: Props) {
               )}
             </div>
 
-            {/* Todos Section (read-only) */}
-            {todoLists.length > 0 && (
-              <div className="mb-6">
-                <h2 className="mb-4 text-base font-medium text-zinc-900">Todos</h2>
-                <div className="flex flex-col gap-4">
-                  {todoLists.map(list => {
-                    const listTodos = todos.filter(
-                      (t: { todoListId?: string }) => t.todoListId === list.id
-                    );
-                    const completedCount = listTodos.filter(
-                      (t: { completed?: boolean; status?: string }) =>
-                        t.completed || t.status === 'COMPLETED'
-                    ).length;
-                    const totalCount = listTodos.length;
-
-                    return (
-                      <div
-                        key={list.id}
-                        className="rounded-xl border border-zinc-100 bg-zinc-50 p-4"
-                      >
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="text-sm font-medium text-zinc-900">
-                            {list.name || 'Todo List'}
-                          </span>
-                          <span className="text-xs font-medium text-zinc-400">
-                            {completedCount}/{totalCount} completed
-                          </span>
-                        </div>
-                        {/* Progress bar */}
-                        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
-                          <div
-                            className="h-full rounded-full bg-emerald-500 transition-all"
-                            style={{
-                              width: totalCount > 0 ? `${(completedCount / totalCount) * 100}%` : '0%',
-                            }}
-                          />
-                        </div>
-                        {listTodos.length > 0 && (
-                          <div className="flex flex-col gap-1.5">
-                            {listTodos.map(
-                              (todo: {
-                                id: string;
-                                name?: string;
-                                title?: string;
-                                completed?: boolean;
-                                status?: string;
-                              }) => {
-                                const isDone = todo.completed || todo.status === 'COMPLETED';
-                                return (
-                                  <div
-                                    key={todo.id}
-                                    className="flex items-center gap-2 text-sm"
-                                  >
-                                    <div
-                                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded ${
-                                        isDone
-                                          ? 'bg-emerald-500'
-                                          : 'border border-zinc-300 bg-white'
-                                      }`}
-                                    >
-                                      {isDone && (
-                                        <CheckIcon
-                                          weight="bold"
-                                          className="h-3 w-3 text-white"
-                                        />
-                                      )}
-                                    </div>
-                                    <span
-                                      className={
-                                        isDone
-                                          ? 'text-zinc-400 line-through'
-                                          : 'text-zinc-700'
-                                      }
-                                    >
-                                      {todo.name || todo.title || 'Untitled'}
-                                    </span>
-                                  </div>
-                                );
-                              }
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
             {/* Comments Panel */}
-            {strategyDocument && (
+            {/* {strategyDocument && (
               <CommentsPanel
-                comments={comments}
-                isLoading={isLoadingComments}
-                onAddComment={handleAddComment}
+                comments={chatMessages}
+                isLoading={isLoadingChat}
+                onAddComment={handleSendMessage}
               />
-            )}
+            )} */}
           </div>
         </div>
       </div>
@@ -1251,25 +1180,40 @@ export default function ComplianceClientDetailPage({ params }: Props) {
 
       {/* Strategy Review Sheet */}
       {strategyPdfUrl && (
-        <StrategySheet
-          mode="review"
+        <StrategyReviewSheet
+          role="compliance"
           isOpen={isStrategySheetOpen}
-          onClose={() => setIsStrategySheetOpen(false)}
+          onClose={() => {
+            setIsStrategySheetOpen(false);
+            refresh();
+          }}
           pdfUrl={strategyPdfUrl}
           documentTitle={strategyDocument?.name?.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan'}
-          comments={comments.map(c => ({
-            id: c.id,
-            body: c.body,
-            createdAt: c.createdAt,
-            userName: 'userName' in c ? String((c as unknown as { userName: string }).userName) : undefined,
-          }))}
-          isLoadingComments={isLoadingComments}
-          onAddComment={handleAddComment}
-          onApprove={isComplianceReview ? () => setIsApproveModalOpen(true) : undefined}
-          onReject={isComplianceReview ? () => setIsRejectModalOpen(true) : undefined}
-          isApproving={isApproving}
-          isRejecting={isRejecting}
-          userRole="COMPLIANCE"
+          otherUserId={strategistId}
+          onApprove={
+            isComplianceReview
+              ? async () => {
+                  const ok = await handleApproveStrategy();
+                  if (ok) {
+                    setIsStrategySheetOpen(false);
+                    refresh();
+                  }
+                  return ok;
+                }
+              : undefined
+          }
+          onReject={
+            isComplianceReview
+              ? async (reason: string) => {
+                  const ok = await handleRejectStrategy(reason);
+                  if (ok) {
+                    setIsStrategySheetOpen(false);
+                    refresh();
+                  }
+                  return ok;
+                }
+              : undefined
+          }
         />
       )}
     </div>

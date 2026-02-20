@@ -23,6 +23,9 @@ todos:
   - id: backend-get-documents
     content: "GET /compliance/documents/{id} endpoint implemented in compliance.api.ts — getComplianceDocument() for viewing strategy"
     status: completed
+  - id: fix-rejection-ui-update
+    content: Fix rejection flow — compliance service must update agreement status to PENDING_STRATEGY + store rejection reason, and both pages must reflect the new state
+    status: pending
 isProject: false
 ---
 
@@ -110,6 +113,34 @@ Shared component for strategy review + chat. Same visual style as `strategy-shee
 - Keep using `getComplianceDocumentUrl` for PDF URL resolution
 - Wire approve/reject to compliance-scoped function (with fallback)
 - Remove debug logging
+
+### 6. Fix rejection flow and UI updates
+
+**Root cause**: The compliance service's `rejectStrategy()` in [compliance.service.ts](src/contexts/compliance/services/compliance.service.ts) only calls `updateComplianceDocumentAcceptance(docId, 'REJECTED_BY_COMPLIANCE')`. It does NOT:
+1. Update the agreement status back to `PENDING_STRATEGY`
+2. Store the rejection reason in agreement metadata
+
+There's already a correct server action `rejectStrategyAsCompliance()` in [strategies.actions.ts](src/lib/api/strategies.actions.ts) that does all three — but the compliance page doesn't use it.
+
+**Fix**:
+
+[compliance.service.ts](src/contexts/compliance/services/compliance.service.ts):
+- Update `rejectStrategy()` to also call the agreement status update (set `PENDING_STRATEGY`) and store the rejection reason in metadata, or switch to calling `rejectStrategyAsCompliance` from `strategies.actions.ts`
+
+[compliance client page](src/app/(app)/compliance/clients/[clientId]/page.tsx):
+- After rejection, hide the "Compliance Review Required" action bar (currently still shows because `step5State.phase` stays `compliance_review` instead of flipping to `compliance_rejected`)
+- Show rejection banner with reason
+- Timeline Step 5 should update: dot goes from green to red/amber, sub-step badge shows "Rejected"
+
+[strategist client page](src/app/(app)/strategist/clients/[clientId]/page.tsx):
+- After rejection the timeline should show `compliance_rejected` phase with "Revise & resend strategy" amber button
+- "View strategy document" button should still work (opens `StrategyReviewSheet` with editor + chat so strategist can revise)
+
+[strategy.model.ts](src/contexts/strategist-contexts/client-management/models/strategy.model.ts):
+- Verify `computeStep5State` correctly handles: `agreementStatus = PENDING_STRATEGY_REVIEW` + `acceptanceStatus = REJECTED_BY_COMPLIANCE` — currently this may still return `compliance_review` instead of `compliance_rejected` because the agreement status isn't updated. Once the service fix is in, this should work since: `PENDING_STRATEGY` + `REJECTED_BY_COMPLIANCE` → `compliance_rejected`
+
+Both pages:
+- After rejection action completes, call `refresh()` / `fetchClientDetail()` to refetch agreement + documents so `computeStep5State` recomputes correctly
 
 ---
 

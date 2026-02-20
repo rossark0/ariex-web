@@ -10,6 +10,7 @@ import {
   ArrowSquareOut,
   Warning,
   FilePdf,
+  DownloadSimple,
 } from '@phosphor-icons/react';
 import Image from 'next/image';
 import {
@@ -20,6 +21,7 @@ import {
   getDocumentDownloadUrl,
   getSignedDocumentDownloadUrl,
   syncAgreementSignatureStatus,
+  updateAgreementStatus,
   type ClientDashboardData,
   type ClientAgreement,
   type ClientCharge,
@@ -400,9 +402,8 @@ function AgreementStep({
         // Notify parent to refresh data
         onAgreementSigned?.();
       } else if (result.status === 'in_progress') {
-        // Envelope is in progress - signing may still be happening
         setStatusMessage(
-          'Signing in progress. If you completed signing, please wait a moment and try again.'
+          'Your signature has been received! Waiting for your tax strategist to co-sign the agreement. Please check back shortly.'
         );
       } else if (
         result.status === 'pending' ||
@@ -473,15 +474,25 @@ function AgreementStep({
               />
               <div className="flex items-center justify-between border-t border-zinc-200 bg-zinc-50 px-4 py-2">
                 <span className="text-xs text-zinc-500">Signed Agreement PDF</span>
-                <a
-                  href={signedDocumentUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900"
-                >
-                  <ArrowSquareOut weight="bold" className="h-3.5 w-3.5" />
-                  Open PDF
-                </a>
+                <div className="flex items-center gap-3">
+                  <a
+                    href={signedDocumentUrl}
+                    download
+                    className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 hover:text-emerald-800"
+                  >
+                    <DownloadSimple weight="bold" className="h-3.5 w-3.5" />
+                    Download
+                  </a>
+                  <a
+                    href={signedDocumentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900"
+                  >
+                    <ArrowSquareOut weight="bold" className="h-3.5 w-3.5" />
+                    Open PDF
+                  </a>
+                </div>
               </div>
             </div>
           ) : documentUrl ? (
@@ -703,14 +714,32 @@ function PaymentStep({
   // Get client email for Stripe checkout pre-fill
   const clientEmail = dashboardData?.user?.email;
 
-  const agreementPrice = pendingAgreement?.price
-    ? typeof pendingAgreement.price === 'string'
-      ? parseFloat(pendingAgreement.price)
-      : pendingAgreement.price
-    : 499;
+  const agreementPrice = (() => {
+    if (charge?.amount && charge.amount > 0) return charge.amount;
+    if (pendingAgreement?.paymentAmount && pendingAgreement.paymentAmount > 0)
+      return pendingAgreement.paymentAmount;
+    if (pendingAgreement?.price) {
+      const n = typeof pendingAgreement.price === 'string'
+        ? parseFloat(pendingAgreement.price)
+        : pendingAgreement.price;
+      if (!isNaN(n) && n > 0) return n;
+    }
+    return 499;
+  })();
 
   // Check if payment is already complete
   const isPaymentComplete = charge?.status === 'paid';
+
+  // Advance agreement status when payment is confirmed
+  const hasAdvancedStatusRef = useRef(false);
+  useEffect(() => {
+    if (!isPaymentComplete || hasAdvancedStatusRef.current || !pendingAgreement?.id) return;
+    if (pendingAgreement.status !== AgreementStatus.PENDING_PAYMENT) return;
+    hasAdvancedStatusRef.current = true;
+    updateAgreementStatus(pendingAgreement.id, AgreementStatus.PENDING_TODOS_COMPLETION).catch(
+      err => console.error('[PaymentStep] Failed to advance agreement status:', err)
+    );
+  }, [isPaymentComplete, pendingAgreement?.id, pendingAgreement?.status]);
 
   // Fetch charges for this agreement
   useEffect(() => {

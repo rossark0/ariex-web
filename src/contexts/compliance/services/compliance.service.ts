@@ -21,6 +21,7 @@ import {
   getDocumentComments,
   acceptComplianceInvitation as apiAcceptInvitation,
   updateComplianceDocumentAcceptance,
+  updateComplianceAgreement,
 } from '@/lib/api/compliance.api';
 import {
   toStrategistView,
@@ -28,7 +29,11 @@ import {
   findStrategyDocument,
   computeClientStatusKey,
 } from '../models/compliance.model';
-import { parseStrategyMetadata } from '@/contexts/strategist-contexts/client-management/models/strategy.model';
+import {
+  parseStrategyMetadata,
+  serializeStrategyMetadata,
+} from '@/contexts/strategist-contexts/client-management/models/strategy.model';
+import { AgreementStatus } from '@/types/agreement';
 import type { ComplianceStrategist } from '@/lib/api/compliance.api';
 import type { ApiAgreement, ApiClient } from '@/lib/api/strategist.api';
 
@@ -190,30 +195,36 @@ export async function fetchClientDetail(
 
 /**
  * Approve strategy as compliance officer.
- * Uses the compliance-scoped document endpoint.
+ * 1. Sets document to ACCEPTED_BY_COMPLIANCE
+ * 2. Advances document to REQUEST_CLIENT_ACCEPTANCE
  */
 export async function approveStrategy(documentId: string): Promise<boolean> {
   try {
-    const doc = await updateComplianceDocumentAcceptance(
+    const accepted = await updateComplianceDocumentAcceptance(
       documentId,
       'ACCEPTED_BY_COMPLIANCE'
     );
-    
-    if (doc) {
-      // Refresh the strategy document status in store
-      const store = complianceStore.getState();
-      const agreement = store.selectedAgreement;
-      if (agreement) {
-        const documents = await getAgreementDocuments(agreement.id);
-        store.setClientDocuments(documents);
-        store.setStrategyDocument(findStrategyDocument(documents));
-        // Refresh agreement for updated status
-        const updated = await getComplianceAgreement(agreement.id);
-        if (updated) store.setSelectedAgreement(updated);
-      }
-      return true;
+    if (!accepted) return false;
+
+    // Advance to client acceptance
+    await updateComplianceDocumentAcceptance(
+      documentId,
+      'REQUEST_CLIENT_ACCEPTANCE'
+    );
+
+    // Refresh store
+    const store = complianceStore.getState();
+    const agreement = store.selectedAgreement;
+    if (agreement) {
+      const [documents, updated] = await Promise.all([
+        getAgreementDocuments(agreement.id),
+        getComplianceAgreement(agreement.id),
+      ]);
+      store.setClientDocuments(documents);
+      store.setStrategyDocument(findStrategyDocument(documents));
+      if (updated) store.setSelectedAgreement(updated);
     }
-    return false;
+    return true;
   } catch (error) {
     console.error('[Compliance] Failed to approve strategy:', error);
     return false;
@@ -222,7 +233,9 @@ export async function approveStrategy(documentId: string): Promise<boolean> {
 
 /**
  * Reject strategy as compliance officer.
- * Uses the compliance-scoped document endpoint.
+ * 1. Sets document acceptanceStatus to REJECTED_BY_COMPLIANCE
+ * 2. Moves agreement back to PENDING_STRATEGY so strategist can revise
+ * 3. Stores rejection reason in agreement metadata
  */
 export async function rejectStrategy(
   agreementId: string,
@@ -234,20 +247,58 @@ export async function rejectStrategy(
       documentId,
       'REJECTED_BY_COMPLIANCE'
     );
-    
-    if (doc) {
-      // Refresh data
-      const store = complianceStore.getState();
-      const [documents, agreement] = await Promise.all([
-        getAgreementDocuments(agreementId),
-        getComplianceAgreement(agreementId),
-      ]);
-      store.setClientDocuments(documents);
-      store.setStrategyDocument(findStrategyDocument(documents));
-      if (agreement) store.setSelectedAgreement(agreement);
-      return true;
+
+    if (!doc) {
+      console.error('[Compliance] rejectStrategy: failed to update document acceptance');
+      return false;
     }
-    return false;
+
+    // Move agreement back to PENDING_STRATEGY and store rejection metadata.
+    // Preserve the existing description (HTML + __SIGNATURE_METADATA__) and
+    // only replace the __STRATEGY_METADATA__ block.
+    const store = complianceStore.getState();
+    const agreement = store.selectedAgreement;
+    const existing = parseStrategyMetadata(agreement?.description ?? null);
+
+    const newStrategyBlock = serializeStrategyMetadata({
+      type: 'STRATEGY',
+      strategyDocumentId: documentId,
+      sentAt: existing?.sentAt ?? new Date().toISOString(),
+      rejectedBy: 'compliance',
+      rejectionReason: reason,
+      rejectedAt: new Date().toISOString(),
+    });
+
+    // Strip old __STRATEGY_METADATA__ block and append updated one
+    const baseDescription = (agreement?.description ?? '')
+      .replace(/__STRATEGY_METADATA__:[\s\S]+$/, '')
+      .trimEnd();
+    const updatedDescription = baseDescription
+      ? `${baseDescription}\n${newStrategyBlock}`
+      : newStrategyBlock;
+
+    const agreementUpdated = await updateComplianceAgreement(agreementId, {
+      status: AgreementStatus.PENDING_STRATEGY,
+      description: updatedDescription,
+    });
+
+    if (!agreementUpdated) {
+      console.warn('[Compliance] rejectStrategy: agreement status update failed, retrying status-only');
+      await updateComplianceAgreement(agreementId, {
+        status: AgreementStatus.PENDING_STRATEGY,
+      });
+    }
+
+    // Refresh store data
+    const [documents, updatedAgreement] = await Promise.all([
+      getAgreementDocuments(agreementId),
+      getComplianceAgreement(agreementId),
+    ]);
+    store.setClientDocuments(documents);
+    store.setStrategyDocument(findStrategyDocument(documents));
+    if (updatedAgreement) store.setSelectedAgreement(updatedAgreement);
+
+    return true;
   } catch (error) {
     console.error('[Compliance] Failed to reject strategy:', error);
     return false;

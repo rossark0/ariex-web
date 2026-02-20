@@ -4,20 +4,15 @@
  * Hook for the compliance client detail page.
  * Fetches full client data, agreement, documents, todos, strategy state.
  * Provides approve/reject actions.
+ * Uses chat API for strategy review messaging (not comments).
  */
 
 'use client';
 
-import { useEffect, useMemo, useCallback, useState } from 'react';
+import { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { useStore } from 'zustand';
 import { complianceStore } from '../ComplianceStore';
-import {
-  fetchClientDetail,
-  approveStrategy,
-  rejectStrategy,
-  fetchComments,
-  addComment,
-} from '../services/compliance.service';
+import { fetchClientDetail, approveStrategy, rejectStrategy } from '../services/compliance.service';
 import {
   computeTimelineState,
   computeClientStatusKey,
@@ -27,8 +22,11 @@ import { parseStrategyMetadata } from '@/contexts/strategist-contexts/client-man
 import { CLIENT_STATUS_CONFIG, type ClientStatusKey } from '@/lib/client-status';
 import { getStrategyDocumentUrl } from '@/lib/api/strategies.actions';
 import { getComplianceDocumentUrl } from '@/lib/api/compliance.api';
+import { createOrGetChat } from '@/lib/api/chat.api';
+import { useAuth } from '@/contexts/auth/AuthStore';
 
 export function useComplianceClientDetail(clientId: string, strategistId: string) {
+  const { user: authUser } = useAuth();
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [strategyPdfUrl, setStrategyPdfUrl] = useState<string | null>(null);
@@ -43,8 +41,6 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
   const strategyDocument = useStore(complianceStore, s => s.strategyDocument);
   const isLoading = useStore(complianceStore, s => s.isLoadingClientDetail);
   const error = useStore(complianceStore, s => s.clientDetailError);
-  const comments = useStore(complianceStore, s => s.comments);
-  const isLoadingComments = useStore(complianceStore, s => s.isLoadingComments);
 
   // Fetch on mount
   useEffect(() => {
@@ -65,14 +61,24 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
 
   // Resolve the strategy document ID: prefer the document found in the
   // compliance documents list; fall back to the ID stored in agreement metadata.
-  const resolvedStrategyDocId = strategyDocument?.id ?? strategyMetadata?.strategyDocumentId ?? null;
+  const resolvedStrategyDocId =
+    strategyDocument?.id ?? strategyMetadata?.strategyDocumentId ?? null;
 
-  // Fetch comments when strategy document is identified
+  // Initialize chat with strategist
   useEffect(() => {
-    if (resolvedStrategyDocId) {
-      fetchComments(resolvedStrategyDocId);
-    }
-  }, [resolvedStrategyDocId]);
+    if (!authUser?.id || !strategistId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await createOrGetChat(authUser.id, strategistId, authUser.id);
+      } catch {
+        // Non-critical
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser?.id, strategistId]);
 
   // Get strategy PDF URL via compliance-scoped endpoints
   // (the generic /documents/{id} returns 403 for compliance users).
@@ -92,16 +98,15 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
 
     // Otherwise fetch via the compliance-specific API helper
     (async () => {
-      const url = await getComplianceDocumentUrl(
-        resolvedStrategyDocId,
-        selectedAgreement?.id
-      );
+      const url = await getComplianceDocumentUrl(resolvedStrategyDocId, selectedAgreement?.id);
       if (!cancelled && url) {
         setStrategyPdfUrl(url);
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [resolvedStrategyDocId, clientDocuments, clientFiles, selectedAgreement?.id]);
 
   // Status config for badge display
@@ -112,7 +117,8 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
 
   // Client profile helpers
   const clientProfile = selectedClient?.clientProfile;
-  const clientName = selectedClient?.fullName || selectedClient?.name || selectedClient?.email || '';
+  const clientName =
+    selectedClient?.fullName || selectedClient?.name || selectedClient?.email || '';
 
   // ─── Actions ──────────────────────────────────────────────────────────
 
@@ -132,28 +138,13 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
       if (!selectedAgreement?.id || !strategyDocument?.id) return false;
       setIsRejecting(true);
       try {
-        const success = await rejectStrategy(
-          selectedAgreement.id,
-          strategyDocument.id,
-          reason
-        );
+        const success = await rejectStrategy(selectedAgreement.id, strategyDocument.id, reason);
         return success;
       } finally {
         setIsRejecting(false);
       }
     },
     [selectedAgreement?.id, strategyDocument?.id]
-  );
-
-  const handleAddComment = useCallback(
-    async (body: string): Promise<boolean> => {
-      return addComment({
-        strategistUserId: strategistId,
-        documentId: resolvedStrategyDocId ?? undefined,
-        body,
-      });
-    },
-    [strategistId, resolvedStrategyDocId]
   );
 
   return {
@@ -169,7 +160,6 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
     strategyDocument,
     strategyMetadata,
     strategyPdfUrl,
-    comments,
 
     // Timeline / status
     timeline,
@@ -178,7 +168,6 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
 
     // Loading states
     isLoading,
-    isLoadingComments,
     isApproving,
     isRejecting,
     error,
@@ -186,7 +175,6 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
     // Actions
     handleApproveStrategy,
     handleRejectStrategy,
-    handleAddComment,
 
     // Refresh
     refresh: () => fetchClientDetail(clientId, strategistId),

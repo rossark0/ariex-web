@@ -1,4 +1,3 @@
-
 'use server';
 
 import { API_URL } from '@/lib/cognito-config';
@@ -134,6 +133,8 @@ export interface ApiAgreement {
   signatureEnvelopeId?: string;
   signatureRecipientId?: string;
   signatureCeremonyUrl?: string;
+  strategistRecipientId?: string;
+  strategistCeremonyUrl?: string;
   paymentAmount?: number;
   paymentStatus?: 'pending' | 'paid' | 'failed';
   paymentLink?: string;
@@ -806,6 +807,8 @@ export async function listClientAgreements(clientId: string): Promise<ApiAgreeme
               signatureEnvelopeId: metadata.envelopeId,
               signatureRecipientId: metadata.recipientId,
               signatureCeremonyUrl: metadata.ceremonyUrl,
+              strategistRecipientId: metadata.strategistRecipientId,
+              strategistCeremonyUrl: metadata.strategistCeremonyUrl,
             };
           } catch (e) {
             console.error('[API] Failed to parse metadata for agreement', a.id, ':', e);
@@ -1176,7 +1179,6 @@ export async function createCharge(data: {
 
     console.log('🔵 [API] Creating charge - Request body:', JSON.stringify(requestBody, null, 2));
 
-
     const raw = await apiRequest<any>('/charges', {
       method: 'POST',
       body: JSON.stringify(requestBody),
@@ -1210,7 +1212,6 @@ export async function createCharge(data: {
  */
 export async function getChargesForAgreement(agreementId: string): Promise<Charge[]> {
   try {
-
     const rawCharges = await apiRequest<any[]>(`/charges/agreement/${agreementId}`);
 
     // Map backend fields (amountCents) → frontend interface (amount in dollars)
@@ -1239,7 +1240,6 @@ export async function getChargesForAgreement(agreementId: string): Promise<Charg
  */
 export async function getCharge(chargeId: string): Promise<Charge | null> {
   try {
-
     const raw = await apiRequest<any>(`/charges/${chargeId}`);
     return {
       id: raw.id,
@@ -1323,7 +1323,11 @@ export async function cancelCharge(chargeId: string): Promise<boolean> {
 // Signature Status Sync
 // ============================================================================
 
-import { getEnvelopeDetails } from '@/lib/signature/signatureapi';
+import {
+  getEnvelopeDetails,
+  createCeremonyForRecipient,
+  getSignedDocumentUrl,
+} from '@/lib/signature/signatureapi';
 
 /**
  * Check envelope status from SignatureAPI for an agreement
@@ -1341,15 +1345,14 @@ export async function getAgreementEnvelopeStatus(
       return { status: null, error: 'Could not get envelope details from SignatureAPI' };
     }
 
-    // If envelope is completed, try to update backend
+    // If envelope is completed (all recipients signed), update agreement to PENDING_PAYMENT
     if (envelopeDetails.status === 'completed') {
       console.log('[StrategistAPI] Envelope is COMPLETED - attempting to sync to backend');
 
-      // Try to update agreement status to ACTIVE (signed)
       await apiRequest(`/agreements/${agreementId}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          status: 'ACTIVE',
+          status: AgreementStatus.PENDING_PAYMENT,
           signedAt: new Date().toISOString(),
         }),
       }).catch(() => {
@@ -1363,6 +1366,111 @@ export async function getAgreementEnvelopeStatus(
   } catch (error) {
     console.error('[StrategistAPI] Failed to get envelope status:', error);
     return { status: null, error: 'Failed to check envelope status' };
+  }
+}
+
+// ============================================================================
+// Strategist Signing Info
+// ============================================================================
+
+export interface StrategistSigningInfo {
+  strategistCeremonyUrl: string | null;
+  strategistHasSigned: boolean;
+  clientHasSigned: boolean;
+  envelopeCompleted: boolean;
+  signedDocumentUrl: string | null;
+}
+
+/**
+ * Get strategist signing status, ceremony URL, and signed document URL for an agreement.
+ *
+ * Parses __SIGNATURE_METADATA__ from the agreement description, checks
+ * individual recipient statuses via SignatureAPI, refreshes the ceremony
+ * URL if it has expired, and fetches the signed PDF URL when available.
+ */
+export async function getStrategistSigningInfo(
+  agreementId: string
+): Promise<StrategistSigningInfo> {
+  const fallback: StrategistSigningInfo = {
+    strategistCeremonyUrl: null,
+    strategistHasSigned: false,
+    clientHasSigned: false,
+    envelopeCompleted: false,
+    signedDocumentUrl: null,
+  };
+
+  try {
+    const agreement = await getAgreement(agreementId);
+    if (!agreement?.description) return fallback;
+
+    const metadataMatch = agreement.description.match(/__SIGNATURE_METADATA__:([\s\S]+)$/);
+    if (!metadataMatch) return fallback;
+
+    const metadata = JSON.parse(metadataMatch[1]);
+    const envelopeId: string | undefined = metadata.envelopeId;
+    const strategistRecipientId: string | undefined = metadata.strategistRecipientId;
+    let strategistCeremonyUrl: string | undefined = metadata.strategistCeremonyUrl;
+
+    if (!envelopeId) return fallback;
+
+    const envelope = await getEnvelopeDetails(envelopeId);
+    if (!envelope) return fallback;
+
+    const envelopeCompleted = envelope.status === 'completed';
+
+    const clientRecipient = envelope.recipients?.find(r => r.key === 'client');
+    const strategistRecipient = envelope.recipients?.find(r => r.key === 'strategist');
+
+    const clientHasSigned = clientRecipient?.status === 'completed';
+    const strategistHasSigned = strategistRecipient?.status === 'completed';
+
+    // If strategist hasn't signed and envelope isn't done, try to ensure we
+    // have a valid ceremony URL (they expire). Create a fresh one if needed.
+    if (!strategistHasSigned && !envelopeCompleted && strategistRecipientId) {
+      try {
+        const ceremony = await createCeremonyForRecipient({
+          recipientId: strategistRecipientId,
+        });
+        strategistCeremonyUrl = ceremony.ceremonyUrl;
+      } catch {
+        // Keep the original URL — it may still work
+      }
+    }
+
+    // When envelope is completed, fetch the signed document URL.
+    // The deliverable may take a few seconds to generate, so retry once.
+    let signedDocumentUrl: string | null = null;
+    if (envelopeCompleted) {
+      signedDocumentUrl = await getSignedDocumentUrl(envelopeId);
+      if (!signedDocumentUrl) {
+        await new Promise(r => setTimeout(r, 3000));
+        signedDocumentUrl = await getSignedDocumentUrl(envelopeId);
+      }
+    }
+
+    return {
+      strategistCeremonyUrl: strategistCeremonyUrl ?? null,
+      strategistHasSigned: !!strategistHasSigned,
+      clientHasSigned: !!clientHasSigned,
+      envelopeCompleted,
+      signedDocumentUrl,
+    };
+  } catch (error) {
+    console.error('[StrategistAPI] getStrategistSigningInfo error:', error);
+    return fallback;
+  }
+}
+
+/**
+ * Get the URL of the signed (fully executed) agreement PDF from SignatureAPI.
+ * Only available after the envelope is completed (all parties signed).
+ */
+export async function getSignedAgreementDocumentUrl(envelopeId: string): Promise<string | null> {
+  try {
+    return await getSignedDocumentUrl(envelopeId);
+  } catch (error) {
+    console.error('[StrategistAPI] getSignedAgreementDocumentUrl error:', error);
+    return null;
   }
 }
 
@@ -1591,7 +1699,14 @@ export async function getLinkedComplianceUsers(): Promise<ApiClient[]> {
     const result = await apiRequest<ApiClient[] | { data: ApiClient[] }>(
       '/compliance/strategist/allowed-compliance'
     );
-    return Array.isArray(result) ? result : result.data ?? [];
+    try {
+      require('fs').appendFileSync(
+        '/tmp/compliance-debug.log',
+        JSON.stringify({ time: new Date().toISOString(), result }, null, 2) + '\n'
+      );
+    } catch (e) {}
+    console.log('🔴 [DEBUG Compliance Users]', JSON.stringify(result, null, 2));
+    return Array.isArray(result) ? result : (result.data ?? []);
   } catch (error) {
     console.error('[API] Failed to get linked compliance users:', error);
     return [];

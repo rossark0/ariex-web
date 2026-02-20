@@ -21,6 +21,8 @@ import {
   updateDocumentAcceptance,
   updateAgreementStatus,
   deleteDocument,
+  getStrategistSigningInfo,
+  getLinkedComplianceUsers,
 } from '@/lib/api/strategist.api';
 import { sendAgreementToClient } from '@/lib/api/agreements.actions';
 import {
@@ -28,8 +30,13 @@ import {
   completeAgreement,
   getStrategyDocumentUrl,
 } from '@/lib/api/strategies.actions';
-import { getDocumentComments } from '@/lib/api/compliance.api';
-import type { ReviewComment } from '@/components/strategy/strategy-sheet';
+import {
+  createOrGetChat,
+  getChatMessages,
+  sendMessage as sendChatMessage,
+} from '@/lib/api/chat.api';
+import { useAuth } from '@/contexts/auth/AuthStore';
+
 import {
   computeStep5State,
   parseStrategyMetadata,
@@ -136,6 +143,12 @@ export interface ClientDetailData {
   statusKey: ClientStatusKey;
   todoTitles: Map<string, string>;
 
+  // Strategist signing & signed document
+  strategistCeremonyUrl: string | null;
+  strategistHasSigned: boolean;
+  clientHasSigned: boolean;
+  signedAgreementDocUrl: string | null;
+
   // Handlers
   toggleDocSelection: (docId: string) => void;
   handleSendAgreement: (data: AgreementSendData) => Promise<void>;
@@ -151,14 +164,17 @@ export interface ClientDetailData {
   handleViewStrategyDocument: () => Promise<void>;
   handleDeleteTodo: () => Promise<void>;
   handleViewDocument: (docId: string) => Promise<void>;
+  handleStrategistSign: () => void;
   refreshAgreements: () => Promise<void>;
 
-  // Strategy review (compliance comments)
+  // Strategy review (chat with compliance)
+  // Strategy review (chat with compliance)
   strategyReviewPdfUrl: string | null;
-  strategyComments: ReviewComment[];
-  isLoadingStrategyComments: boolean;
+  complianceUserId: string | null;
+  complianceUsers: (ApiClient & { complianceUserId?: string })[];
   isStrategyReviewOpen: boolean;
   setIsStrategyReviewOpen: (open: boolean) => void;
+  handleSendRevisedStrategy: (data: StrategySendData) => Promise<void>;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────
@@ -204,6 +220,12 @@ export function useClientDetailData(clientId: string): ClientDetailData {
   const [isStrategySheetOpen, setIsStrategySheetOpen] = useState(false);
   const [isCompletingAgreement, setIsCompletingAgreement] = useState(false);
   const [isAdvancingToStrategy, setIsAdvancingToStrategy] = useState(false);
+
+  // ─── Strategist Signing State ─────────────────────────────────
+  const [strategistCeremonyUrl, setStrategistCeremonyUrl] = useState<string | null>(null);
+  const [strategistHasSigned, setStrategistHasSigned] = useState(false);
+  const [clientHasSigned, setClientHasSigned] = useState(false);
+  const [signedAgreementDocUrl, setSignedAgreementDocUrl] = useState<string | null>(null);
 
   // ─── Envelope Sync State ─────────────────────────────────────
   const [envelopeStatuses, setEnvelopeStatuses] = useState<Record<string, string>>({});
@@ -330,6 +352,38 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     syncEnvelopeStatuses();
   }, [agreements, refreshAgreements]);
 
+  // ─── Strategist Signing Info ──────────────────────────────────
+  const hasFetchedSigningInfoRef = useRef(false);
+  useEffect(() => {
+    if (hasFetchedSigningInfoRef.current || agreements.length === 0) return;
+    const active = [...agreements].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )[0];
+    if (
+      !active ||
+      active.status === AgreementStatus.DRAFT ||
+      active.status === AgreementStatus.CANCELLED
+    )
+      return;
+    hasFetchedSigningInfoRef.current = true;
+
+    (async () => {
+      try {
+        const info = await getStrategistSigningInfo(active.id);
+        setStrategistHasSigned(info.strategistHasSigned);
+        setClientHasSigned(info.clientHasSigned);
+        if (info.strategistCeremonyUrl) {
+          setStrategistCeremonyUrl(info.strategistCeremonyUrl);
+        }
+        if (info.signedDocumentUrl) {
+          setSignedAgreementDocUrl(info.signedDocumentUrl);
+        }
+      } catch (error) {
+        console.error('[Hook] Failed to fetch strategist signing info:', error);
+      }
+    })();
+  }, [agreements]);
+
   useEffect(() => {
     async function fetchCharges() {
       setIsLoadingCharges(true);
@@ -343,6 +397,15 @@ export function useClientDetailData(clientId: string): ClientDetailData {
         const charges = await getChargesForAgreement(signed.id);
         const pendingCharge = charges.find(c => c.status === 'pending') || charges[0];
         setExistingCharge(pendingCharge || null);
+
+        // Auto-advance: if charge is paid but agreement still at PENDING_PAYMENT,
+        // advance it so the flow isn't stuck.
+        const paidCharge = charges.find(c => c.status === 'paid');
+        if (paidCharge && signed.status === AgreementStatus.PENDING_PAYMENT) {
+          updateAgreementStatus(signed.id, AgreementStatus.PENDING_TODOS_COMPLETION)
+            .then(() => refreshAgreements())
+            .catch(err => console.error('[Hook] Failed to auto-advance agreement:', err));
+        }
       } catch (error) {
         console.error('[Hook] Failed to fetch charges:', error);
         setExistingCharge(null);
@@ -768,10 +831,14 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     }
   };
 
-  // ─── Strategy Review Sheet (with compliance comments) ─────
+  // ─── Strategy Review Sheet (chat with compliance) ─────
+  // ─── Strategy Review Sheet (chat with compliance) ─────
+  const { user: authUser } = useAuth();
   const [strategyReviewPdfUrl, setStrategyReviewPdfUrl] = useState<string | null>(null);
-  const [strategyComments, setStrategyComments] = useState<ReviewComment[]>([]);
-  const [isLoadingStrategyComments, setIsLoadingStrategyComments] = useState(false);
+  const [complianceUserId, setComplianceUserId] = useState<string | null>(null);
+  const [complianceUsers, setComplianceUsers] = useState<
+    (ApiClient & { complianceUserId?: string })[]
+  >([]);
   const [isStrategyReviewOpen, setIsStrategyReviewOpen] = useState(false);
 
   useEffect(() => {
@@ -783,34 +850,44 @@ export function useClientDetailData(clientId: string): ClientDetailData {
         setStrategyReviewPdfUrl(result.url);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [strategyDocumentId]);
 
+  // Find linked compliance user ID just once
   useEffect(() => {
-    if (!strategyDocumentId) return;
+    if (!authUser?.id) return;
     let cancelled = false;
-    setIsLoadingStrategyComments(true);
     (async () => {
       try {
-        const comments = await getDocumentComments(strategyDocumentId);
-        if (!cancelled) {
-          setStrategyComments(
-            comments.map(c => ({
-              id: c.id,
-              body: c.body,
-              createdAt: c.createdAt,
-              userName: undefined,
-            }))
-          );
+        const fetchedUsers = await getLinkedComplianceUsers();
+        if (!cancelled && fetchedUsers.length > 0) {
+          // Add the true `complianceUserId` back into each user object for easy mapping in the frontend
+          const mappedUsers = fetchedUsers.map((u: any) => ({
+            ...u,
+            complianceUserId: u.complianceUserId || u.userId || u.id,
+          }));
+
+          setComplianceUsers(mappedUsers);
+
+          // The backend may return a mapping object (ComplianceStrategistMapping) or a User object.
+          // In a mapping object, the actual user ID is in `complianceUserId`.
+          // We cast to any to safely check, then fallback to `id` if it's a direct user object.
+          const targetUser: any =
+            mappedUsers.find((u: any) => u.email?.includes('koged')) || mappedUsers[0];
+          const actualUserId = targetUser.complianceUserId;
+
+          setComplianceUserId(actualUserId);
         }
       } catch {
         // Non-critical
-      } finally {
-        if (!cancelled) setIsLoadingStrategyComments(false);
       }
     })();
-    return () => { cancelled = true; };
-  }, [strategyDocumentId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser?.id]);
 
   const handleViewStrategyDocument = async () => {
     if (strategyReviewPdfUrl) {
@@ -828,6 +905,26 @@ export function useClientDetailData(clientId: string): ClientDetailData {
 
   // Backward compat alias (Phase 4 will remove)
   const handleDownloadSignedStrategy = handleViewStrategyDocument;
+
+  const handleSendRevisedStrategy = async (data: StrategySendData) => {
+    if (!signedAgreement || !apiClient) return;
+    try {
+      const result = await sendStrategyToClient({
+        agreementId: signedAgreement.id,
+        clientId: apiClient.id,
+        clientName: apiClient.name || apiClient.fullName || apiClient.email.split('@')[0],
+        clientEmail: apiClient.email,
+        strategistName: 'Ariex Tax Strategist',
+        data,
+      });
+      if (result.success) {
+        setIsStrategyReviewOpen(false);
+        await refreshAgreements();
+      }
+    } catch (error) {
+      console.error('Failed to send revised strategy:', error);
+    }
+  };
 
   const handleDeleteTodo = async () => {
     if (!todoToDelete) return;
@@ -847,6 +944,12 @@ export function useClientDetailData(clientId: string): ClientDetailData {
       console.error('[UI] Error getting download URL:', err);
     } finally {
       setViewingDocId(null);
+    }
+  };
+
+  const handleStrategistSign = () => {
+    if (strategistCeremonyUrl) {
+      window.open(strategistCeremonyUrl, '_blank');
     }
   };
 
@@ -911,6 +1014,10 @@ export function useClientDetailData(clientId: string): ClientDetailData {
       : null,
     statusKey,
     todoTitles,
+    strategistCeremonyUrl,
+    strategistHasSigned,
+    clientHasSigned,
+    signedAgreementDocUrl,
     toggleDocSelection,
     handleSendAgreement,
     handleAcceptDocument,
@@ -925,11 +1032,13 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     handleViewStrategyDocument,
     handleDeleteTodo,
     handleViewDocument,
+    handleStrategistSign,
     refreshAgreements,
     strategyReviewPdfUrl,
-    strategyComments,
-    isLoadingStrategyComments,
+    complianceUserId,
+    complianceUsers,
     isStrategyReviewOpen,
     setIsStrategyReviewOpen,
+    handleSendRevisedStrategy,
   };
 }

@@ -567,14 +567,13 @@ export async function getSignedDocumentUrl(envelopeId: string): Promise<string |
       return null;
     }
     
-    // Find a completed deliverable with a URL
-    // Types can be: 'standard', 'signed_pdf', etc.
+    // Find a ready deliverable with a URL.
+    // SignatureAPI uses status 'generated' (not 'completed') for ready deliverables.
     const signedPdf = deliverables.find((d: any) => 
-      d.status === 'completed' && d.url
+      (d.status === 'generated' || d.status === 'completed') && d.url
     );
     
     if (!signedPdf?.url) {
-      // Check if deliverables exist but are still pending
       const pendingDeliverable = deliverables.find((d: any) => d.status === 'pending');
       if (pendingDeliverable) {
         console.log('[SignatureAPI] Signed document is still being generated (pending)');
