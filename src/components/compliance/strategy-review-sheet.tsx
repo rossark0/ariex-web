@@ -584,7 +584,7 @@ export function StrategyReviewSheet({
           </div>
 
           {/* RIGHT COLUMN — Chat */}
-          <div className="flex w-[380px] shrink-0 flex-col border-l border-zinc-200 bg-white">
+          <div className="flex w-[380px] shrink-0 flex-col border-l border-zinc-200 bg-white px-4">
             <div className="border-b border-zinc-200 px-6 py-4">
               <h3 className="font-semibold text-zinc-900">
                 {role === 'compliance' ? 'Strategist Chat' : 'Compliance Chat'}

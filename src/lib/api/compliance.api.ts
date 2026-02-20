@@ -86,7 +86,14 @@ async function getAccessToken(): Promise<string | null> {
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const accessToken = await getAccessToken();
 
-  console.log('[Compliance API] Request', options.method ?? 'GET', options.body, endpoint, '- has token:', !!accessToken);
+  console.log(
+    '[Compliance API] Request',
+    options.method ?? 'GET',
+    options.body,
+    endpoint,
+    '- has token:',
+    !!accessToken
+  );
 
   if (!accessToken) {
     throw new Error('User not authenticated. Please provide a valid access token.');
@@ -193,7 +200,7 @@ export async function getComplianceStrategists(
       `/compliance/get-strategists${query}`
     );
     // Handle both array and paginated response formats
-    return Array.isArray(result) ? result : result.data ?? [];
+    return Array.isArray(result) ? result : (result.data ?? []);
   } catch (error) {
     console.error('[Compliance API] Failed to list strategists:', error);
     return [];
@@ -210,9 +217,7 @@ export async function getComplianceStrategistById(
 ): Promise<ComplianceStrategist | null> {
   const query = joinClients ? '?join=clients' : '';
   try {
-    return await apiRequest<ComplianceStrategist>(
-      `/compliance/get-strategists/${id}${query}`
-    );
+    return await apiRequest<ComplianceStrategist>(`/compliance/get-strategists/${id}${query}`);
   } catch (error) {
     console.error('[Compliance API] Failed to get strategist:', error);
     return null;
@@ -233,7 +238,7 @@ export async function getComplianceClients(strategistUserId: string): Promise<Ap
     const result = await apiRequest<ApiClient[] | { data: ApiClient[] }>(
       `/compliance/get-clients?strategistUserId=${strategistUserId}`
     );
-    return Array.isArray(result) ? result : result.data ?? [];
+    return Array.isArray(result) ? result : (result.data ?? []);
   } catch (error) {
     console.error('[Compliance API] Failed to list clients:', error);
     return [];
@@ -285,7 +290,7 @@ export async function getLinkedComplianceUsers(): Promise<ApiClient[]> {
     const result = await apiRequest<ApiClient[] | { data: ApiClient[] }>(
       '/compliance/strategist/allowed-compliance'
     );
-    return Array.isArray(result) ? result : result.data ?? [];
+    return Array.isArray(result) ? result : (result.data ?? []);
   } catch (error) {
     console.error('[Compliance API] Failed to get linked compliance users:', error);
     return [];
@@ -319,7 +324,7 @@ export async function getStrategistAgreements(strategistId: string): Promise<Api
     const result = await apiRequest<ApiAgreement[] | { data: ApiAgreement[] }>(
       `/compliance/strategists/${strategistId}/agreements`
     );
-    return Array.isArray(result) ? result : result.data ?? [];
+    return Array.isArray(result) ? result : (result.data ?? []);
   } catch (error) {
     console.error('[Compliance API] Failed to list strategist agreements:', error);
     return [];
@@ -329,13 +334,9 @@ export async function getStrategistAgreements(strategistId: string): Promise<Api
 /**
  * Get a single agreement by ID within compliance scope
  */
-export async function getComplianceAgreement(
-  agreementId: string
-): Promise<ApiAgreement | null> {
+export async function getComplianceAgreement(agreementId: string): Promise<ApiAgreement | null> {
   try {
-    return await apiRequest<ApiAgreement>(
-      `/compliance/agreements/${agreementId}`
-    );
+    return await apiRequest<ApiAgreement>(`/compliance/agreements/${agreementId}`);
   } catch (error) {
     console.error('[Compliance API] Failed to get agreement:', error);
     return null;
@@ -374,7 +375,7 @@ export async function getAgreementDocuments(agreementId: string): Promise<ApiDoc
     const result = await apiRequest<ApiDocument[] | { data: ApiDocument[] }>(
       `/compliance/agreements/${agreementId}/documents`
     );
-    return Array.isArray(result) ? result : result.data ?? [];
+    return Array.isArray(result) ? result : (result.data ?? []);
   } catch (error) {
     console.error('[Compliance API] Failed to list agreement documents:', error);
     return [];
@@ -389,7 +390,7 @@ export async function getAgreementFiles(agreementId: string): Promise<FileMetada
     const result = await apiRequest<FileMetadata[] | { data: FileMetadata[] }>(
       `/compliance/agreements/${agreementId}/files`
     );
-    return Array.isArray(result) ? result : result.data ?? [];
+    return Array.isArray(result) ? result : (result.data ?? []);
   } catch (error) {
     console.error('[Compliance API] Failed to list agreement files:', error);
     return [];
@@ -408,7 +409,7 @@ export async function getAgreementTodoLists(agreementId: string): Promise<ApiTod
     const result = await apiRequest<ApiTodoList[] | { data: ApiTodoList[] }>(
       `/compliance/agreements/${agreementId}/todo-lists`
     );
-    return Array.isArray(result) ? result : result.data ?? [];
+    return Array.isArray(result) ? result : (result.data ?? []);
   } catch (error) {
     console.error('[Compliance API] Failed to list agreement todo lists:', error);
     return [];
@@ -423,7 +424,7 @@ export async function getAgreementTodos(agreementId: string): Promise<ApiTodo[]>
     const result = await apiRequest<ApiTodo[] | { data: ApiTodo[] }>(
       `/compliance/agreements/${agreementId}/todos`
     );
-    return Array.isArray(result) ? result : result.data ?? [];
+    return Array.isArray(result) ? result : (result.data ?? []);
   } catch (error) {
     console.error('[Compliance API] Failed to list agreement todos:', error);
     return [];
@@ -454,7 +455,10 @@ export async function getComplianceDocument(documentId: string): Promise<ApiDocu
  */
 export async function updateComplianceDocumentAcceptance(
   documentId: string,
-  acceptanceStatus: 'ACCEPTED_BY_COMPLIANCE' | 'REJECTED_BY_COMPLIANCE' | 'REQUEST_CLIENT_ACCEPTANCE'
+  acceptanceStatus:
+    | 'ACCEPTED_BY_COMPLIANCE'
+    | 'REJECTED_BY_COMPLIANCE'
+    | 'REQUEST_CLIENT_ACCEPTANCE'
 ): Promise<ApiDocument | null> {
   try {
     const doc = await apiRequest<ApiDocument>(`/compliance/documents/${documentId}`, {
@@ -549,7 +553,7 @@ export async function getDocumentComments(documentId: string): Promise<Complianc
     const result = await apiRequest<ComplianceComment[] | { data: ComplianceComment[] }>(
       `/comment?filter=documentId||$eq||${documentId}&sort=createdAt,DESC`
     );
-    return Array.isArray(result) ? result : result.data ?? [];
+    return Array.isArray(result) ? result : (result.data ?? []);
   } catch (error) {
     console.error('[Compliance API] Failed to get document comments:', error);
     return [];

@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -148,7 +148,7 @@ function RejectStrategyModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-100000 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
         <h3 className="mb-1 text-lg font-semibold text-zinc-900">Reject Strategy</h3>
         <p className="mb-4 text-sm text-zinc-500">
@@ -201,7 +201,7 @@ function ApproveStrategyModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-100000 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
         <h3 className="mb-1 text-lg font-semibold text-zinc-900">Approve Strategy</h3>
         <p className="mb-4 text-sm text-zinc-500">
@@ -355,6 +355,12 @@ export default function ComplianceClientDetailPage({ params }: Props) {
     handleRejectStrategy,
     refresh,
   } = useComplianceClientDetail(params.clientId, strategistId);
+
+  const todoTitles = useMemo(() => {
+    const map = new Map<string, string>();
+    todos.forEach(t => map.set(t.id, t.title));
+    return map;
+  }, [todos]);
 
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
@@ -1125,7 +1131,11 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                   </div>
                                   <div className="flex flex-1 flex-col">
                                     <span className="font-medium text-zinc-900">
-                                      {(doc.name || 'Untitled').replace(/\.[^/.]+$/, '')}
+                                      {(
+                                        doc.name ||
+                                        (doc.todoId && todoTitles.get(doc.todoId)) ||
+                                        'Untitled'
+                                      ).replace(/\.[^/.]+$/, '')}
                                     </span>
                                     <span className="text-sm text-zinc-500">
                                       {doc.uploadedByName || 'Client'}
