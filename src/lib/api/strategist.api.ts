@@ -1694,18 +1694,12 @@ export async function inviteComplianceUser(
 /**
  * Get all compliance users linked to this strategist
  */
-export async function getLinkedComplianceUsers(): Promise<ApiClient[]> {
+export async function getLinkedComplianceUsers(joinClients = false): Promise<ApiClient[]> {
   try {
+    const query = joinClients ? '?join=clients' : '';
     const result = await apiRequest<ApiClient[] | { data: ApiClient[] }>(
-      '/compliance/strategist/allowed-compliance'
+      `/compliance/strategist/allowed-compliance${query}`
     );
-    try {
-      require('fs').appendFileSync(
-        '/tmp/compliance-debug.log',
-        JSON.stringify({ time: new Date().toISOString(), result }, null, 2) + '\n'
-      );
-    } catch (e) {}
-    console.log('🔴 [DEBUG Compliance Users]', JSON.stringify(result, null, 2));
     return Array.isArray(result) ? result : (result.data ?? []);
   } catch (error) {
     console.error('[API] Failed to get linked compliance users:', error);
