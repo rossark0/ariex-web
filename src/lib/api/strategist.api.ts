@@ -1741,3 +1741,24 @@ export async function updateComplianceClientAccess(
     return false;
   }
 }
+
+/**
+ * Remove a client from a compliance user's allowed clients
+ */
+export async function deleteComplianceClient(
+  complianceUserId: string,
+  clientUserId: string
+): Promise<boolean> {
+  try {
+    await apiRequest(
+      `/compliance/strategist/allowed-compliance/${complianceUserId}/clients/${clientUserId}`,
+      {
+        method: 'DELETE',
+      }
+    );
+    return true;
+  } catch (error) {
+    console.error('[API] Failed to delete compliance client:', error);
+    return false;
+  }
+}

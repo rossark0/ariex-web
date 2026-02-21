@@ -1,10 +1,11 @@
 'use client';
 
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
-import { Plus, ShieldCheck, User, X } from '@phosphor-icons/react/dist/ssr';
+import { Plus, ShieldCheck, Trash, User, X } from '@phosphor-icons/react/dist/ssr';
 import { Check } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  deleteComplianceClient,
   getLinkedComplianceUsers,
   listClients,
   updateComplianceClientAccess,
@@ -15,10 +16,18 @@ import {
 // TYPES
 // ============================================================================
 
+interface LinkedClient {
+  id: string;
+  email: string;
+  name?: string | null;
+}
+
 interface ComplianceUser {
   id: string;
+  complianceUserId: string;
   name: string;
   email: string;
+  clients: LinkedClient[];
 }
 
 // ============================================================================
@@ -42,9 +51,11 @@ function getInitials(name: string | null): string {
 function ComplianceCard({
   complianceUser,
   onAddClient,
+  onDeleteClient,
 }: {
   complianceUser: ComplianceUser;
   onAddClient: (complianceUser: ComplianceUser) => void;
+  onDeleteClient: (complianceUserId: string, clientId: string, clientEmail: string) => void;
 }) {
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white transition-all hover:border-zinc-300 hover:shadow-md">
@@ -63,6 +74,31 @@ function ComplianceCard({
           Compliance
         </span>
       </div>
+
+      {/* Linked Clients List */}
+      {complianceUser.clients && complianceUser.clients.length > 0 && (
+        <div className="border-t border-zinc-100 px-4 py-3">
+          <p className="mb-2 text-xs font-medium text-zinc-600">Linked Clients</p>
+          <div className="space-y-2">
+            {complianceUser.clients.map(client => (
+              <div
+                key={client.id}
+                className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2"
+              >
+                <p className="text-xs text-zinc-700">{client.email}</p>
+                <button
+                  onClick={() => onDeleteClient(complianceUser.complianceUserId, client.id, client.email)}
+                  className="flex items-center justify-center text-red-500 transition-colors hover:text-red-700"
+                  title="Remove client"
+                >
+                  <Trash weight="fill" className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <button
         onClick={() => onAddClient(complianceUser)}
         className="flex w-full cursor-pointer items-center justify-center gap-1.5 border-t border-zinc-100 py-2.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
@@ -297,6 +333,69 @@ function AddClientToComplianceModal({
 }
 
 // ============================================================================
+// DELETE CLIENT CONFIRMATION MODAL
+// ============================================================================
+
+interface DeleteClientConfirmationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  clientEmail: string | null;
+  onConfirm: () => void;
+  isDeleting: boolean;
+}
+
+function DeleteClientConfirmationModal({
+  isOpen,
+  onClose,
+  clientEmail,
+  onConfirm,
+  isDeleting,
+}: DeleteClientConfirmationModalProps) {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-6 shadow-lg">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-zinc-900">Remove Client</h2>
+          <p className="mt-2 text-sm text-zinc-600">
+            Are you sure you want to remove <span className="font-medium">{clientEmail}</span> from this compliance user's access?
+          </p>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={isDeleting}
+            className="flex-1 rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+          >
+            {isDeleting ? 'Removing...' : 'Remove'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // LOADING STATE
 // ============================================================================
 
@@ -356,12 +455,19 @@ export default function StrategistCompliancePage() {
     isOpen: boolean;
     complianceUser: ComplianceUser | null;
   }>({ isOpen: false, complianceUser: null });
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    complianceUserId: string | null;
+    clientId: string | null;
+    clientEmail: string | null;
+    isDeleting: boolean;
+  }>({ isOpen: false, complianceUserId: null, clientId: null, clientEmail: null, isDeleting: false });
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
       const [complianceData, clientsData] = await Promise.all([
-        getLinkedComplianceUsers(),
+        getLinkedComplianceUsers(true),
         listClients(),
       ]);
 
@@ -369,8 +475,14 @@ export default function StrategistCompliancePage() {
 
       const users: ComplianceUser[] = (complianceData || []).map((cu: any) => ({
         id: cu.id,
+        complianceUserId: cu.id,
         name: cu.name || cu.fullName || cu.email?.split('@')[0] || '',
         email: cu.email || '',
+        clients: (cu.clients || []).map((client: any) => ({
+          id: client.id,
+          email: client.email,
+          name: client.name || client.fullName || client.email?.split('@')[0],
+        })),
       }));
 
       setComplianceUsers(users);
@@ -381,6 +493,40 @@ export default function StrategistCompliancePage() {
       setIsLoading(false);
     }
   }, []);
+
+  const handleDeleteClient = useCallback(
+    (complianceUserId: string, clientId: string, clientEmail: string) => {
+      setDeleteConfirmation({
+        isOpen: true,
+        complianceUserId,
+        clientId,
+        clientEmail,
+        isDeleting: false,
+      });
+    },
+    []
+  );
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteConfirmation.complianceUserId || !deleteConfirmation.clientId) return;
+
+    setDeleteConfirmation(prev => ({ ...prev, isDeleting: true }));
+
+    try {
+      const success = await deleteComplianceClient(
+        deleteConfirmation.complianceUserId,
+        deleteConfirmation.clientId
+      );
+      if (success) {
+        // Refresh data after successful deletion
+        loadData();
+        setDeleteConfirmation({ isOpen: false, complianceUserId: null, clientId: null, clientEmail: null, isDeleting: false });
+      }
+    } catch (error) {
+      console.error('Failed to delete client from compliance:', error);
+      setDeleteConfirmation(prev => ({ ...prev, isDeleting: false }));
+    }
+  }, [deleteConfirmation.complianceUserId, deleteConfirmation.clientId, loadData]);
 
   useEffect(() => {
     loadData();
@@ -445,6 +591,7 @@ export default function StrategistCompliancePage() {
                     key={cu.id}
                     complianceUser={cu}
                     onAddClient={cu => setAddClientModal({ isOpen: true, complianceUser: cu })}
+                    onDeleteClient={handleDeleteClient}
                   />
                 ))}
               </div>
@@ -459,6 +606,14 @@ export default function StrategistCompliancePage() {
         complianceUser={addClientModal.complianceUser}
         allClients={allClients}
         onClientAdded={loadData}
+      />
+
+      <DeleteClientConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() => setDeleteConfirmation({ isOpen: false, complianceUserId: null, clientId: null, clientEmail: null, isDeleting: false })}
+        clientEmail={deleteConfirmation.clientEmail}
+        onConfirm={handleConfirmDelete}
+        isDeleting={deleteConfirmation.isDeleting}
       />
     </div>
   );
