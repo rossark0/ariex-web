@@ -32,6 +32,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
+import { AgreementSelector } from '@/contexts/strategist-contexts/client-management/components/detail/agreement-selector';
 import { useAiPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
 import { useUiStore } from '@/contexts/ui/UiStore';
 import { ChevronDown } from 'lucide-react';
@@ -337,6 +338,8 @@ export default function ComplianceClientDetailPage({ params }: Props) {
     client,
     clientName,
     clientProfile,
+    clientAgreements,
+    selectedAgreementId,
     agreement,
     documents,
     todoLists,
@@ -353,6 +356,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
     error,
     handleApproveStrategy,
     handleRejectStrategy,
+    handleSelectAgreement,
     refresh,
   } = useComplianceClientDetail(params.clientId, strategistId);
 
@@ -650,6 +654,15 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                 <span>Strategy</span>
               </button>
             </div>
+
+            {/* Agreement Selector */}
+            {clientAgreements.length > 0 && (
+              <AgreementSelector
+                agreements={clientAgreements}
+                selectedAgreementId={selectedAgreementId}
+                onSelect={handleSelectAgreement}
+              />
+            )}
 
             {/* Compliance Review Action Bar */}
             {isComplianceReview && (

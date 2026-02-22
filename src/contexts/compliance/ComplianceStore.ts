@@ -33,6 +33,8 @@ export interface ComplianceState {
 
   // ─── Client Detail ───────────────────────────────────────────
   selectedClient: ApiClient | null;
+  clientAgreements: ApiAgreement[];
+  selectedAgreementId: string | null;
   selectedAgreement: ApiAgreement | null;
   clientDocuments: ApiDocument[];
   clientFiles: FileMetadata[];
@@ -66,6 +68,8 @@ export interface ComplianceState {
 
   // Client detail
   setSelectedClient: (client: ApiClient | null) => void;
+  setClientAgreements: (agreements: ApiAgreement[]) => void;
+  setSelectedAgreementId: (id: string | null) => void;
   setSelectedAgreement: (agreement: ApiAgreement | null) => void;
   setClientDocuments: (documents: ApiDocument[]) => void;
   setClientFiles: (files: FileMetadata[]) => void;
@@ -104,6 +108,8 @@ const initialState = {
   clientError: null,
 
   selectedClient: null,
+  clientAgreements: [],
+  selectedAgreementId: null,
   selectedAgreement: null,
   clientDocuments: [],
   clientFiles: [],
@@ -142,6 +148,8 @@ export const complianceStore = createStore<ComplianceState>(set => ({
 
   // Client detail
   setSelectedClient: selectedClient => set({ selectedClient }),
+  setClientAgreements: clientAgreements => set({ clientAgreements }),
+  setSelectedAgreementId: selectedAgreementId => set({ selectedAgreementId }),
   setSelectedAgreement: selectedAgreement => set({ selectedAgreement }),
   setClientDocuments: clientDocuments => set({ clientDocuments }),
   setClientFiles: clientFiles => set({ clientFiles }),
@@ -161,6 +169,8 @@ export const complianceStore = createStore<ComplianceState>(set => ({
   resetClientDetail: () =>
     set({
       selectedClient: null,
+      clientAgreements: [],
+      selectedAgreementId: null,
       selectedAgreement: null,
       clientDocuments: [],
       clientFiles: [],

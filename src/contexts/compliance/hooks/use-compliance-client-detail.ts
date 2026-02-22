@@ -12,7 +12,7 @@
 import { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { useStore } from 'zustand';
 import { complianceStore } from '../ComplianceStore';
-import { fetchClientDetail, approveStrategy, rejectStrategy } from '../services/compliance.service';
+import { fetchClientDetail, approveStrategy, rejectStrategy, selectComplianceAgreement } from '../services/compliance.service';
 import {
   computeTimelineState,
   computeClientStatusKey,
@@ -33,6 +33,8 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
 
   // Store selectors
   const selectedClient = useStore(complianceStore, s => s.selectedClient);
+  const clientAgreements = useStore(complianceStore, s => s.clientAgreements);
+  const selectedAgreementId = useStore(complianceStore, s => s.selectedAgreementId);
   const selectedAgreement = useStore(complianceStore, s => s.selectedAgreement);
   const clientDocuments = useStore(complianceStore, s => s.clientDocuments);
   const clientFiles = useStore(complianceStore, s => s.clientFiles);
@@ -46,6 +48,11 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
   useEffect(() => {
     fetchClientDetail(clientId, strategistId);
   }, [clientId, strategistId]);
+
+  // Reset strategyPdfUrl when agreement changes
+  useEffect(() => {
+    setStrategyPdfUrl(null);
+  }, [selectedAgreementId]);
 
   // Compute timeline state from real data
   const timeline: RealTimelineState = useMemo(
@@ -147,11 +154,20 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
     [selectedAgreement?.id, strategyDocument?.id]
   );
 
+  const handleSelectAgreement = useCallback(
+    async (id: string) => {
+      await selectComplianceAgreement(id);
+    },
+    []
+  );
+
   return {
     // Data
     client: selectedClient,
     clientName,
     clientProfile,
+    clientAgreements,
+    selectedAgreementId,
     agreement: selectedAgreement,
     documents: clientDocuments,
     files: clientFiles,
@@ -175,6 +191,7 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
     // Actions
     handleApproveStrategy,
     handleRejectStrategy,
+    handleSelectAgreement,
 
     // Refresh
     refresh: () => fetchClientDetail(clientId, strategistId),

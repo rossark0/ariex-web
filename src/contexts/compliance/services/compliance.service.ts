@@ -102,7 +102,11 @@ export async function fetchClients(strategistId: string): Promise<void> {
 
     // Build views with computed status from agreement data
     const views = clients.map(client => {
-      const clientAgreement = agreements.find(a => a.clientId === client.id) ?? null;
+      // Pick the most recent agreement for this client
+      const clientAgreements = agreements
+        .filter(a => a.clientId === client.id)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const clientAgreement = clientAgreements[0] ?? null;
       // If agreement has strategy metadata, find the strategy document's acceptance status
       let strategyDocAcceptance: string | null = null;
       if (clientAgreement) {
@@ -130,6 +134,7 @@ export async function fetchClients(strategistId: string): Promise<void> {
 /**
  * Fetch full client detail including agreement, documents, todos, files.
  * This is the main data-loading function for the client detail page.
+ * Supports multiple agreements per client — auto-selects the most recent.
  */
 export async function fetchClientDetail(
   clientId: string,
@@ -140,7 +145,7 @@ export async function fetchClientDetail(
   store.setIsLoadingClientDetail(true);
 
   try {
-    // Step 1: Fetch client and their agreement
+    // Step 1: Fetch client and their agreements
     const [client, agreements] = await Promise.all([
       getComplianceClientById(clientId, strategistId),
       getStrategistAgreements(strategistId),
@@ -154,8 +159,16 @@ export async function fetchClientDetail(
 
     store.setSelectedClient(client);
 
-    // Find the agreement for this client
-    const agreement = agreements.find(a => a.clientId === clientId) ?? null;
+    // Find ALL agreements for this client, sorted newest first
+    const clientAgreements = agreements
+      .filter(a => a.clientId === clientId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    store.setClientAgreements(clientAgreements);
+
+    // Auto-select the most recent agreement
+    const agreement = clientAgreements[0] ?? null;
+    store.setSelectedAgreementId(agreement?.id ?? null);
     store.setSelectedAgreement(agreement);
 
     if (!agreement) {
@@ -165,27 +178,63 @@ export async function fetchClientDetail(
     }
 
     // Step 2: Fetch all agreement-related data in parallel
-    const [documents, files, todoLists, todos] = await Promise.all([
-      getAgreementDocuments(agreement.id),
-      getAgreementFiles(agreement.id),
-      getAgreementTodoLists(agreement.id),
-      getAgreementTodos(agreement.id),
-    ]);
-
-    store.setClientDocuments(documents);
-    store.setClientFiles(files);
-    store.setClientTodoLists(todoLists);
-    store.setClientTodos(todos);
-
-    // Find strategy document
-    const strategyDoc = findStrategyDocument(documents);
-    store.setStrategyDocument(strategyDoc);
+    await loadAgreementData(agreement.id);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to load client detail';
     store.setClientDetailError(message);
     console.error('[Compliance] Failed to fetch client detail:', error);
   } finally {
     store.setIsLoadingClientDetail(false);
+  }
+}
+
+/**
+ * Load documents, files, todos for a specific agreement and update the store.
+ */
+async function loadAgreementData(agreementId: string): Promise<void> {
+  const store = complianceStore.getState();
+  const [documents, files, todoLists, todos] = await Promise.all([
+    getAgreementDocuments(agreementId),
+    getAgreementFiles(agreementId),
+    getAgreementTodoLists(agreementId),
+    getAgreementTodos(agreementId),
+  ]);
+
+  store.setClientDocuments(documents);
+  store.setClientFiles(files);
+  store.setClientTodoLists(todoLists);
+  store.setClientTodos(todos);
+
+  // Find strategy document
+  const strategyDoc = findStrategyDocument(documents);
+  store.setStrategyDocument(strategyDoc);
+}
+
+/**
+ * Switch to a different agreement for the current client.
+ * Clears stale data and re-fetches agreement-scoped resources.
+ */
+export async function selectComplianceAgreement(agreementId: string): Promise<void> {
+  const store = complianceStore.getState();
+  const agreement = store.clientAgreements.find(a => a.id === agreementId);
+  if (!agreement) return;
+
+  // Update selection
+  store.setSelectedAgreementId(agreementId);
+  store.setSelectedAgreement(agreement);
+
+  // Clear stale dependent data
+  store.setClientDocuments([]);
+  store.setClientFiles([]);
+  store.setClientTodoLists([]);
+  store.setClientTodos([]);
+  store.setStrategyDocument(null);
+
+  // Reload data for newly selected agreement
+  try {
+    await loadAgreementData(agreementId);
+  } catch (error) {
+    console.error('[Compliance] Failed to load agreement data:', error);
   }
 }
 
