@@ -1,12 +1,26 @@
 'use client';
 
-import type { ApiAgreement } from '@/lib/api/strategist.api';
 import { AgreementStatus } from '@/types/agreement';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CaretDown, Check, FileText, Plus } from '@phosphor-icons/react';
 import { useState } from 'react';
-import { formatCurrency, formatDate } from '../../utils/formatters';
+
+// ─── Inline formatters (avoids deep relative import for reuse outside strategist ctx) ──
+
+function formatCurrency(amount: number | null | undefined): string {
+  if (amount == null) return '—';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -46,14 +60,32 @@ function statusVariant(
   }
 }
 
+// ─── Types ────────────────────────────────────────────────────────────────
+
+/** Minimal agreement shape accepted by the selector (works with both ApiAgreement & ClientAgreement) */
+export interface AgreementSelectorItem {
+  id: string;
+  name?: string;
+  title?: string;
+  status: AgreementStatus | string;
+  price?: string | number;
+  createdAt: string;
+}
+
+function agreementDisplayName(a: AgreementSelectorItem): string {
+  return a.name || a.title || 'Untitled Agreement';
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────
 
 interface AgreementSelectorProps {
-  agreements: ApiAgreement[];
+  agreements: AgreementSelectorItem[];
   selectedAgreementId: string | null;
   onSelect: (id: string) => void;
   onCreateNew?: () => void;
   isLoading?: boolean;
+  /** Compact mode for sidebar placement */
+  compact?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────
@@ -64,6 +96,7 @@ export function AgreementSelector({
   onSelect,
   onCreateNew,
   isLoading,
+  compact,
 }: AgreementSelectorProps) {
   const [open, setOpen] = useState(false);
 
@@ -91,7 +124,58 @@ export function AgreementSelector({
   );
 
   const selected = sorted.find(a => a.id === selectedAgreementId) ?? sorted[0];
+  const selectedPrice =
+    typeof selected.price === 'string' ? parseFloat(selected.price) : selected.price;
 
+  // ─── Compact variant (sidebar) ─────────────────────────────────────────
+  if (compact) {
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full cursor-pointer px-2 uppercase items-center justify-center gap-1 rounded-md border border-emerald-200 py-0.5 text-xs font-medium tracking-wide text-emerald-700 transition-colors duration-500 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-900"
+          >
+            <span className="truncate">{agreementDisplayName(selected)}</span>
+            <CaretDown
+              className={`h-3 w-3 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+              weight="bold"
+            />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="start" side="top" className="w-56 p-1">
+          <div className="max-h-64 overflow-y-auto">
+            {sorted.map(agreement => {
+              const isActive = agreement.id === selected.id;
+              return (
+                <button
+                  key={agreement.id}
+                  type="button"
+                  onClick={() => {
+                    onSelect(agreement.id);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors ${
+                    isActive ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-700 hover:bg-zinc-50'
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium">{agreementDisplayName(agreement)}</p>
+                    <p className="text-[10px] text-zinc-500">
+                      {statusLabel(agreement.status)}
+                    </p>
+                  </div>
+                  {isActive && <Check className="h-3 w-3 shrink-0 text-emerald-600" weight="bold" />}
+                </button>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  // ─── Full variant (page content area) ──────────────────────────────────
   return (
     <div className="mb-4 mt-2 flex items-center gap-2">
       <Popover open={open} onOpenChange={setOpen}>
@@ -104,16 +188,12 @@ export function AgreementSelector({
               <FileText className="h-5 w-5 shrink-0 text-zinc-400" weight="duotone" />
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-zinc-900">
-                  {selected.name || 'Untitled Agreement'}
+                  {agreementDisplayName(selected)}
                 </p>
                 <p className="text-xs text-zinc-500">
                   {formatDate(new Date(selected.createdAt))}
                   {' · '}
-                  {formatCurrency(
-                    typeof selected.price === 'string'
-                      ? parseFloat(selected.price)
-                      : selected.price
-                  )}
+                  {formatCurrency(selectedPrice)}
                 </p>
               </div>
             </div>
@@ -155,7 +235,7 @@ export function AgreementSelector({
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
-                      {agreement.name || 'Untitled Agreement'}
+                      {agreementDisplayName(agreement)}
                     </p>
                     <p className="text-xs text-zinc-500">
                       {formatDate(new Date(agreement.createdAt))}

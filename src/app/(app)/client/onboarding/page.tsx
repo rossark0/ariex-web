@@ -1223,7 +1223,7 @@ function CompleteStep({ dashboardData }: { dashboardData: ClientDashboardData | 
         <ul className="space-y-2 text-xs text-zinc-600">
           <li className="flex items-start gap-2">
             <span className="mt-1 h-1 w-1 rounded-full bg-emerald-500" />
-            <span>Check your email for the agreement signing link</span>
+            <span>Sign the agreement</span>
           </li>
           <li className="flex items-start gap-2">
             <span className="mt-1 h-1 w-1 rounded-full bg-zinc-300" />

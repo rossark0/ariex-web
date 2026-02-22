@@ -30,6 +30,7 @@ import {
   isAgreementPaid,
 } from '@/types/agreement';
 import { useAiPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
+import { useClientAgreementStore } from '@/contexts/client/ClientAgreementStore';
 import type { AiDocumentContext, AiAgreementContext } from '@/contexts/ai/AiPageContextStore';
 
 // ============================================================================
@@ -158,6 +159,7 @@ export default function ClientDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const { setSelection, setDownloadingSelection } = useUiStore();
+  const { selectedAgreementId, setAgreements: setStoreAgreements } = useClientAgreementStore();
 
   const toggleDocSelection = (docId: string) => {
     setSelectedDocs(prev => {
@@ -270,6 +272,9 @@ export default function ClientDashboardPage() {
         setIsLoading(true);
         const data = await getClientDashboardData();
         setDashboardData(data);
+
+        // Populate the shared Zustand store so the sidebar can show the selector
+        if (data?.agreements) setStoreAgreements(data.agreements);
 
         // If no agreements exist, redirect to onboarding
         const hasAgreements = data?.agreements && data.agreements.length > 0;
@@ -485,7 +490,10 @@ export default function ClientDashboardPage() {
     if (priorityB !== priorityA) return priorityB - priorityA;
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
-  const serviceAgreement = sortedAgreements[0] || null;
+  const serviceAgreement =
+    (selectedAgreementId
+      ? agreements.find(a => a.id === selectedAgreementId)
+      : null) ?? sortedAgreements[0] ?? null;
 
   // Extract ALL todos from agreement
   const agreementTodos = serviceAgreement?.todoLists?.flatMap(list => list.todos || []) || [];

@@ -1,18 +1,18 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import { useRoleRedirect } from '@/hooks/use-role-redirect';
 import AppLayout from '@/components/layout/app-layout';
-import { House, Upload, FileText, CreditCard } from '@phosphor-icons/react';
 import { useAuth } from '@/contexts/auth/AuthStore';
+import { useRoleRedirect } from '@/hooks/use-role-redirect';
 import { getClientAgreements } from '@/lib/api/client.api';
-import { isAgreementSigned, isAgreementPaid } from '@/types/agreement';
+import { isAgreementPaid, isAgreementSigned } from '@/types/agreement';
+import { CreditCard, House } from '@phosphor-icons/react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 const navItems = [
   { href: '/client/home', label: 'Home', icon: House },
-  { href: '/client/documents', label: 'Documents', icon: Upload },
-  { href: '/client/agreements', label: 'Agreements', icon: FileText },
+  // { href: '/client/documents', label: 'Documents', icon: Upload },
+  // { href: '/client/agreements', label: 'Agreements', icon: FileText },
   { href: '/client/payments', label: 'Payments', icon: CreditCard },
 ];
 
