@@ -22,6 +22,7 @@ const navItems = [
   { href: '/strategist/home', label: 'Home', icon: House },
   { href: '/strategist/clients', label: 'Clients', icon: AddressBook },
   { href: '/strategist/compliance', label: 'Compliance', icon: ShieldCheck },
+  { href: '/strategist/billing', label: 'Billing', icon: CreditCard },
   // { href: '/strategist/agreements', label: 'Agreements', icon: FileText },
   { href: '/strategist/documents', label: 'Documents', icon: Upload },
   // { href: '/strategist/payments', label: 'Payments', icon: CreditCard },

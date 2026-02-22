@@ -1319,6 +1319,34 @@ export async function cancelCharge(chargeId: string): Promise<boolean> {
   }
 }
 
+/**
+ * Get all charges for the strategist across all agreements
+ */
+export async function getAllCharges(): Promise<Charge[]> {
+  try {
+    const rawCharges = await apiRequest<any[]>('/charges');
+
+    // Map backend fields (amountCents) → frontend interface (amount in dollars)
+    const charges: Charge[] = rawCharges.map(c => ({
+      id: c.id,
+      agreementId: c.agreementId,
+      amount: c.amountCents ? c.amountCents / 100 : c.amount || 0,
+      currency: c.currency || 'usd',
+      status: c.status,
+      description: c.description,
+      paymentLink: c.paymentLink,
+      stripePaymentIntentId: c.stripePaymentIntentId,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    }));
+
+    return charges;
+  } catch (error) {
+    console.error('[API] Failed to get all charges:', error);
+    return [];
+  }
+}
+
 // ============================================================================
 // Signature Status Sync
 // ============================================================================
