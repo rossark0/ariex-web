@@ -81,14 +81,16 @@ export const billingStore = createStore<BillingState>((set, get) => ({
       filtered = filtered.filter((c: Charge) => c.status === state.chargeFilter);
     }
 
-    // Apply search filter (search by agreement ID)
+    // Apply search filter (search by agreement ID, agreement name, client email, description, charge ID)
     if (state.searchQuery) {
       const q = state.searchQuery.toLowerCase();
       filtered = filtered.filter(
         (c: Charge) =>
           c.agreementId.toLowerCase().includes(q) ||
           c.description?.toLowerCase().includes(q) ||
-          c.id.toLowerCase().includes(q)
+          c.id.toLowerCase().includes(q) ||
+          c.agreement?.name?.toLowerCase().includes(q) ||
+          c.agreement?.client?.email?.toLowerCase().includes(q)
       );
     }
 

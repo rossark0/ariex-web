@@ -1,50 +1,3 @@
-Billing
-
-Charges
-
-Payments
-
-Failed
-
-This is scalable if later you add:
-
-retries
-
-disputes
-
-refunds
-
-taxes
-
-My recommendation for your case
-
-Use:
-
-Billing
-
-Inside it:
-
-Charges
-
-Payments
-
-Agreements
-
-Reason:
-
-Strategists think financial operations, not individual agreements.
-
-Mental model
-
-Client thinks:
-
-"How do I pay this agreement?"
-
-Strategist thinks:
-
-"What money is coming in, pending, or failing?"
-
-That difference is why Billing tends to be the cleanest strategist view name.
 
 ---
 
@@ -137,3 +90,9 @@ GET /charges/agreement/{agreementId}
 - Payment link generation
 - Bulk actions
 - Revenue charts
+
+
+## Todo
+
+- Show Client name and agreement name
+- Execlue Messages from side menu

@@ -63,6 +63,7 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
   const isStrategistCompliance = pathname.startsWith('/strategist/compliance');
   const isComplianceStrategistDetail = pathname.match(/\/compliance\/strategists\/[^/]+$/);
   const isComplianceClientDetail = pathname.match(/\/compliance\/clients\/[^/]+$/);
+  const isBilling = pathname.startsWith('/strategist/billing');
   const isPayments =
     pathname.startsWith('/client/payments') || pathname.startsWith('/strategist/payments');
   const isDocuments =
@@ -143,7 +144,7 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
           ) : null}
         </div>
       </main>
-      {(!isCompliance || isComplianceStrategistDetail || isComplianceClientDetail) && !isStrategistCompliance && (
+      {(!isCompliance || isComplianceStrategistDetail || isComplianceClientDetail) && !isStrategistCompliance && !isBilling && (
         <aside className="hidden h-[calc(100vh-0.5rem)] flex-col gap-4 pt-4 pr-4 md:flex">
           <ChatSidebar />
         </aside>

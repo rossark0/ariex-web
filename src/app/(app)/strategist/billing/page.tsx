@@ -156,18 +156,21 @@ function ChargesTable({ charges }: { charges: ReturnType<typeof billingStore.get
         <table className="w-full">
           <thead>
             <tr className="border-b border-zinc-100 bg-zinc-50">
-              <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-600">Agreement ID</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-600">Agreement</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-600">Client</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-600">Amount</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-600">Status</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-600">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-600">Description</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {charges.map(charge => (
               <tr key={charge.id} className="hover:bg-zinc-50">
                 <td className="px-6 py-4">
-                  <code className="text-xs font-mono text-zinc-700">{charge.agreementId.slice(0, 8)}</code>
+                  <p className="text-sm font-medium text-zinc-900">{charge.agreement?.name || '—'}</p>
+                </td>
+                <td className="px-6 py-4">
+                  <p className="text-sm text-zinc-600">{charge.agreement?.client?.email || '—'}</p>
                 </td>
                 <td className="px-6 py-4">
                   <p className="font-medium text-zinc-900">{formatCurrency(charge.amount, charge.currency)}</p>
@@ -179,9 +182,6 @@ function ChargesTable({ charges }: { charges: ReturnType<typeof billingStore.get
                 </td>
                 <td className="px-6 py-4 text-sm text-zinc-600">
                   {formatDate(charge.createdAt)}
-                </td>
-                <td className="px-6 py-4">
-                  <p className="truncate text-sm text-zinc-500">{charge.description || '—'}</p>
                 </td>
               </tr>
             ))}
@@ -302,7 +302,7 @@ export default function StrategistBillingPage() {
                 />
                 <input
                   type="text"
-                  placeholder="Search by Agreement ID..."
+                  placeholder="Search by agreement, client, or ID..."
                   value={searchQuery}
                   onChange={e => handleSearchChange(e.target.value)}
                   className="w-full rounded-lg border border-zinc-200 bg-white py-2 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"

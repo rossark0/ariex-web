@@ -1156,6 +1156,12 @@ export interface Charge {
   stripePaymentIntentId?: string;
   createdAt: string;
   updatedAt: string;
+  agreement?: {
+    name: string;
+    client?: {
+      email: string;
+    };
+  };
 }
 
 /**
@@ -1199,6 +1205,7 @@ export async function createCharge(data: {
       stripePaymentIntentId: raw.stripePaymentIntentId,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
+      agreement: raw.agreement,
     };
 
     return charge;
@@ -1227,6 +1234,7 @@ export async function getChargesForAgreement(agreementId: string): Promise<Charg
       stripePaymentIntentId: c.stripePaymentIntentId,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
+      agreement: c.agreement,
     }));
 
     return charges;
@@ -1253,6 +1261,7 @@ export async function getCharge(chargeId: string): Promise<Charge | null> {
       stripePaymentIntentId: raw.stripePaymentIntentId,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
+      agreement: raw.agreement,
     };
   } catch (error) {
     console.error('[API] Failed to get charge:', error);
@@ -1339,6 +1348,7 @@ export async function getAllCharges(): Promise<Charge[]> {
       stripePaymentIntentId: c.stripePaymentIntentId,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
+      agreement: c.agreement,
     }));
 
     return charges;
