@@ -1,7 +1,7 @@
 'use client';
 
 import type { ApiAgreement } from '@/lib/api/strategist.api';
-import { getDownloadUrl } from '@/lib/api/strategist.api';
+import { getDownloadUrl, getSignedAgreementDocumentUrl, findSignedAgreementByClientId } from '@/lib/api/strategist.api';
 import type { FullClientMock } from '@/lib/mocks/client-full';
 import { AgreementStatus } from '@/types/agreement';
 import { AcceptanceStatus } from '@/types/document';
@@ -158,12 +158,56 @@ export function ActivityTimeline({
   const [decliningDocId, setDecliningDocId] = useState<string | null>(null);
   const [deletingTodoId, setDeletingTodoId] = useState<string | null>(null);
   const [isAdvancingToStrategy, setIsAdvancingToStrategy] = useState(false);
+  const [isDownloadingAgreement, setIsDownloadingAgreement] = useState(false);
   // Preview state
   const [previewDoc, setPreviewDoc] = useState<{
     name: string;
     url: string | null;
     loading: boolean;
   } | null>(null);
+
+  // ─── On-demand signed agreement download ────────────────────────
+  const handleDownloadSignedAgreement = async () => {
+    // If we already have the cached URL, open it directly
+    if (signedAgreementDocUrl) {
+      window.open(signedAgreementDocUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (!signedAgreement) return;
+    setIsDownloadingAgreement(true);
+    try {
+      // 1. Try SignatureAPI deliverables via envelope ID
+      const envelopeId =
+        signedAgreement.signatureEnvelopeId ||
+        (() => {
+          const match = signedAgreement.description?.match(/__SIGNATURE_METADATA__:([\s\S]+)$/);
+          if (match) {
+            try { return JSON.parse(match[1]).envelopeId; } catch { return null; }
+          }
+          return null;
+        })();
+      if (envelopeId) {
+        const url = await getSignedAgreementDocumentUrl(envelopeId);
+        if (url) {
+          window.open(url, '_blank', 'noopener,noreferrer');
+          return;
+        }
+      }
+
+      // 2. Fallback: search for completed envelope by client ID
+      const url = await findSignedAgreementByClientId(signedAgreement.clientId);
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
+      alert('Signed agreement document is not available yet. The e-signature process may not have fully completed. Please try again later.');
+    } catch {
+      alert('Failed to fetch the signed agreement. Please try again.');
+    } finally {
+      setIsDownloadingAgreement(false);
+    }
+  };
 
   const handlePreviewDoc = async (docId: string, fileName: string) => {
     setPreviewDoc({ name: fileName, url: null, loading: true });
@@ -329,23 +373,57 @@ export function ActivityTimeline({
                 </div>
               )}
 
-              {/* Signed state: badge + download link */}
-              {hasAgreementSigned && strategistHasSigned && (
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="flex w-fit items-center gap-1 rounded bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
-                    <CheckIcon weight="bold" className="h-3 w-3" />
-                    You signed
-                  </span>
-                  {signedAgreementDocUrl && (
-                    <a
-                      href={signedAgreementDocUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex w-fit items-center gap-1 rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200"
-                    >
-                      <FileArrowDownIcon weight="fill" className="h-3.5 w-3.5" />
-                      Download signed agreement
-                    </a>
+              {/* Signed state: badge + download / sign actions */}
+              {hasAgreementSigned && (
+                <div className="mt-2 flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    {strategistHasSigned && (
+                      <span className="flex w-fit items-center gap-1 rounded bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+                        <CheckIcon weight="bold" className="h-3 w-3" />
+                        You signed
+                      </span>
+                    )}
+                    {signedAgreementDocUrl ? (
+                      <button
+                        onClick={handleDownloadSignedAgreement}
+                        disabled={isDownloadingAgreement}
+                        className="flex w-fit items-center gap-1 rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200 disabled:opacity-50"
+                      >
+                        {isDownloadingAgreement ? (
+                          <SpinnerGap weight="bold" className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <FileArrowDownIcon weight="fill" className="h-3.5 w-3.5" />
+                        )}
+                        Download signed agreement
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleDownloadSignedAgreement}
+                        disabled={isDownloadingAgreement}
+                        className="flex w-fit items-center gap-1 rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200 disabled:opacity-50"
+                      >
+                        {isDownloadingAgreement ? (
+                          <SpinnerGap weight="bold" className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <FileArrowDownIcon weight="fill" className="h-3.5 w-3.5" />
+                        )}
+                        Download signed agreement
+                      </button>
+                    )}
+                  </div>
+                  {/* Show sign button if e-signature not fully completed */}
+                  {!signedAgreementDocUrl && !strategistHasSigned && strategistCeremonyUrl && onStrategistSign && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-amber-600">
+                        E-signature not fully completed
+                      </span>
+                      <button
+                        onClick={onStrategistSign}
+                        className="flex w-fit items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                      >
+                        Complete signing
+                      </button>
+                    </div>
                   )}
                 </div>
               )}

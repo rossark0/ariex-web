@@ -423,6 +423,43 @@ export async function getEnvelopeDetails(envelopeId: string): Promise<SignatureA
 }
 
 /**
+ * Find the most recent envelope for a given client ID by checking metadata.
+ * Used as a fallback when the agreement record doesn't store the envelope ID.
+ */
+export async function findEnvelopeByClientId(
+  clientId: string,
+  preferCompleted = true
+): Promise<SignatureApiEnvelope | null> {
+  try {
+    // Fetch recent envelopes and filter by metadata.client_id client-side
+    // (SignatureAPI metadata filtering is unreliable)
+    const res = await fetch(`${SIGNATURE_API_BASE}/envelopes?per_page=50`, {
+      headers: { 'X-Api-Key': SIGNATURE_API_KEY },
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const envelopes: SignatureApiEnvelope[] = data.data || [];
+    const matches = envelopes.filter(
+      (e: any) => e.metadata?.client_id === clientId
+    );
+    if (matches.length === 0) return null;
+
+    // Prefer completed envelopes
+    if (preferCompleted) {
+      const completed = matches.find((e: any) => e.status === 'completed');
+      if (completed) return completed;
+    }
+
+    // Return the most recent (first in list, API returns newest first)
+    return matches[0];
+  } catch (error) {
+    console.error('[SignatureAPI] findEnvelopeByClientId error:', error);
+    return null;
+  }
+}
+
+/**
  * Get recipient details including ceremony URL
  */
 export async function getRecipientDetails(recipientId: string): Promise<{
@@ -545,6 +582,10 @@ export type SignatureWebhookEvent = {
  */
 export async function getSignedDocumentUrl(envelopeId: string): Promise<string | null> {
   try {
+    console.log('[SignatureAPI][DEBUG] Fetching deliverables for envelope:', envelopeId);
+    console.log('[SignatureAPI][DEBUG] API URL:', `${SIGNATURE_API_BASE}/envelopes/${envelopeId}/deliverables`);
+    console.log('[SignatureAPI][DEBUG] Has API key:', !!SIGNATURE_API_KEY, 'key length:', SIGNATURE_API_KEY.length);
+    
     // Get deliverables for the envelope
     const res = await fetch(`${SIGNATURE_API_BASE}/envelopes/${envelopeId}/deliverables`, {
       headers: {
@@ -552,20 +593,28 @@ export async function getSignedDocumentUrl(envelopeId: string): Promise<string |
       },
     });
     
+    console.log('[SignatureAPI][DEBUG] Response status:', res.status);
     if (!res.ok) {
-      throw new Error(`Failed to get deliverables: ${res.status}`);
+      const errorText = await res.text();
+      console.error('[SignatureAPI][DEBUG] ❌ Non-OK response:', res.status, errorText);
+      throw new Error(`Failed to get deliverables: ${res.status} ${errorText}`);
     }
     
     const response = await res.json();
-    console.log('[SignatureAPI] Deliverables:', response);
+    console.log('[SignatureAPI][DEBUG] Full deliverables response:', JSON.stringify(response, null, 2));
     
     // API returns { data: [...], links: {...} }
     const deliverables = response.data || response;
     
     if (!Array.isArray(deliverables) || deliverables.length === 0) {
-      console.log('[SignatureAPI] No deliverables found');
+      console.log('[SignatureAPI][DEBUG] ❌ No deliverables array found or empty');
       return null;
     }
+    
+    console.log('[SignatureAPI][DEBUG] Deliverables count:', deliverables.length);
+    deliverables.forEach((d: any, i: number) => {
+      console.log(`[SignatureAPI][DEBUG] Deliverable ${i}:`, JSON.stringify({ id: d.id, status: d.status, url: d.url, type: d.type, format: d.format }));
+    });
     
     // Find a ready deliverable with a URL.
     // SignatureAPI uses status 'generated' (not 'completed') for ready deliverables.
@@ -576,16 +625,18 @@ export async function getSignedDocumentUrl(envelopeId: string): Promise<string |
     if (!signedPdf?.url) {
       const pendingDeliverable = deliverables.find((d: any) => d.status === 'pending');
       if (pendingDeliverable) {
-        console.log('[SignatureAPI] Signed document is still being generated (pending)');
+        console.log('[SignatureAPI][DEBUG] ⏳ Signed document still pending generation');
       } else {
-        console.log('[SignatureAPI] No signed PDF found in deliverables');
+        console.log('[SignatureAPI][DEBUG] ❌ No deliverable with status generated/completed and url');
+        console.log('[SignatureAPI][DEBUG] All statuses:', deliverables.map((d: any) => d.status));
       }
       return null;
     }
     
+    console.log('[SignatureAPI][DEBUG] ✅ Found signed PDF URL:', signedPdf.url);
     return signedPdf.url;
   } catch (error) {
-    console.error('[SignatureAPI] Failed to get signed document URL:', error);
+    console.error('[SignatureAPI][DEBUG] ❌ EXCEPTION in getSignedDocumentUrl:', error);
     return null;
   }
 }

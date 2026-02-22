@@ -22,6 +22,7 @@ import {
   updateAgreementStatus,
   deleteDocument,
   getStrategistSigningInfo,
+  getSignedAgreementDocumentUrl,
   getLinkedComplianceUsers,
 } from '@/lib/api/strategist.api';
 import { sendAgreementToClient } from '@/lib/api/agreements.actions';
@@ -352,6 +353,45 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     syncEnvelopeStatuses();
   }, [agreements, refreshAgreements]);
 
+  // ─── Helper: extract envelope ID from agreement metadata or fields ─────
+  const getEnvelopeIdFromAgreement = useCallback((agreement: ApiAgreement): string | null => {
+    // Try the direct field first
+    if (agreement.signatureEnvelopeId) return agreement.signatureEnvelopeId;
+    // Parse from description metadata
+    if (agreement.description) {
+      const match = agreement.description.match(/__SIGNATURE_METADATA__:([\s\S]+)$/);
+      if (match) {
+        try {
+          const metadata = JSON.parse(match[1]);
+          if (metadata.envelopeId) return metadata.envelopeId;
+        } catch { /* ignore */ }
+      }
+    }
+    return null;
+  }, []);
+
+  // ─── Helper: get the SIGNED document URL ──────────────────────────────
+  const fetchSignedDocUrl = useCallback(async (agreement: ApiAgreement): Promise<string | null> => {
+    // ONLY use SignatureAPI deliverables — this is the only source guaranteed
+    // to return the actual signed PDF with embedded signatures.
+    // Do NOT fall back to S3 (signedDocumentFileId) or contractDocumentId
+    // as those contain the unsigned original.
+    const envelopeId = getEnvelopeIdFromAgreement(agreement);
+    if (envelopeId) {
+      try {
+        const url = await getSignedAgreementDocumentUrl(envelopeId);
+        if (url) {
+          console.log('[Hook] Got signed doc URL via SignatureAPI deliverables');
+          return url;
+        }
+      } catch {
+        console.warn('[Hook] SignatureAPI deliverables fetch failed');
+      }
+    }
+
+    return null;
+  }, [getEnvelopeIdFromAgreement]);
+
   // ─── Strategist Signing Info ──────────────────────────────────
   const hasFetchedSigningInfoRef = useRef(false);
   useEffect(() => {
@@ -359,30 +399,65 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     const active = [...agreements].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )[0];
+
+    console.log('[Hook][DEBUG] === SIGNING INFO FLOW START ===');
+    console.log('[Hook][DEBUG] agreements count:', agreements.length);
+    console.log('[Hook][DEBUG] active agreement:', JSON.stringify({
+      id: active?.id,
+      status: active?.status,
+      signatureEnvelopeId: active?.signatureEnvelopeId,
+      signedDocumentFileId: active?.signedDocumentFileId,
+      contractDocumentId: active?.contractDocumentId,
+      hasDescription: !!active?.description,
+      descriptionLength: active?.description?.length,
+      hasMetadata: active?.description?.includes('__SIGNATURE_METADATA__'),
+    }));
+
     if (
       !active ||
       active.status === AgreementStatus.DRAFT ||
       active.status === AgreementStatus.CANCELLED
-    )
+    ) {
+      console.log('[Hook][DEBUG] Skipping — status is DRAFT/CANCELLED or no active agreement');
       return;
+    }
     hasFetchedSigningInfoRef.current = true;
 
     (async () => {
       try {
+        console.log('[Hook][DEBUG] Calling getStrategistSigningInfo for agreement:', active.id);
         const info = await getStrategistSigningInfo(active.id);
+        console.log('[Hook][DEBUG] getStrategistSigningInfo result:', JSON.stringify(info));
+
         setStrategistHasSigned(info.strategistHasSigned);
         setClientHasSigned(info.clientHasSigned);
         if (info.strategistCeremonyUrl) {
           setStrategistCeremonyUrl(info.strategistCeremonyUrl);
         }
         if (info.signedDocumentUrl) {
+          console.log('[Hook][DEBUG] ✅ Got signedDocumentUrl from getStrategistSigningInfo:', info.signedDocumentUrl);
           setSignedAgreementDocUrl(info.signedDocumentUrl);
+        } else if (isAgreementSigned(active.status)) {
+          console.log('[Hook][DEBUG] No signedDocumentUrl from signingInfo, trying fetchSignedDocUrl fallback...');
+          console.log('[Hook][DEBUG] isAgreementSigned:', isAgreementSigned(active.status), 'status:', active.status);
+          const url = await fetchSignedDocUrl(active);
+          console.log('[Hook][DEBUG] fetchSignedDocUrl result:', url);
+          if (url) setSignedAgreementDocUrl(url);
+          else console.log('[Hook][DEBUG] ❌ fetchSignedDocUrl also returned null — NO DOWNLOAD URL');
+        } else {
+          console.log('[Hook][DEBUG] ❌ No signedDocumentUrl and agreement not signed yet. status:', active.status);
         }
       } catch (error) {
-        console.error('[Hook] Failed to fetch strategist signing info:', error);
+        console.error('[Hook][DEBUG] ❌ getStrategistSigningInfo THREW:', error);
+        if (isAgreementSigned(active.status)) {
+          const url = await fetchSignedDocUrl(active);
+          console.log('[Hook][DEBUG] fetchSignedDocUrl after error:', url);
+          if (url) setSignedAgreementDocUrl(url);
+        }
       }
+      console.log('[Hook][DEBUG] === SIGNING INFO FLOW END ===');
     })();
-  }, [agreements]);
+  }, [agreements, fetchSignedDocUrl]);
 
   useEffect(() => {
     async function fetchCharges() {

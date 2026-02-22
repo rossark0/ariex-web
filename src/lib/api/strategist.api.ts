@@ -2,7 +2,7 @@
 
 import { API_URL } from '@/lib/cognito-config';
 import { cookies } from 'next/headers';
-import { AgreementStatus } from '@/types/agreement';
+import { AgreementStatus, isAgreementSigned } from '@/types/agreement';
 import { AcceptanceStatus } from '@/types/document';
 
 // ============================================================================
@@ -123,6 +123,7 @@ export interface ApiAgreement {
     signedStatus: 'WAITING_SIGNED' | 'SIGNED';
     uploadStatus: 'WAITING_UPLOAD' | 'FILE_UPLOADED' | 'FILE_DELETED';
   };
+  signedDocumentFileId?: string; // S3 file ID for the signed PDF
   todoLists: ApiTodoList[];
   startedAt?: string;
   completedAt?: string;
@@ -1355,6 +1356,7 @@ import {
   getEnvelopeDetails,
   createCeremonyForRecipient,
   getSignedDocumentUrl,
+  findEnvelopeByClientId,
 } from '@/lib/signature/signatureapi';
 
 /**
@@ -1429,22 +1431,91 @@ export async function getStrategistSigningInfo(
 
   try {
     const agreement = await getAgreement(agreementId);
-    if (!agreement?.description) return fallback;
+    console.log('[SigningInfo][DEBUG] agreement fetched:', JSON.stringify({
+      id: agreement?.id,
+      status: agreement?.status,
+      signatureEnvelopeId: agreement?.signatureEnvelopeId,
+      strategistRecipientId: agreement?.strategistRecipientId,
+      signedDocumentFileId: agreement?.signedDocumentFileId,
+      hasDescription: !!agreement?.description,
+      descLength: agreement?.description?.length,
+      hasMetadata: agreement?.description?.includes('__SIGNATURE_METADATA__'),
+    }));
+    if (!agreement) {
+      console.log('[SigningInfo][DEBUG] ❌ No agreement found, returning fallback');
+      return fallback;
+    }
 
-    const metadataMatch = agreement.description.match(/__SIGNATURE_METADATA__:([\s\S]+)$/);
-    if (!metadataMatch) return fallback;
+    // Try to get envelope ID from metadata first, then from agreement fields
+    let envelopeId: string | undefined;
+    let strategistRecipientId: string | undefined;
+    let strategistCeremonyUrl: string | undefined;
 
-    const metadata = JSON.parse(metadataMatch[1]);
-    const envelopeId: string | undefined = metadata.envelopeId;
-    const strategistRecipientId: string | undefined = metadata.strategistRecipientId;
-    let strategistCeremonyUrl: string | undefined = metadata.strategistCeremonyUrl;
+    const metadataMatch = agreement.description?.match(/__SIGNATURE_METADATA__:([\s\S]+)$/);
+    if (metadataMatch) {
+      try {
+        const metadata = JSON.parse(metadataMatch[1]);
+        console.log('[SigningInfo][DEBUG] Parsed metadata:', JSON.stringify(metadata));
+        envelopeId = metadata.envelopeId;
+        strategistRecipientId = metadata.strategistRecipientId;
+        strategistCeremonyUrl = metadata.strategistCeremonyUrl;
+      } catch (e) {
+        console.log('[SigningInfo][DEBUG] ❌ Metadata JSON parse failed:', e);
+      }
+    } else {
+      console.log('[SigningInfo][DEBUG] No __SIGNATURE_METADATA__ found in description');
+    }
 
-    if (!envelopeId) return fallback;
+    // Fallback to agreement-level fields if metadata didn't provide envelope ID
+    if (!envelopeId && agreement.signatureEnvelopeId) {
+      console.log('[SigningInfo][DEBUG] Using signatureEnvelopeId from agreement field:', agreement.signatureEnvelopeId);
+      envelopeId = agreement.signatureEnvelopeId;
+    }
+    if (!strategistRecipientId && agreement.strategistRecipientId) {
+      strategistRecipientId = agreement.strategistRecipientId;
+    }
+    if (!strategistCeremonyUrl && agreement.strategistCeremonyUrl) {
+      strategistCeremonyUrl = agreement.strategistCeremonyUrl;
+    }
 
+    console.log('[SigningInfo][DEBUG] Resolved envelopeId:', envelopeId);
+    if (!envelopeId) {
+      // Fallback: search SignatureAPI envelopes by client_id metadata
+      console.log('[SigningInfo][DEBUG] No envelopeId found — searching by clientId:', agreement.clientId);
+      const foundEnvelope = await findEnvelopeByClientId(agreement.clientId);
+      if (foundEnvelope) {
+        console.log('[SigningInfo][DEBUG] ✅ Found envelope via client search:', foundEnvelope.id, 'status:', foundEnvelope.status);
+        envelopeId = foundEnvelope.id;
+        // Extract strategist recipient info from found envelope
+        const stratRecipient = foundEnvelope.recipients?.find((r: any) => r.key === 'strategist');
+        if (stratRecipient) {
+          strategistRecipientId = stratRecipient.id;
+        }
+      } else {
+        console.log('[SigningInfo][DEBUG] ❌ No envelope found for client — returning fallback');
+        return fallback;
+      }
+    }
+
+    console.log('[SigningInfo][DEBUG] Fetching envelope details for:', envelopeId);
     const envelope = await getEnvelopeDetails(envelopeId);
-    if (!envelope) return fallback;
+    console.log('[SigningInfo][DEBUG] Envelope:', JSON.stringify({
+      status: envelope?.status,
+      recipientCount: envelope?.recipients?.length,
+      recipients: envelope?.recipients?.map(r => ({ key: r.key, status: r.status })),
+    }));
+    if (!envelope) {
+      console.log('[SigningInfo][DEBUG] ❌ Envelope not found, trying direct getSignedDocumentUrl...');
+      if (isAgreementSigned(agreement.status)) {
+        const signedDocumentUrl = await getSignedDocumentUrl(envelopeId);
+        console.log('[SigningInfo][DEBUG] Direct getSignedDocumentUrl result:', signedDocumentUrl);
+        return { ...fallback, signedDocumentUrl, envelopeCompleted: true };
+      }
+      return fallback;
+    }
 
     const envelopeCompleted = envelope.status === 'completed';
+    console.log('[SigningInfo][DEBUG] envelopeCompleted:', envelopeCompleted);
 
     const clientRecipient = envelope.recipients?.find(r => r.key === 'client');
     const strategistRecipient = envelope.recipients?.find(r => r.key === 'strategist');
@@ -1469,20 +1540,28 @@ export async function getStrategistSigningInfo(
     // The deliverable may take a few seconds to generate, so retry once.
     let signedDocumentUrl: string | null = null;
     if (envelopeCompleted) {
+      console.log('[SigningInfo][DEBUG] Envelope completed! Fetching signed document URL...');
       signedDocumentUrl = await getSignedDocumentUrl(envelopeId);
+      console.log('[SigningInfo][DEBUG] getSignedDocumentUrl attempt 1:', signedDocumentUrl);
       if (!signedDocumentUrl) {
+        console.log('[SigningInfo][DEBUG] Retrying after 3s...');
         await new Promise(r => setTimeout(r, 3000));
         signedDocumentUrl = await getSignedDocumentUrl(envelopeId);
+        console.log('[SigningInfo][DEBUG] getSignedDocumentUrl attempt 2:', signedDocumentUrl);
       }
+    } else {
+      console.log('[SigningInfo][DEBUG] Envelope NOT completed (status:', envelope.status, ') — skipping signed doc fetch');
     }
 
-    return {
+    const result = {
       strategistCeremonyUrl: strategistCeremonyUrl ?? null,
       strategistHasSigned: !!strategistHasSigned,
       clientHasSigned: !!clientHasSigned,
       envelopeCompleted,
       signedDocumentUrl,
     };
+    console.log('[SigningInfo][DEBUG] ✅ Final result:', JSON.stringify(result));
+    return result;
   } catch (error) {
     console.error('[StrategistAPI] getStrategistSigningInfo error:', error);
     return fallback;
@@ -1492,12 +1571,28 @@ export async function getStrategistSigningInfo(
 /**
  * Get the URL of the signed (fully executed) agreement PDF from SignatureAPI.
  * Only available after the envelope is completed (all parties signed).
+ * Tries the direct envelope ID first, then falls back to searching by client ID.
  */
 export async function getSignedAgreementDocumentUrl(envelopeId: string): Promise<string | null> {
   try {
     return await getSignedDocumentUrl(envelopeId);
   } catch (error) {
     console.error('[StrategistAPI] getSignedAgreementDocumentUrl error:', error);
+    return null;
+  }
+}
+
+/**
+ * Find signed agreement URL by client ID when envelope ID is not available.
+ * Searches SignatureAPI for completed envelopes matching the client.
+ */
+export async function findSignedAgreementByClientId(clientId: string): Promise<string | null> {
+  try {
+    const envelope = await findEnvelopeByClientId(clientId, true);
+    if (!envelope || envelope.status !== 'completed') return null;
+    return await getSignedDocumentUrl(envelope.id);
+  } catch (error) {
+    console.error('[StrategistAPI] findSignedAgreementByClientId error:', error);
     return null;
   }
 }

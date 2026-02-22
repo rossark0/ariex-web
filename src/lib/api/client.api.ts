@@ -1027,28 +1027,31 @@ export async function getSignedAgreementUrl(envelopeId: string): Promise<string 
 }
 
 /**
- * Get the signed document URL - tries S3 first (if stored), then SignatureAPI
- * This provides a fallback mechanism for retrieving signed documents
+ * Get the signed document URL.
+ * IMPORTANT: Always prefers SignatureAPI deliverables (guaranteed to be the
+ * actual signed PDF with embedded signatures). Only falls back to S3 if
+ * SignatureAPI is unavailable, since S3 may contain the unsigned original.
  */
 export async function getSignedDocumentDownloadUrl(
   signedDocumentFileId: string | null | undefined,
   envelopeId: string | null | undefined
 ): Promise<string | null> {
-  // Strategy 1: Try S3 file ID if we have it (stored by webhook)
-  if (signedDocumentFileId) {
-    try {
-      const s3Url = await getDocumentDownloadUrl(signedDocumentFileId);
-      if (s3Url) return s3Url;
-    } catch {
-      // Fall through to SignatureAPI
-    }
-  }
-
-  // Strategy 2: Fallback to SignatureAPI
+  // Strategy 1 (preferred): SignatureAPI deliverables — always the signed PDF
   if (envelopeId) {
     try {
       const signatureUrl = await getSignedDocumentUrl(envelopeId);
       if (signatureUrl) return signatureUrl;
+    } catch {
+      // Fall through to S3
+    }
+  }
+
+  // Strategy 2 (fallback): S3 file ID stored by webhook after signing
+  // NOTE: Only used when SignatureAPI deliverables are unavailable
+  if (signedDocumentFileId) {
+    try {
+      const s3Url = await getDocumentDownloadUrl(signedDocumentFileId);
+      if (s3Url) return s3Url;
     } catch {
       // No signed document available
     }
