@@ -46,6 +46,7 @@ import { LoadingState } from '@/contexts/strategist-contexts/client-management/c
 import { ClientHeader } from '@/contexts/strategist-contexts/client-management/components/detail/client-header';
 import { ClientInfoCard } from '@/contexts/strategist-contexts/client-management/components/detail/client-info-card';
 import { ActivityTimeline } from '@/contexts/strategist-contexts/client-management/components/detail/activity-timeline';
+import { AgreementSelector } from '@/contexts/strategist-contexts/client-management/components/detail/agreement-selector';
 import { DocumentsList } from '@/contexts/strategist-contexts/client-management/components/detail/documents-list';
 import { PaymentModal } from '@/contexts/strategist-contexts/client-management/components/detail/payment-modal';
 import { DeleteTodoDialog } from '@/contexts/strategist-contexts/client-management/components/detail/delete-todo-dialog';
@@ -163,6 +164,14 @@ export default function StrategistClientDetailPage({ params }: Props) {
             state={data.client.profile.state}
             estimatedIncome={data.client.profile.estimatedIncome}
             filingStatus={data.client.profile.filingStatus}
+          />
+
+          <AgreementSelector
+            agreements={data.agreements}
+            selectedAgreementId={data.selectedAgreementId}
+            onSelect={data.setSelectedAgreementId}
+            onCreateNew={() => data.setIsAgreementModalOpen(true)}
+            isLoading={data.isLoadingAgreements}
           />
 
           <ActivityTimeline

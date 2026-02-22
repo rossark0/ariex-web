@@ -83,6 +83,8 @@ export interface ClientDetailData {
   // Agreement state
   activeAgreement: ApiAgreement | undefined;
   signedAgreement: ApiAgreement | null;
+  selectedAgreementId: string | null;
+  setSelectedAgreementId: (id: string) => void;
   isLoadingAgreements: boolean;
   isAgreementModalOpen: boolean;
   agreementError: string | null;
@@ -217,6 +219,9 @@ export function useClientDetailData(clientId: string): ClientDetailData {
   const [deletingTodoId, setDeletingTodoId] = useState<string | null>(null);
   const [todoToDelete, setTodoToDelete] = useState<{ id: string; title: string } | null>(null);
 
+  // ─── Agreement Selection State ────────────────────────────────
+  const [selectedAgreementId, setSelectedAgreementId] = useState<string | null>(null);
+
   // ─── Strategy State ──────────────────────────────────────────
   const [isStrategySheetOpen, setIsStrategySheetOpen] = useState(false);
   const [isCompletingAgreement, setIsCompletingAgreement] = useState(false);
@@ -275,6 +280,13 @@ export function useClientDetailData(clientId: string): ClientDetailData {
           `Client ${clientId}`
         );
         setAgreements(data);
+        // Auto-select the newest agreement on first load
+        if (!selectedAgreementId && data.length > 0) {
+          const newest = [...data].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )[0];
+          setSelectedAgreementId(newest.id);
+        }
       } catch (error) {
         console.error('[Hook] Failed to load agreements:', error);
       } finally {
@@ -284,24 +296,38 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     if (clientId) loadAgreements();
   }, [clientId]);
 
+  // ─── Reset stale state on agreement switch ───────────────────
+  useEffect(() => {
+    if (!selectedAgreementId) return;
+    // Reset signing info refs so they re-fetch for the new agreement
+    hasFetchedSigningInfoRef.current = false;
+    // Clear stale per-agreement data
+    setSignedAgreementDocUrl(null);
+    setStrategistCeremonyUrl(null);
+    setStrategistHasSigned(false);
+    setClientHasSigned(false);
+    setExistingCharge(null);
+    setClientDocuments([]);
+  }, [selectedAgreementId]);
+
   useEffect(() => {
     async function loadDocuments() {
-      const first = agreements[0];
-      if (!first) {
+      const target = agreements.find(a => a.id === selectedAgreementId) ?? agreements[0];
+      if (!target) {
         setIsLoadingDocuments(false);
         return;
       }
       setIsLoadingDocuments(true);
       try {
-        const docs = await listAgreementDocuments(first.id);
+        const docs = await listAgreementDocuments(target.id);
 
         // Ensure the agreement's contract document is included
         // (it may be missing if the agreementId linkage failed during creation)
-        if (first.contractDocumentId) {
-          const alreadyIncluded = docs.some(d => d.id === first.contractDocumentId);
+        if (target.contractDocumentId) {
+          const alreadyIncluded = docs.some(d => d.id === target.contractDocumentId);
           if (!alreadyIncluded) {
             try {
-              const contractDoc = await getDocumentById(first.contractDocumentId);
+              const contractDoc = await getDocumentById(target.contractDocumentId);
               if (contractDoc) docs.unshift(contractDoc);
             } catch {
               // Contract doc fetch failed — continue with what we have
@@ -317,7 +343,7 @@ export function useClientDetailData(clientId: string): ClientDetailData {
       }
     }
     if (agreements.length > 0) loadDocuments();
-  }, [agreements]);
+  }, [agreements, selectedAgreementId]);
 
   useEffect(() => {
     async function syncEnvelopeStatuses() {
@@ -396,9 +422,11 @@ export function useClientDetailData(clientId: string): ClientDetailData {
   const hasFetchedSigningInfoRef = useRef(false);
   useEffect(() => {
     if (hasFetchedSigningInfoRef.current || agreements.length === 0) return;
-    const active = [...agreements].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )[0];
+    const active =
+      agreements.find(a => a.id === selectedAgreementId) ??
+      [...agreements].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )[0];
 
     console.log('[Hook][DEBUG] === SIGNING INFO FLOW START ===');
     console.log('[Hook][DEBUG] agreements count:', agreements.length);
@@ -457,12 +485,17 @@ export function useClientDetailData(clientId: string): ClientDetailData {
       }
       console.log('[Hook][DEBUG] === SIGNING INFO FLOW END ===');
     })();
-  }, [agreements, fetchSignedDocUrl]);
+  }, [agreements, selectedAgreementId, fetchSignedDocUrl]);
 
   useEffect(() => {
     async function fetchCharges() {
       setIsLoadingCharges(true);
-      const signed = agreements.find(a => isAgreementSigned(a.status));
+      // Use the selected agreement if it's signed, otherwise find any signed one
+      const selectedAgreement = agreements.find(a => a.id === selectedAgreementId);
+      const signed =
+        (selectedAgreement && isAgreementSigned(selectedAgreement.status)
+          ? selectedAgreement
+          : null) ?? agreements.find(a => isAgreementSigned(a.status));
       if (!signed) {
         setExistingCharge(null);
         setIsLoadingCharges(false);
@@ -489,7 +522,7 @@ export function useClientDetailData(clientId: string): ClientDetailData {
       }
     }
     fetchCharges();
-  }, [agreements]);
+  }, [agreements, selectedAgreementId]);
 
   // ─── Doc Selection Sync ──────────────────────────────────────
 
@@ -552,18 +585,21 @@ export function useClientDetailData(clientId: string): ClientDetailData {
   const sortedAgreements = [...agreements].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
-  const activeAgreement = sortedAgreements[0];
+  const activeAgreement =
+    agreements.find(a => a.id === selectedAgreementId) ?? sortedAgreements[0];
   const allTodos = activeAgreement?.todoLists?.flatMap(list => list.todos || []) || [];
 
-  const hasAgreementSent = agreements.some(
-    a => a.status !== AgreementStatus.DRAFT && a.status !== AgreementStatus.CANCELLED
-  );
+  const hasAgreementSent = activeAgreement
+    ? activeAgreement.status !== AgreementStatus.DRAFT &&
+      activeAgreement.status !== AgreementStatus.CANCELLED
+    : false;
   const envelopeIsCompleted =
     activeAgreement && envelopeStatuses[activeAgreement.id] === 'completed';
-  const hasAgreementSigned =
-    agreements.some(a => isAgreementSigned(a.status)) || !!envelopeIsCompleted;
+  const hasAgreementSigned = activeAgreement
+    ? isAgreementSigned(activeAgreement.status) || !!envelopeIsCompleted
+    : false;
   const signedAgreement =
-    agreements.find(a => isAgreementSigned(a.status)) ||
+    (activeAgreement && isAgreementSigned(activeAgreement.status) ? activeAgreement : null) ||
     (hasAgreementSigned ? activeAgreement : null) ||
     null;
 
@@ -669,6 +705,7 @@ export function useClientDetailData(clientId: string): ClientDetailData {
             return { ...a, signatureCeremonyUrl: a.signatureCeremonyUrl || stored[a.id] };
           });
           setAgreements(enriched);
+          if (result.agreementId) setSelectedAgreementId(result.agreementId);
         } catch {
           setAgreements([
             {
@@ -1038,6 +1075,8 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     clientDocuments,
     activeAgreement,
     signedAgreement,
+    selectedAgreementId,
+    setSelectedAgreementId,
     isLoadingAgreements,
     isAgreementModalOpen,
     agreementError,
