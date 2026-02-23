@@ -4,8 +4,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { getAllCharges } from '@/lib/api/strategist.api';
 import { useBilling, type ChargeFilter } from '@/contexts/strategist-contexts/billing/BillingStore';
 import { billingStore } from '@/contexts/strategist-contexts/billing/BillingStore';
-import { MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { MagnifyingGlassIcon, Plus, Check, Copy } from '@phosphor-icons/react';
 import { CreditCard } from '@phosphor-icons/react/dist/ssr';
+import { CreatePaymentLinkModal } from '@/components/payments/create-payment-link-modal';
 
 // ============================================================================
 // TYPES
@@ -220,6 +221,9 @@ function LoadingState() {
 
 export default function StrategistBillingPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Use billing store
   const charges = useBilling(state => state.charges);
@@ -262,6 +266,27 @@ export default function StrategistBillingPage() {
     billingStore.setState({ searchQuery: query });
   };
 
+  const handlePaymentLinkSuccess = (link: string) => {
+    setGeneratedLink(link);
+    loadCharges(); // Refresh to show the new charge
+  };
+
+  const handleCopyLink = async () => {
+    if (!generatedLink) return;
+    try {
+      await navigator.clipboard.writeText(generatedLink);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleCloseSuccessMessage = () => {
+    setGeneratedLink(null);
+    setCopySuccess(false);
+  };
+
   return (
     <div className="flex min-h-full flex-col">
       <div className="flex-1">
@@ -274,6 +299,13 @@ export default function StrategistBillingPage() {
                   Track all charges and payment statuses across your clients
                 </p>
               </div>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+              >
+                <Plus className="h-4 w-4" weight="bold" />
+                Create Payment Link
+              </button>
             </div>
 
             {/* Summary Cards */}
@@ -290,6 +322,48 @@ export default function StrategistBillingPage() {
             {chargesError && (
               <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
                 <p className="text-sm text-red-700">{chargesError}</p>
+              </div>
+            )}
+
+            {generatedLink && (
+              <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="mb-2 text-sm font-medium text-emerald-800">
+                      Payment link created successfully!
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={generatedLink}
+                        className="flex-1 rounded border border-emerald-300 bg-white px-3 py-2 text-xs text-emerald-900"
+                      />
+                      <button
+                        onClick={handleCopyLink}
+                        className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-emerald-700"
+                      >
+                        {copySuccess ? (
+                          <>
+                            <Check className="h-3.5 w-3.5" weight="bold" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5" weight="bold" />
+                            Copy
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCloseSuccessMessage}
+                    className="ml-3 rounded p-1 text-emerald-600 hover:bg-emerald-100"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             )}
 
@@ -328,6 +402,13 @@ export default function StrategistBillingPage() {
           </div>
         </div>
       </div>
+
+      {/* Payment Link Modal */}
+      <CreatePaymentLinkModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handlePaymentLinkSuccess}
+      />
     </div>
   );
 }
