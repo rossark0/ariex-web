@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { AgreementStatus } from '@/types/agreement';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -90,7 +91,7 @@ interface AgreementSelectorProps {
 
 // ─── Component ────────────────────────────────────────────────────────────
 
-export function AgreementSelector({
+export const AgreementSelector = memo(function AgreementSelector({
   agreements,
   selectedAgreementId,
   onSelect,
@@ -272,4 +273,4 @@ export function AgreementSelector({
       )}
     </div>
   );
-}
+})

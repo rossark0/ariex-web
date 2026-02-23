@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { CreditCard, CurrencyDollar, SpinnerGap, X as XIcon } from '@phosphor-icons/react';
 
 interface PaymentModalProps {
@@ -14,7 +15,7 @@ interface PaymentModalProps {
   onClose: () => void;
 }
 
-export function PaymentModal({
+export const PaymentModal = memo(function PaymentModal({
   isOpen,
   clientName,
   agreementName,
@@ -106,4 +107,4 @@ export function PaymentModal({
       </div>
     </div>
   );
-}
+});

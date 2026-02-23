@@ -7,6 +7,9 @@
 import type { ApiClient, ApiAgreement, ApiDocument } from '@/lib/api/strategist.api';
 import type { FullClientMock } from '@/lib/mocks/client-full';
 
+// Re-export the new ClientInfo type from the store for convenience
+export type { ClientInfo } from '../ClientDetailStore';
+
 /**
  * Payment charge from Stripe
  */
@@ -32,7 +35,9 @@ export interface ClientWithDetails extends ApiClient {
 }
 
 /**
- * Client converter utility
+ * @deprecated Use `ClientInfo` from `ClientDetailStore` and `apiClientToClientInfo` instead.
+ * This function converts ApiClient to the legacy FullClientMock shape.
+ * Will be removed after all consumers are migrated.
  */
 export function apiClientToMockFormat(apiClient: ApiClient): FullClientMock {
   const now = new Date();

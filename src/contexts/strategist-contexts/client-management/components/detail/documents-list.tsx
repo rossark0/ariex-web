@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import {
   FileIcon,
   Check as CheckIcon,
@@ -47,7 +47,7 @@ interface DocumentsListProps {
   onRequestDocuments?: () => void;
 }
 
-export function DocumentsList({
+export const DocumentsList = memo(function DocumentsList({
   documents,
   isLoading,
   selectedDocs,
@@ -290,4 +290,4 @@ export function DocumentsList({
       />
     </div>
   );
-}
+})

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { AgreementStatus } from '@/types/agreement';
@@ -51,7 +52,31 @@ import { DocumentsList } from '@/contexts/strategist-contexts/client-management/
 import { PaymentModal } from '@/contexts/strategist-contexts/client-management/components/detail/payment-modal';
 import { DeleteTodoDialog } from '@/contexts/strategist-contexts/client-management/components/detail/delete-todo-dialog';
 
-import { useClientDetailData } from '@/contexts/strategist-contexts/client-management/hooks/use-client-detail-data';
+import {
+  useClientDetailStore,
+  selectActiveAgreement,
+  selectSignedAgreement,
+  selectStatusKey,
+  selectHasAgreementSent,
+  selectHasAgreementSigned,
+  selectStep3Sent,
+  selectStep3Complete,
+  selectHasDocumentsRequested,
+  selectHasAllDocumentsUploaded,
+  selectHasAllDocumentsAccepted,
+  selectDocumentTodos,
+  selectUploadedDocCount,
+  selectTotalDocTodos,
+  selectAcceptedDocCount,
+  selectStep5Sent,
+  selectStep5Complete,
+  selectStep5State,
+  selectStrategyMetadata,
+  selectStrategyDoc,
+  selectTodoTitles,
+  selectHasPaymentReceived,
+} from '@/contexts/strategist-contexts/client-management/ClientDetailStore';
+
 import { useAiPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
 import type { AiDocumentContext, AiAgreementContext } from '@/contexts/ai/AiPageContextStore';
 
@@ -61,32 +86,123 @@ interface Props {
 
 export default function StrategistClientDetailPage({ params }: Props) {
   const router = useRouter();
-  const data = useClientDetailData(params.clientId);
+
+  // ─── Store Initialization ───────────────────────────────────
+  const init = useClientDetailStore(s => s.init);
+  const reset = useClientDetailStore(s => s.reset);
+
+  useEffect(() => {
+    init(params.clientId);
+    return () => reset();
+  }, [params.clientId, init, reset]);
+
+  // ─── Read Store State ───────────────────────────────────────
+  const isLoading = useClientDetailStore(s => s.isLoading);
+  const clientInfo = useClientDetailStore(s => s.clientInfo);
+  const apiClient = useClientDetailStore(s => s.apiClient);
+  const agreements = useClientDetailStore(s => s.agreements);
+  const clientDocuments = useClientDetailStore(s => s.clientDocuments);
+  const selectedAgreementId = useClientDetailStore(s => s.selectedAgreementId);
+  const isLoadingAgreements = useClientDetailStore(s => s.isLoadingAgreements);
+  const isAgreementModalOpen = useClientDetailStore(s => s.isAgreementModalOpen);
+  const agreementError = useClientDetailStore(s => s.agreementError);
+  const existingCharge = useClientDetailStore(s => s.existingCharge);
+  const isLoadingCharges = useClientDetailStore(s => s.isLoadingCharges);
+  const isPaymentModalOpen = useClientDetailStore(s => s.isPaymentModalOpen);
+  const isSendingPayment = useClientDetailStore(s => s.isSendingPayment);
+  const paymentError = useClientDetailStore(s => s.paymentError);
+  const paymentAmount = useClientDetailStore(s => s.paymentAmount);
+  const selectedDocs = useClientDetailStore(s => s.selectedDocs);
+  const isLoadingDocuments = useClientDetailStore(s => s.isLoadingDocuments);
+  const viewingDocId = useClientDetailStore(s => s.viewingDocId);
+  const isRequestDocsModalOpen = useClientDetailStore(s => s.isRequestDocsModalOpen);
+  const todoToDelete = useClientDetailStore(s => s.todoToDelete);
+  const deletingTodoId = useClientDetailStore(s => s.deletingTodoId);
+  const isStrategySheetOpen = useClientDetailStore(s => s.isStrategySheetOpen);
+  const isCompletingAgreement = useClientDetailStore(s => s.isCompletingAgreement);
+  const strategistCeremonyUrl = useClientDetailStore(s => s.strategistCeremonyUrl);
+  const strategistHasSigned = useClientDetailStore(s => s.strategistHasSigned);
+  const clientHasSigned = useClientDetailStore(s => s.clientHasSigned);
+  const signedAgreementDocUrl = useClientDetailStore(s => s.signedAgreementDocUrl);
+  const strategyReviewPdfUrl = useClientDetailStore(s => s.strategyReviewPdfUrl);
+  const complianceUserId = useClientDetailStore(s => s.complianceUserId);
+  const complianceUsers = useClientDetailStore(s => s.complianceUsers);
+  const isStrategyReviewOpen = useClientDetailStore(s => s.isStrategyReviewOpen);
+
+  // ─── Computed Selectors ─────────────────────────────────────
+  const activeAgreement = useClientDetailStore(selectActiveAgreement);
+  const signedAgreement = useClientDetailStore(selectSignedAgreement);
+  const statusKey = useClientDetailStore(selectStatusKey);
+  const hasAgreementSent = useClientDetailStore(selectHasAgreementSent);
+  const hasAgreementSigned = useClientDetailStore(selectHasAgreementSigned);
+  const step3Sent = useClientDetailStore(selectStep3Sent);
+  const step3Complete = useClientDetailStore(selectStep3Complete);
+  const hasDocumentsRequested = useClientDetailStore(selectHasDocumentsRequested);
+  const hasAllDocumentsUploaded = useClientDetailStore(selectHasAllDocumentsUploaded);
+  const hasAllDocumentsAccepted = useClientDetailStore(selectHasAllDocumentsAccepted);
+  const documentTodos = useClientDetailStore(selectDocumentTodos);
+  const uploadedDocCount = useClientDetailStore(selectUploadedDocCount);
+  const totalDocTodos = useClientDetailStore(selectTotalDocTodos);
+  const acceptedDocCount = useClientDetailStore(selectAcceptedDocCount);
+  const step5Sent = useClientDetailStore(selectStep5Sent);
+  const step5Complete = useClientDetailStore(selectStep5Complete);
+  const step5State = useClientDetailStore(selectStep5State);
+  const strategyMetadata = useClientDetailStore(selectStrategyMetadata);
+  const strategyDoc = useClientDetailStore(selectStrategyDoc);
+  const todoTitles = useClientDetailStore(selectTodoTitles);
+
+  // ─── Store Actions ──────────────────────────────────────────
+  const setSelectedAgreementId = useClientDetailStore(s => s.setSelectedAgreementId);
+  const setIsAgreementModalOpen = useClientDetailStore(s => s.setIsAgreementModalOpen);
+  const setIsPaymentModalOpen = useClientDetailStore(s => s.setIsPaymentModalOpen);
+  const setPaymentAmount = useClientDetailStore(s => s.setPaymentAmount);
+  const setIsRequestDocsModalOpen = useClientDetailStore(s => s.setIsRequestDocsModalOpen);
+  const setTodoToDelete = useClientDetailStore(s => s.setTodoToDelete);
+  const setIsStrategySheetOpen = useClientDetailStore(s => s.setIsStrategySheetOpen);
+  const setIsStrategyReviewOpen = useClientDetailStore(s => s.setIsStrategyReviewOpen);
+  const toggleDocSelection = useClientDetailStore(s => s.toggleDocSelection);
+  const refreshAgreements = useClientDetailStore(s => s.refreshAgreements);
+
+  const sendAgreement = useClientDetailStore(s => s.sendAgreement);
+  const acceptDocument = useClientDetailStore(s => s.acceptDocument);
+  const declineDocument = useClientDetailStore(s => s.declineDocument);
+  const advanceToStrategy = useClientDetailStore(s => s.advanceToStrategy);
+  const sendStrategy = useClientDetailStore(s => s.sendStrategy);
+  const completeAgreementAction = useClientDetailStore(s => s.completeAgreementAction);
+  const openPaymentModal = useClientDetailStore(s => s.openPaymentModal);
+  const sendPaymentLink = useClientDetailStore(s => s.sendPaymentLink);
+  const sendPaymentReminder = useClientDetailStore(s => s.sendPaymentReminder);
+  const downloadSignedStrategy = useClientDetailStore(s => s.downloadSignedStrategy);
+  const viewStrategyDocument = useClientDetailStore(s => s.viewStrategyDocument);
+  const sendRevisedStrategy = useClientDetailStore(s => s.sendRevisedStrategy);
+  const deleteTodoAction = useClientDetailStore(s => s.deleteTodoAction);
+  const viewDocument = useClientDetailStore(s => s.viewDocument);
+  const strategistSign = useClientDetailStore(s => s.strategistSign);
 
   // ─── AI Page Context ────────────────────────────────────────
 
   useAiPageContext({
-    pageTitle: data.client
-      ? `Client: ${data.client.user.name || data.client.user.email}`
+    pageTitle: clientInfo
+      ? `Client: ${clientInfo.user.name || clientInfo.user.email}`
       : 'Client Detail',
     userRole: 'STRATEGIST',
-    client: data.client
+    client: clientInfo
       ? {
-          id: data.client.user.id,
-          name: data.client.user.name,
-          email: data.client.user.email,
-          phoneNumber: data.client.profile.phoneNumber,
-          businessName: data.client.profile.businessName,
-          businessType: data.client.profile.businessType,
-          city: data.client.profile.city,
-          state: data.client.profile.state,
-          estimatedIncome: data.client.profile.estimatedIncome,
-          filingStatus: data.client.profile.filingStatus,
-          dependents: data.client.profile.dependents,
-          statusKey: data.statusKey,
+          id: clientInfo.user.id,
+          name: clientInfo.user.name,
+          email: clientInfo.user.email,
+          phoneNumber: clientInfo.profile.phoneNumber,
+          businessName: clientInfo.profile.businessName,
+          businessType: clientInfo.profile.businessType,
+          city: clientInfo.profile.city,
+          state: clientInfo.profile.state,
+          estimatedIncome: clientInfo.profile.estimatedIncome,
+          filingStatus: clientInfo.profile.filingStatus,
+          dependents: clientInfo.profile.dependents,
+          statusKey,
         }
       : null,
-    documents: data.clientDocuments.map(
+    documents: clientDocuments.map(
       (d): AiDocumentContext => ({
         id: d.id,
         name: d.name,
@@ -98,7 +214,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
         createdAt: d.createdAt,
       })
     ),
-    agreements: data.agreements.map(
+    agreements: agreements.map(
       (a): AiAgreementContext => ({
         id: a.id,
         name: a.name,
@@ -107,28 +223,28 @@ export default function StrategistClientDetailPage({ params }: Props) {
         createdAt: a.createdAt,
       })
     ),
-    strategy: data.step5State
+    strategy: step5State
       ? {
-          sent: !!data.step5State.strategySent,
-          phase: data.step5State.phase,
-          isComplete: !!data.step5State.isComplete,
+          sent: !!step5State.strategySent,
+          phase: step5State.phase,
+          isComplete: !!step5State.isComplete,
         }
       : null,
     extra: {
-      hasAgreementSigned: data.hasAgreementSigned,
-      hasPaymentReceived: !!data.existingCharge && data.existingCharge.status === 'paid',
-      hasAllDocumentsAccepted: data.hasAllDocumentsAccepted,
-      uploadedDocCount: data.uploadedDocCount,
-      totalDocTodos: data.totalDocTodos,
-      acceptedDocCount: data.acceptedDocCount,
+      hasAgreementSigned,
+      hasPaymentReceived: !!existingCharge && existingCharge.status === 'paid',
+      hasAllDocumentsAccepted,
+      uploadedDocCount,
+      totalDocTodos,
+      acceptedDocCount,
     },
   });
 
   // ─── Loading / Not Found ────────────────────────────────────
 
-  if (data.isLoading) return <LoadingState />;
+  if (isLoading) return <LoadingState />;
 
-  if (!data.client) {
+  if (!clientInfo) {
     return (
       <section className="flex flex-col items-center justify-center gap-4 p-12">
         <Warning className="h-12 w-12 text-amber-500" weight="duotone" />
@@ -147,181 +263,181 @@ export default function StrategistClientDetailPage({ params }: Props) {
     <div className="flex min-h-full flex-col bg-white">
       <div className="relative flex-1">
         <ClientHeader
-          clientName={data.client.user.name}
-          statusKey={data.statusKey}
-          canSendStrategy={data.signedAgreement?.status === AgreementStatus.PENDING_STRATEGY}
-          onStrategyClick={() => data.setIsStrategySheetOpen(true)}
+          clientName={clientInfo.user.name}
+          statusKey={statusKey}
+          canSendStrategy={signedAgreement?.status === AgreementStatus.PENDING_STRATEGY}
+          onStrategyClick={() => setIsStrategySheetOpen(true)}
         />
 
         <div className="relative z-40 mx-auto w-full max-w-2xl px-4">
           <ClientInfoCard
-            clientName={data.client.user.name}
-            email={data.client.user.email}
-            phoneNumber={data.client.profile.phoneNumber}
-            businessName={data.client.profile.businessName}
-            businessType={data.client.profile.businessType}
-            city={data.client.profile.city}
-            state={data.client.profile.state}
-            estimatedIncome={data.client.profile.estimatedIncome}
-            filingStatus={data.client.profile.filingStatus}
+            clientName={clientInfo.user.name}
+            email={clientInfo.user.email}
+            phoneNumber={clientInfo.profile.phoneNumber}
+            businessName={clientInfo.profile.businessName}
+            businessType={clientInfo.profile.businessType}
+            city={clientInfo.profile.city}
+            state={clientInfo.profile.state}
+            estimatedIncome={clientInfo.profile.estimatedIncome}
+            filingStatus={clientInfo.profile.filingStatus}
           />
 
           <AgreementSelector
-            agreements={data.agreements}
-            selectedAgreementId={data.selectedAgreementId}
-            onSelect={data.setSelectedAgreementId}
-            onCreateNew={() => data.setIsAgreementModalOpen(true)}
-            isLoading={data.isLoadingAgreements}
+            agreements={agreements}
+            selectedAgreementId={selectedAgreementId}
+            onSelect={setSelectedAgreementId}
+            onCreateNew={() => setIsAgreementModalOpen(true)}
+            isLoading={isLoadingAgreements}
           />
 
           <ActivityTimeline
-            client={data.client}
-            agreements={data.agreements}
-            existingCharge={data.existingCharge}
-            signedAgreement={data.signedAgreement}
-            isLoadingAgreements={data.isLoadingAgreements}
-            isLoadingCharges={data.isLoadingCharges}
-            isSendingPayment={data.isSendingPayment}
-            isCompletingAgreement={data.isCompletingAgreement}
-            paymentError={data.paymentError}
-            agreementError={data.agreementError}
-            hasAgreementSent={data.hasAgreementSent}
-            hasAgreementSigned={data.hasAgreementSigned}
-            step3Sent={data.step3Sent}
-            step3Complete={data.step3Complete}
-            hasDocumentsRequested={data.hasDocumentsRequested}
-            hasAllDocumentsUploaded={data.hasAllDocumentsUploaded}
-            hasAllDocumentsAccepted={data.hasAllDocumentsAccepted}
-            documentTodos={data.documentTodos}
-            uploadedDocCount={data.uploadedDocCount}
-            totalDocTodos={data.totalDocTodos}
-            acceptedDocCount={data.acceptedDocCount}
-            step5Sent={data.step5Sent}
-            step5Signed={data.step5Signed}
-            step5Complete={data.step5Complete}
-            step5State={data.step5State}
-            strategyMetadata={data.strategyMetadata}
-            strategyDoc={data.strategyDoc}
-            strategistCeremonyUrl={data.strategistCeremonyUrl}
-            strategistHasSigned={data.strategistHasSigned}
-            clientHasSigned={data.clientHasSigned}
-            signedAgreementDocUrl={data.signedAgreementDocUrl}
-            onStrategistSign={data.handleStrategistSign}
-            onOpenAgreementModal={() => data.setIsAgreementModalOpen(true)}
-            onOpenPaymentModal={data.handleOpenPaymentModal}
-            onSendPaymentReminder={data.handleSendPaymentReminder}
-            onOpenRequestDocsModal={() => data.setIsRequestDocsModalOpen(true)}
-            onOpenStrategySheet={() => data.setIsStrategySheetOpen(true)}
-            onAdvanceToStrategy={data.handleAdvanceToStrategy}
-            onCompleteAgreement={data.handleCompleteAgreement}
-            onDownloadSignedStrategy={data.handleDownloadSignedStrategy}
-            onViewStrategyDocument={data.handleViewStrategyDocument}
-            onAcceptDocument={data.handleAcceptDocument}
-            onDeclineDocument={data.handleDeclineDocument}
-            onDeleteTodoRequest={todo => data.setTodoToDelete(todo)}
+            client={clientInfo}
+            agreements={agreements}
+            existingCharge={existingCharge}
+            signedAgreement={signedAgreement}
+            isLoadingAgreements={isLoadingAgreements}
+            isLoadingCharges={isLoadingCharges}
+            isSendingPayment={isSendingPayment}
+            isCompletingAgreement={isCompletingAgreement}
+            paymentError={paymentError}
+            agreementError={agreementError}
+            hasAgreementSent={hasAgreementSent}
+            hasAgreementSigned={hasAgreementSigned}
+            step3Sent={step3Sent}
+            step3Complete={step3Complete}
+            hasDocumentsRequested={hasDocumentsRequested}
+            hasAllDocumentsUploaded={hasAllDocumentsUploaded}
+            hasAllDocumentsAccepted={hasAllDocumentsAccepted}
+            documentTodos={documentTodos}
+            uploadedDocCount={uploadedDocCount}
+            totalDocTodos={totalDocTodos}
+            acceptedDocCount={acceptedDocCount}
+            step5Sent={step5Sent}
+            step5Signed={false}
+            step5Complete={step5Complete}
+            step5State={step5State}
+            strategyMetadata={strategyMetadata}
+            strategyDoc={strategyDoc}
+            strategistCeremonyUrl={strategistCeremonyUrl}
+            strategistHasSigned={strategistHasSigned}
+            clientHasSigned={clientHasSigned}
+            signedAgreementDocUrl={signedAgreementDocUrl}
+            onStrategistSign={strategistSign}
+            onOpenAgreementModal={() => setIsAgreementModalOpen(true)}
+            onOpenPaymentModal={openPaymentModal}
+            onSendPaymentReminder={sendPaymentReminder}
+            onOpenRequestDocsModal={() => setIsRequestDocsModalOpen(true)}
+            onOpenStrategySheet={() => setIsStrategySheetOpen(true)}
+            onAdvanceToStrategy={advanceToStrategy}
+            onCompleteAgreement={completeAgreementAction}
+            onDownloadSignedStrategy={downloadSignedStrategy}
+            onViewStrategyDocument={viewStrategyDocument}
+            onAcceptDocument={acceptDocument}
+            onDeclineDocument={declineDocument}
+            onDeleteTodoRequest={todo => setTodoToDelete(todo)}
           />
 
           <DocumentsList
-            documents={data.clientDocuments}
-            isLoading={data.isLoadingDocuments}
-            selectedDocs={data.selectedDocs}
-            viewingDocId={data.viewingDocId}
-            todoTitles={data.todoTitles}
-            documentTodos={data.documentTodos}
-            signedDocumentUrl={data.signedAgreementDocUrl}
-            contractDocumentId={data.signedAgreement?.contractDocumentId}
-            onToggleSelection={data.toggleDocSelection}
-            onViewDocument={data.handleViewDocument}
-            onRequestDocuments={() => data.setIsRequestDocsModalOpen(true)}
+            documents={clientDocuments}
+            isLoading={isLoadingDocuments}
+            selectedDocs={selectedDocs}
+            viewingDocId={viewingDocId}
+            todoTitles={todoTitles}
+            documentTodos={documentTodos}
+            signedDocumentUrl={signedAgreementDocUrl}
+            contractDocumentId={signedAgreement?.contractDocumentId}
+            onToggleSelection={toggleDocSelection}
+            onViewDocument={viewDocument}
+            onRequestDocuments={() => setIsRequestDocsModalOpen(true)}
           />
         </div>
       </div>
 
       {/* Strategy Sheet (edit mode) */}
-      {data.signedAgreement && (
+      {signedAgreement && (
         <StrategySheet
-          client={data.client}
-          agreementId={data.signedAgreement.id}
-          isOpen={data.isStrategySheetOpen}
-          onClose={() => data.setIsStrategySheetOpen(false)}
-          onSend={data.handleSendStrategy}
-          rejectedPdfUrl={data.strategyReviewPdfUrl}
-          complianceUserId={data.complianceUserId}
-          complianceUsers={data.complianceUsers}
+          client={clientInfo}
+          agreementId={signedAgreement.id}
+          isOpen={isStrategySheetOpen}
+          onClose={() => setIsStrategySheetOpen(false)}
+          onSend={sendStrategy}
+          rejectedPdfUrl={strategyReviewPdfUrl}
+          complianceUserId={complianceUserId}
+          complianceUsers={complianceUsers}
         />
       )}
 
       {/* Strategy Review Sheet (edit + chat with compliance) */}
-      {data.signedAgreement && data.client && (
+      {signedAgreement && clientInfo && (
         <StrategyReviewSheet
           role="strategist"
-          isOpen={data.isStrategyReviewOpen}
-          onClose={() => data.setIsStrategyReviewOpen(false)}
-          client={data.client}
-          agreementId={data.signedAgreement.id}
+          isOpen={isStrategyReviewOpen}
+          onClose={() => setIsStrategyReviewOpen(false)}
+          client={clientInfo}
+          agreementId={signedAgreement.id}
           documentTitle={
-            data.strategyDoc?.originalName?.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan'
+            strategyDoc?.originalName?.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan'
           }
-          otherUserId={data.complianceUserId}
-          complianceUsers={data.complianceUsers}
-          onSend={data.handleSendRevisedStrategy}
+          otherUserId={complianceUserId}
+          complianceUsers={complianceUsers}
+          onSend={sendRevisedStrategy}
         />
       )}
 
       {/* Agreement Sheet */}
       <AgreementSheet
         clientId={params.clientId}
-        clientName={data.client.user.name || data.client.user.email || 'Client'}
-        clientEmail={data.client.user.email || ''}
-        isOpen={data.isAgreementModalOpen}
-        onClose={() => data.setIsAgreementModalOpen(false)}
-        onSend={data.handleSendAgreement}
+        clientName={clientInfo.user.name || clientInfo.user.email || 'Client'}
+        clientEmail={clientInfo.user.email || ''}
+        isOpen={isAgreementModalOpen}
+        onClose={() => setIsAgreementModalOpen(false)}
+        onSend={sendAgreement}
       />
 
       {/* Payment Modal */}
       <PaymentModal
-        isOpen={data.isPaymentModalOpen}
-        clientName={data.client.user.name}
-        agreementName={data.signedAgreement?.name || 'Service Agreement'}
-        paymentAmount={data.paymentAmount}
-        isSending={data.isSendingPayment}
-        error={data.paymentError}
-        onAmountChange={data.setPaymentAmount}
-        onSend={data.handleSendPaymentLink}
-        onClose={() => data.setIsPaymentModalOpen(false)}
+        isOpen={isPaymentModalOpen}
+        clientName={clientInfo.user.name}
+        agreementName={signedAgreement?.name || 'Service Agreement'}
+        paymentAmount={paymentAmount}
+        isSending={isSendingPayment}
+        error={paymentError}
+        onAmountChange={setPaymentAmount}
+        onSend={sendPaymentLink}
+        onClose={() => setIsPaymentModalOpen(false)}
       />
 
       {/* Request Documents Modal */}
-      {data.activeAgreement && (
+      {activeAgreement && (
         <RequestDocumentsModal
-          isOpen={data.isRequestDocsModalOpen}
-          onClose={() => data.setIsRequestDocsModalOpen(false)}
-          agreementId={data.activeAgreement.id}
+          isOpen={isRequestDocsModalOpen}
+          onClose={() => setIsRequestDocsModalOpen(false)}
+          agreementId={activeAgreement.id}
           clientId={params.clientId}
-          clientName={data.client?.user.name || 'Client'}
-          onSuccess={data.refreshAgreements}
+          clientName={clientInfo?.user.name || 'Client'}
+          onSuccess={refreshAgreements}
         />
       )}
 
       {/* Delete Todo Dialog */}
-      {data.todoToDelete && (
+      {todoToDelete && (
         <DeleteTodoDialog
-          todo={data.todoToDelete}
-          isDeleting={!!data.deletingTodoId}
-          onConfirm={data.handleDeleteTodo}
-          onCancel={() => data.setTodoToDelete(null)}
+          todo={todoToDelete}
+          isDeleting={!!deletingTodoId}
+          onConfirm={deleteTodoAction}
+          onCancel={() => setTodoToDelete(null)}
         />
       )}
 
       {/* Floating Chat */}
-      {data.apiClient && (
+      {apiClient && (
         <ClientFloatingChat
           client={{
-            id: data.apiClient.id,
+            id: apiClient.id,
             user: {
-              id: data.apiClient.id,
-              name: data.apiClient.name,
-              email: data.apiClient.email,
+              id: apiClient.id,
+              name: apiClient.name,
+              email: apiClient.email,
             },
           }}
         />

@@ -6,6 +6,7 @@
 
 'use client';
 
+import { memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeftIcon, StarFourIcon } from '@phosphor-icons/react';
 import { ChevronDown } from 'lucide-react';
@@ -22,7 +23,7 @@ interface ClientHeaderProps {
   onStrategyClick: () => void;
 }
 
-export function ClientHeader({
+export const ClientHeader = memo(function ClientHeader({
   clientName,
   statusKey,
   canSendStrategy,
@@ -101,4 +102,4 @@ export function ClientHeader({
       </div>
     </>
   );
-}
+});

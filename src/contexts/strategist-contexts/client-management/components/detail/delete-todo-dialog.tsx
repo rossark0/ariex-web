@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { SpinnerGap } from '@phosphor-icons/react';
 
 interface DeleteTodoDialogProps {
@@ -9,7 +10,7 @@ interface DeleteTodoDialogProps {
   onCancel: () => void;
 }
 
-export function DeleteTodoDialog({ todo, isDeleting, onConfirm, onCancel }: DeleteTodoDialogProps) {
+export const DeleteTodoDialog = memo(function DeleteTodoDialog({ todo, isDeleting, onConfirm, onCancel }: DeleteTodoDialogProps) {
   return (
     <div className="fixed inset-0 z-9999 flex items-center justify-center">
       <div
@@ -48,4 +49,4 @@ export function DeleteTodoDialog({ todo, isDeleting, onConfirm, onCancel }: Dele
       </div>
     </div>
   );
-}
+});

@@ -2,7 +2,7 @@
 
 import type { ApiAgreement } from '@/lib/api/strategist.api';
 import { getDownloadUrl, getSignedAgreementDocumentUrl, findSignedAgreementByClientId } from '@/lib/api/strategist.api';
-import type { FullClientMock } from '@/lib/mocks/client-full';
+import type { ClientInfo } from '@/contexts/strategist-contexts/client-management/ClientDetailStore';
 import { AgreementStatus } from '@/types/agreement';
 import { AcceptanceStatus } from '@/types/document';
 import type { Step5State } from '../../models/strategy.model';
@@ -43,7 +43,7 @@ interface StrategyMetadata {
 }
 
 export interface ActivityTimelineProps {
-  client: FullClientMock;
+  client: ClientInfo;
   agreements: ApiAgreement[];
   existingCharge: { id: string; paymentLink?: string; status: string; amount?: number } | null;
   signedAgreement: ApiAgreement | null;

@@ -23,7 +23,7 @@ import html2canvas from 'html2canvas';
 import { Button } from '@/components/ui/button';
 import { Chat } from '@/components/chat';
 import type { ApiClient } from '@/lib/api/strategist.api';
-import type { FullClientMock } from '@/lib/mocks/client-full';
+import type { ClientInfo } from '@/contexts/strategist-contexts/client-management/ClientDetailStore';
 import type { StrategySendData } from '@/components/strategy/strategy-sheet';
 
 // ============================================================================
@@ -58,7 +58,7 @@ interface ComplianceReviewProps extends StrategyReviewSheetBaseProps {
 interface StrategistReviewProps extends StrategyReviewSheetBaseProps {
   role: 'strategist';
   complianceUsers?: (ApiClient & { complianceUserId?: string })[];
-  client: FullClientMock;
+  client: ClientInfo;
   agreementId: string;
   onSend: (data: StrategySendData) => Promise<void>;
   pdfUrl?: never;

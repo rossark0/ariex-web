@@ -21,7 +21,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { MiniFileStack } from '@/components/ui/mini-document-illustration';
-import type { FullClientMock } from '@/lib/mocks/client-full';
+import type { ClientInfo } from '@/contexts/strategist-contexts/client-management/ClientDetailStore';
 import { Chat } from '@/components/chat';
 import type { ApiClient } from '@/lib/api/strategist.api';
 
@@ -35,7 +35,7 @@ interface Page {
 }
 
 interface StrategySheetProps {
-  client: FullClientMock;
+  client: ClientInfo;
   agreementId: string;
   isOpen: boolean;
   onClose: () => void;
