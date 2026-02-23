@@ -272,7 +272,7 @@ export async function getComplianceClientById(
  * Add a client to compliance scope (called by strategist or compliance)
  */
 export async function addClientToScope(data: {
-  strategistUserId: string;
+  complianceUserId: string;
   clientUserId: string;
 }): Promise<ComplianceClientMapping> {
   return apiRequest<ComplianceClientMapping>('/compliance/add/client', {
@@ -588,28 +588,4 @@ export async function sendComplianceChatMessage(
       body: JSON.stringify(data),
     }
   );
-}
-
-// ============================================================================
-// Strategist-side: Update compliance client access
-// ============================================================================
-
-/**
- * Update which clients a compliance user can access.
- * Called by strategist.
- */
-export async function updateComplianceClientAccess(
-  complianceUserId: string,
-  clientIds: string[]
-): Promise<boolean> {
-  try {
-    await apiRequest(`/users/strategist/${complianceUserId}/clients`, {
-      method: 'POST',
-      body: JSON.stringify(clientIds),
-    });
-    return true;
-  } catch (error) {
-    console.error('[Compliance API] Failed to update client access:', error);
-    return false;
-  }
 }

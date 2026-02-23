@@ -1856,26 +1856,6 @@ export async function removeComplianceUser(mappingId: string): Promise<boolean> 
 }
 
 /**
- * Update which clients a compliance user can access.
- * Called by strategist to manage compliance scope.
- */
-export async function updateComplianceClientAccess(
-  complianceUserId: string,
-  clientIds: string[]
-): Promise<boolean> {
-  try {
-    await apiRequest(`/users/strategist/${complianceUserId}/clients`, {
-      method: 'POST',
-      body: JSON.stringify(clientIds),
-    });
-    return true;
-  } catch (error) {
-    console.error('[API] Failed to update compliance client access:', error);
-    return false;
-  }
-}
-
-/**
  * Remove a client from a compliance user's allowed clients
  */
 export async function deleteComplianceClient(

@@ -841,6 +841,37 @@ export async function getChargesForAgreement(agreementId: string): Promise<Clien
 }
 
 /**
+ * Get all charges for the current client
+ */
+export async function getAllChargesForClient(): Promise<ClientCharge[]> {
+  try {
+    console.log('[ClientAPI] Fetching all charges for client');
+    const rawCharges = await apiRequest<any[]>('/charges');
+    console.log('[ClientAPI] All charges response:', JSON.stringify(rawCharges, null, 2));
+
+    // Map backend fields to frontend interface
+    const charges: ClientCharge[] = rawCharges.map(c => ({
+      id: c.id,
+      agreementId: c.agreementId,
+      amount: c.amountCents ? c.amountCents / 100 : c.amount || 0,
+      currency: c.currency || 'usd',
+      status: c.status,
+      description: c.description,
+      paymentLink: c.paymentLink,
+      paymentIntentId: c.stripePaymentIntentId || c.paymentIntentId,
+      checkoutSessionId: c.stripeCheckoutSessionId || c.checkoutSessionId,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    }));
+
+    return charges;
+  } catch (err) {
+    console.error('[ClientAPI] Failed to fetch all charges:', err);
+    return [];
+  }
+}
+
+/**
  * Generate payment link for a charge (Stripe checkout URL)
  * This is called by the CLIENT to get their payment link
  * @param chargeId - The charge ID to generate a payment link for

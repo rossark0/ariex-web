@@ -8,9 +8,9 @@ import {
   deleteComplianceClient,
   getLinkedComplianceUsers,
   listClients,
-  updateComplianceClientAccess,
   type ApiClient,
 } from '@/lib/api/strategist.api';
+import { addClientToScope } from '@/lib/api/compliance.api';
 
 // ============================================================================
 // TYPES
@@ -132,6 +132,7 @@ function AddClientToComplianceModal({
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredClients = allClients.filter(client => {
@@ -178,17 +179,27 @@ function AddClientToComplianceModal({
     setError(null);
 
     try {
-      await updateComplianceClientAccess(complianceUser.id, [selectedClientId]);
+      // Second call: Add client to compliance scope for additional linking
+      try {
+        await addClientToScope({
+          complianceUserId: complianceUser.id,
+          clientUserId: selectedClientId,
+        });
+      } catch (scopeErr) {
+        console.warn('addClientToScope supplementary call:', scopeErr);
+        // Non-fatal: main update already succeeded
+      }
 
       onClientAdded();
       onClose();
     } catch (err) {
       console.error('Failed to add client to compliance:', err);
-      setError(
+      const errorMessage =
         err instanceof Error
           ? err.message
-          : 'Failed to add client to compliance scope. Please try again.'
-      );
+          : 'Failed to add client to compliance scope. Please try again.';
+      setError(errorMessage);
+      setShowErrorModal(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -312,12 +323,6 @@ function AddClientToComplianceModal({
             </div>
           </div>
 
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
           <button
             type="button"
             onClick={handleSubmit}
@@ -328,6 +333,12 @@ function AddClientToComplianceModal({
           </button>
         </div>
       </div>
+
+      <ErrorModal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        errorMessage={error}
+      />
     </div>
   );
 }
@@ -390,6 +401,54 @@ function DeleteClientConfirmationModal({
             {isDeleting ? 'Removing...' : 'Remove'}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// ERROR MODAL
+// ============================================================================
+
+interface ErrorModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  errorMessage: string | null;
+}
+
+function ErrorModal({ isOpen, onClose, errorMessage }: ErrorModalProps) {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !errorMessage) return null;
+
+  return (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-xl border border-red-200 bg-white p-6 shadow-lg">
+        <div className="mb-4 flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-100">
+            <X weight="bold" className="h-5 w-5 text-red-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-zinc-900">Error</h2>
+            <p className="mt-2 text-sm text-zinc-600">{errorMessage}</p>
+          </div>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-700"
+        >
+          Dismiss
+        </button>
       </div>
     </div>
   );
