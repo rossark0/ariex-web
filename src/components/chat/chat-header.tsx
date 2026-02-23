@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { ArrowLeft, Robot } from '@phosphor-icons/react';
+import Image from 'next/image';
 
 interface ChatHeaderProps {
   title?: string;
@@ -50,9 +51,11 @@ export function ChatHeader({
 
       {/* Avatar */}
       {avatarUrl ? (
-        <img
+        <Image
           src={avatarUrl}
-          alt={title}
+          alt={title || ''}
+          width={32}
+          height={32}
           className="h-8 w-8 rounded-lg object-cover"
         />
       ) : (

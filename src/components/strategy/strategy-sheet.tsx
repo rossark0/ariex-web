@@ -92,8 +92,7 @@ const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168';
 
 /** Load pdf.js library from CDN (once). */
 function loadPdfJs(): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if ((window as any).pdfjsLib) return Promise.resolve();
+  if ((window as any).pdfjsLib) return Promise.resolve(); // eslint-disable-line
 
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
@@ -137,15 +136,13 @@ async function pdfUrlToBase64Images(pdfUrl: string, clientName: string): Promise
   // 2. Try loading pdf.js from CDN
   await loadPdfJs();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfjsLib = (window as any).pdfjsLib;
+  const pdfjsLib = (window as any).pdfjsLib; // eslint-disable-line
 
   if (!pdfjsLib) {
     // Fallback: try dynamic import from CDN
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mod = await (Function(
       'return import("' + PDFJS_CDN + '/pdf.min.mjs")'
-    )() as Promise<any>);
+    )() as Promise<any>); // eslint-disable-line
     if (!mod?.getDocument) throw new Error('pdf.js could not be loaded');
     mod.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.mjs`;
     return renderPdfPages(mod, arrayBuffer);
@@ -155,7 +152,7 @@ async function pdfUrlToBase64Images(pdfUrl: string, clientName: string): Promise
   return renderPdfPages(pdfjsLib, arrayBuffer);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line
 async function renderPdfPages(pdfjsLib: any, data: ArrayBuffer): Promise<string[]> {
   const pdf = await pdfjsLib.getDocument({ data }).promise;
   const images: string[] = [];

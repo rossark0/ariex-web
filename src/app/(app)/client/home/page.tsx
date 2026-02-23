@@ -405,7 +405,7 @@ export default function ClientDashboardPage() {
     if (user) {
       fetchData();
     }
-  }, [user, router]);
+  }, [user, router, setStoreAgreements]);
 
   // Refresh dashboard data (used after document upload)
   const refreshDashboard = useCallback(async () => {

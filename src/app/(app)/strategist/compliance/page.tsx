@@ -381,7 +381,7 @@ function DeleteClientConfirmationModal({
         <div className="mb-4">
           <h2 className="text-lg font-semibold text-zinc-900">Remove Client</h2>
           <p className="mt-2 text-sm text-zinc-600">
-            Are you sure you want to remove <span className="font-medium">{clientEmail}</span> from this compliance user's access?
+            Are you sure you want to remove <span className="font-medium">{clientEmail}</span> from this compliance user&apos;s access?
           </p>
         </div>
 

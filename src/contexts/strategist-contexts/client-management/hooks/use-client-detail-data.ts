@@ -300,7 +300,8 @@ export function useClientDetailData(clientId: string): ClientDetailData {
       }
     }
     if (clientId) loadAgreements();
-  }, [clientId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId, selectedAgreementId]);
 
   // ─── Reset stale state on agreement switch ───────────────────
   useEffect(() => {
