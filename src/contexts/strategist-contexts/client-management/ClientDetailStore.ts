@@ -211,7 +211,7 @@ interface ClientDetailState {
   _initVersion: number;
 
   // ─── Actions ──────────────────────────────
-  init: (clientId: string) => Promise<void>;
+  init: (clientId: string, initialAgreementId?: string) => Promise<void>;
   reset: () => void;
   selectAgreement: (id: string) => void;
   setSelectedAgreementId: (id: string) => void; // alias for selectAgreement
@@ -246,6 +246,7 @@ interface ClientDetailState {
   deleteTodoAction: () => Promise<void>;
   viewDocument: (docId: string) => Promise<void>;
   strategistSign: () => void;
+  refreshSigningInfo: () => Promise<void>;
 
   // Internal loading methods
   _loadParallelData: () => Promise<void>;
@@ -311,7 +312,7 @@ export const useClientDetailStore = create<ClientDetailState>((set, get) => ({
   // Initialization
   // ──────────────────────────────────────────────────────────────────────
 
-  init: async (clientId: string) => {
+  init: async (clientId: string, initialAgreementId?: string) => {
     const state = get();
     // Skip if already initialized for this client (HMR resilience)
     if (state.clientId === clientId && state.apiClient) return;
@@ -321,6 +322,7 @@ export const useClientDetailStore = create<ClientDetailState>((set, get) => ({
       ...initialState,
       clientId,
       isLoading: true,
+      selectedAgreementId: initialAgreementId ?? null,
       _initVersion: version,
     });
 
@@ -356,8 +358,12 @@ export const useClientDetailStore = create<ClientDetailState>((set, get) => ({
         })),
         `Client ${clientId}`
       );
-      // Auto-select newest
+      // Auto-select: prefer URL-provided ID if it exists in the list, else newest
       let selectedId = get().selectedAgreementId;
+      if (selectedId && !agreements.find(a => a.id === selectedId)) {
+        // URL-provided agreement ID not found in this client's agreements — clear it
+        selectedId = null;
+      }
       if (!selectedId && agreements.length > 0) {
         const newest = [...agreements].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -379,6 +385,13 @@ export const useClientDetailStore = create<ClientDetailState>((set, get) => ({
     if (agreements.length > 0) {
       get()._loadParallelData();
       get()._syncEnvelopeStatuses();
+    } else {
+      // No agreements → nothing to load; clear dependent loading flags
+      // so the UI doesn't stay in an infinite spinner.
+      set({
+        isLoadingCharges: false,
+        isLoadingDocuments: false,
+      });
     }
     get()._loadComplianceUsers();
   },
@@ -875,6 +888,46 @@ export const useClientDetailStore = create<ClientDetailState>((set, get) => ({
     }
   },
 
+  refreshSigningInfo: async () => {
+    const { agreements, selectedAgreementId } = get();
+    const active =
+      agreements.find(a => a.id === selectedAgreementId) ??
+      [...agreements].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )[0];
+    if (
+      !active ||
+      active.status === AgreementStatus.DRAFT ||
+      active.status === AgreementStatus.CANCELLED
+    ) {
+      return;
+    }
+    try {
+      const info = await getStrategistSigningInfo(active.id);
+      // Only update if we're still on the same agreement
+      if (get().selectedAgreementId !== selectedAgreementId) return;
+      const changed =
+        info.strategistHasSigned !== get().strategistHasSigned ||
+        info.clientHasSigned !== get().clientHasSigned;
+      set({
+        strategistHasSigned: info.strategistHasSigned,
+        clientHasSigned: info.clientHasSigned,
+      });
+      if (info.strategistCeremonyUrl) {
+        set({ strategistCeremonyUrl: info.strategistCeremonyUrl });
+      }
+      if (info.signedDocumentUrl) {
+        set({ signedAgreementDocUrl: info.signedDocumentUrl });
+      }
+      // If both just signed, refresh agreements to get updated status
+      if (changed && info.strategistHasSigned && info.clientHasSigned) {
+        await get().refreshAgreements();
+      }
+    } catch (error) {
+      console.error('[Store] refreshSigningInfo failed:', error);
+    }
+  },
+
   // ──────────────────────────────────────────────────────────────────────
   // Internal: Parallel Data Loading
   // ──────────────────────────────────────────────────────────────────────
@@ -918,14 +971,12 @@ export const useClientDetailStore = create<ClientDetailState>((set, get) => ({
       }
     }
 
-    // 2. Fetch charges
+    // 2. Fetch charges (scoped to selected agreement only)
     async function fetchCharges() {
       set({ isLoadingCharges: true });
       const currentAgreements = get().agreements;
       const selectedAg = currentAgreements.find(a => a.id === get().selectedAgreementId);
-      const signed =
-        (selectedAg && isAgreementSigned(selectedAg.status) ? selectedAg : null) ??
-        currentAgreements.find(a => isAgreementSigned(a.status));
+      const signed = selectedAg && isAgreementSigned(selectedAg.status) ? selectedAg : null;
       if (!signed) {
         if (get()._initVersion === version) {
           set({ existingCharge: null, isLoadingCharges: false });

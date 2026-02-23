@@ -25,6 +25,7 @@ import {
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { CLIENT_STATUS_CONFIG, type ClientStatusKey } from '@/lib/client-status';
 import { computeClientStatus } from '@/contexts/strategist-contexts/client-management/utils/status-helpers';
+import { AgreementStatus } from '@/types/agreement';
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -717,39 +718,107 @@ function EmptyState({ onAddClient }: { onAddClient: () => void }) {
 // MAIN PAGE COMPONENT
 // ============================================================================
 
-type StatusFilterOption = 'all' | ClientStatusKey;
+type WorkflowGroup =
+  | 'action_required'
+  | 'waiting_on_client'
+  | 'waiting_on_compliance'
+  | 'active_clients'
+  | 'archived';
 
-const STATUS_FILTER_OPTIONS: { key: StatusFilterOption; label: string; color: string }[] = [
+type FilterOption = 'all' | WorkflowGroup;
+
+/**
+ * Determine the workflow group for a client by looking at the RAW agreement
+ * status — not just the computed ClientStatusKey — so we can correctly
+ * distinguish who needs to act.
+ *
+ * Actor mapping:
+ *  STRATEGIST (action_required):
+ *    - No agreement / DRAFT / CANCELLED → create & send agreement
+ *    - PENDING_STRATEGY               → create strategy
+ *  CLIENT (waiting_on_client):
+ *    - PENDING_SIGNATURE               → sign agreement
+ *    - PENDING_PAYMENT                 → complete payment
+ *    - PENDING_TODOS_COMPLETION        → upload documents
+ *    - awaiting_approval               → approve strategy
+ *  COMPLIANCE (waiting_on_compliance):
+ *    - awaiting_compliance             → review strategy
+ *  NONE (active_clients):
+ *    - COMPLETED                       → all done
+ */
+function getWorkflowGroup(
+  client: ApiClient,
+  allAgreements: ApiAgreement[]
+): WorkflowGroup {
+  const clientAgreements = allAgreements.filter(a => a.clientId === client.id);
+
+  // No agreements at all → strategist must create one
+  if (clientAgreements.length === 0) return 'action_required';
+
+  // Get most recent agreement
+  const sorted = [...clientAgreements].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  const latest = sorted[0];
+
+  switch (latest.status) {
+    // ── Strategist must act ──
+    case AgreementStatus.DRAFT:
+    case AgreementStatus.CANCELLED:
+    case AgreementStatus.PENDING_STRATEGY:
+      return 'action_required';
+
+    // ── Client must act ──
+    case AgreementStatus.PENDING_SIGNATURE:
+    case AgreementStatus.PENDING_PAYMENT:
+    case AgreementStatus.PENDING_TODOS_COMPLETION:
+      return 'waiting_on_client';
+
+    // ── Strategy review: depends on sub-phase ──
+    case AgreementStatus.PENDING_STRATEGY_REVIEW: {
+      const statusKey = computeClientStatus(client, clientAgreements);
+      if (statusKey === 'awaiting_compliance') return 'waiting_on_compliance';
+      if (statusKey === 'awaiting_approval') return 'waiting_on_client';
+      // Both approved → strategist must click "Finish Agreement"
+      return 'action_required';
+    }
+
+    // ── Done ──
+    case AgreementStatus.COMPLETED:
+      return 'active_clients';
+
+    default:
+      return 'action_required';
+  }
+}
+
+const WORKFLOW_SECTIONS: { key: WorkflowGroup; label: string; color: string; description: string }[] = [
+  { key: 'action_required', label: 'Action Required', color: 'bg-violet-500', description: 'Clients that need your action to move forward' },
+  { key: 'waiting_on_client', label: 'Waiting on Client', color: 'bg-amber-500', description: 'Pending client action — signature, payment, documents, or approval' },
+  { key: 'waiting_on_compliance', label: 'Waiting on Compliance', color: 'bg-sky-500', description: 'Strategy submitted for compliance review' },
+  { key: 'active_clients', label: 'Active Clients', color: 'bg-emerald-500', description: 'Strategy approved and active' },
+  { key: 'archived', label: 'Archived', color: 'bg-zinc-400', description: 'Archived clients' },
+];
+
+const FILTER_OPTIONS: { key: FilterOption; label: string; color: string }[] = [
   { key: 'all', label: 'All Clients', color: 'bg-zinc-500' },
-  { key: 'awaiting_agreement', label: 'Pending Signature', color: 'bg-amber-500' },
-  { key: 'awaiting_payment', label: 'Pending Payment', color: 'bg-amber-500' },
-  { key: 'awaiting_documents', label: 'Pending Documents', color: 'bg-amber-500' },
-  { key: 'ready_for_strategy', label: 'Ready for Strategy', color: 'bg-zinc-500' },
-  { key: 'awaiting_compliance', label: 'Compliance Review', color: 'bg-amber-500' },
-  { key: 'awaiting_approval', label: 'Client Approval', color: 'bg-teal-500' },
-  { key: 'active', label: 'Active', color: 'bg-emerald-500' },
+  ...WORKFLOW_SECTIONS.map(s => ({ key: s.key as FilterOption, label: s.label, color: s.color })),
 ];
 
-/** Ordered sections for grouped display */
-const STATUS_SECTION_ORDER: ClientStatusKey[] = [
-  'awaiting_agreement',
-  'awaiting_payment',
-  'awaiting_documents',
-  'ready_for_strategy',
-  'awaiting_compliance',
-  'awaiting_approval',
-  'active',
-];
-
-function groupClientsByStatus(
+function groupClientsByWorkflow(
   clients: ApiClient[],
   allAgreements: ApiAgreement[]
-): Record<string, ApiClient[]> {
-  const groups: Record<string, ApiClient[]> = {};
+): Record<WorkflowGroup, ApiClient[]> {
+  const groups: Record<WorkflowGroup, ApiClient[]> = {
+    action_required: [],
+    waiting_on_client: [],
+    waiting_on_compliance: [],
+    active_clients: [],
+    archived: [],
+  };
   for (const client of clients) {
-    const status = getClientStatusFromAgreements(client, allAgreements);
-    if (!groups[status.key]) groups[status.key] = [];
-    groups[status.key].push(client);
+    const workflow = getWorkflowGroup(client, allAgreements);
+    groups[workflow].push(client);
   }
   return groups;
 }
@@ -757,7 +826,7 @@ function groupClientsByStatus(
 export default function StrategistClientsPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilterOption>('all');
+  const [statusFilter, setStatusFilter] = useState<FilterOption>('all');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
@@ -803,12 +872,12 @@ export default function StrategistClientsPage() {
       client.email?.toLowerCase().includes(q);
     const matchesStatus =
       statusFilter === 'all' ||
-      getClientStatusFromAgreements(client, agreements).key === statusFilter;
+      getWorkflowGroup(client, agreements) === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const groupedClients = groupClientsByStatus(filteredClients, agreements);
-  const activeFilterLabel = STATUS_FILTER_OPTIONS.find(o => o.key === statusFilter);
+  const groupedClients = groupClientsByWorkflow(filteredClients, agreements);
+  const activeFilterLabel = FILTER_OPTIONS.find(o => o.key === statusFilter);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -864,7 +933,7 @@ export default function StrategistClientsPage() {
                   </button>
                   {isFilterOpen && (
                     <div className="absolute right-0 z-50 mt-1 w-48 overflow-hidden rounded-xl border border-zinc-200 bg-white py-1 shadow-lg">
-                      {STATUS_FILTER_OPTIONS.map(option => (
+                      {FILTER_OPTIONS.map(option => (
                         <button
                           key={option.key}
                           onClick={() => {
@@ -914,20 +983,20 @@ export default function StrategistClientsPage() {
                 <p className="text-sm text-zinc-400">Try adjusting your search or filter</p>
               </div>
             ) : (
-              <div className="space-y-8">
-                {STATUS_SECTION_ORDER.map(statusKey => {
-                  const group = groupedClients[statusKey];
+              <div className="space-y-10">
+                {WORKFLOW_SECTIONS.map(section => {
+                  const group = groupedClients[section.key];
                   if (!group || group.length === 0) return null;
-                  const meta = STATUS_FILTER_OPTIONS.find(o => o.key === statusKey)!;
                   return (
-                    <div key={statusKey}>
-                      <div className="mb-3 flex items-center gap-2">
-                        <div className={`h-2 w-2 rounded-full ${meta.color}`} />
-                        <h2 className="text-sm font-semibold text-zinc-700">{meta.label}</h2>
+                    <div key={section.key}>
+                      <div className="mb-1 flex items-center gap-2">
+                        <div className={`h-2 w-2 rounded-full ${section.color}`} />
+                        <h2 className="text-sm font-semibold text-zinc-700">{section.label}</h2>
                         <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">
                           {group.length}
                         </span>
                       </div>
+                      <p className="mb-3 text-xs text-zinc-400 pl-4">{section.description}</p>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         {group.map(client => (
                           <ClientCard

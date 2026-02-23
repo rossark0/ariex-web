@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { AgreementStatus } from '@/types/agreement';
 import { Warning } from '@phosphor-icons/react/dist/ssr';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 // Lazy-load heavy modal/sheet components (TipTap, jsPDF, html2canvas stay out of HMR graph)
 const AgreementSheet = dynamic(
@@ -86,14 +86,21 @@ interface Props {
 
 export default function StrategistClientDetailPage({ params }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const didInitFromUrl = useRef(false);
 
   // ─── Store Initialization ───────────────────────────────────
   const init = useClientDetailStore(s => s.init);
   const reset = useClientDetailStore(s => s.reset);
 
   useEffect(() => {
-    init(params.clientId);
+    const urlAgreementId = searchParams.get('agreementId');
+    if (urlAgreementId) {
+      didInitFromUrl.current = true;
+    }
+    init(params.clientId, urlAgreementId ?? undefined);
     return () => reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.clientId, init, reset]);
 
   // ─── Read Store State ───────────────────────────────────────
@@ -103,6 +110,16 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const agreements = useClientDetailStore(s => s.agreements);
   const clientDocuments = useClientDetailStore(s => s.clientDocuments);
   const selectedAgreementId = useClientDetailStore(s => s.selectedAgreementId);
+
+  // ─── Sync selectedAgreementId → URL query param ─────────────
+  useEffect(() => {
+    if (!selectedAgreementId) return;
+    const current = searchParams.get('agreementId');
+    if (current === selectedAgreementId) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('agreementId', selectedAgreementId);
+    window.history.replaceState(window.history.state, '', url.toString());
+  }, [selectedAgreementId, searchParams]);
   const isLoadingAgreements = useClientDetailStore(s => s.isLoadingAgreements);
   const isAgreementModalOpen = useClientDetailStore(s => s.isAgreementModalOpen);
   const agreementError = useClientDetailStore(s => s.agreementError);
@@ -128,6 +145,32 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const complianceUserId = useClientDetailStore(s => s.complianceUserId);
   const complianceUsers = useClientDetailStore(s => s.complianceUsers);
   const isStrategyReviewOpen = useClientDetailStore(s => s.isStrategyReviewOpen);
+  const refreshSigningInfo = useClientDetailStore(s => s.refreshSigningInfo);
+
+  // ─── Auto-detect signing status on tab focus ────────────────
+  const needsSigningPoll = !!(selectedAgreementId && !(strategistHasSigned && clientHasSigned));
+
+  useEffect(() => {
+    if (!needsSigningPoll) return;
+
+    // Poll when user returns to the tab (e.g. after signing in another tab)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshSigningInfo();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Also poll every 15s while the agreement is pending signatures
+    const interval = setInterval(() => {
+      refreshSigningInfo();
+    }, 15_000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(interval);
+    };
+  }, [needsSigningPoll, refreshSigningInfo]);
 
   // ─── Computed Selectors ─────────────────────────────────────
   const activeAgreement = useClientDetailStore(selectActiveAgreement);

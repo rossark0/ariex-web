@@ -1,7 +1,7 @@
 'use client';
 
 import type { ApiAgreement } from '@/lib/api/strategist.api';
-import { getDownloadUrl, getSignedAgreementDocumentUrl, findSignedAgreementByClientId } from '@/lib/api/strategist.api';
+import { getDownloadUrl, getSignedAgreementDocumentUrl } from '@/lib/api/strategist.api';
 import type { ClientInfo } from '@/contexts/strategist-contexts/client-management/ClientDetailStore';
 import { AgreementStatus } from '@/types/agreement';
 import { AcceptanceStatus } from '@/types/document';
@@ -194,13 +194,6 @@ export function ActivityTimeline({
         }
       }
 
-      // 2. Fallback: search for completed envelope by client ID
-      const url = await findSignedAgreementByClientId(signedAgreement.clientId);
-      if (url) {
-        window.open(url, '_blank', 'noopener,noreferrer');
-        return;
-      }
-
       alert('Signed agreement document is not available yet. The e-signature process may not have fully completed. Please try again later.');
     } catch {
       alert('Failed to fetch the signed agreement. Please try again.');
@@ -244,7 +237,8 @@ export function ActivityTimeline({
   })();
 
   const step1Complete = true;
-  const step2Complete = hasAgreementSigned;
+  const bothSigned = !!(strategistHasSigned && clientHasSigned);
+  const step2Complete = hasAgreementSigned && bothSigned;
 
   // ── Handlers with loading spinners ──
 
@@ -334,7 +328,13 @@ export function ActivityTimeline({
               </span>
               <span className="text-sm text-zinc-500">
                 {hasAgreementSigned
-                  ? 'Both parties have signed the agreement'
+                  ? (strategistHasSigned && clientHasSigned)
+                    ? 'Both parties have signed the agreement'
+                    : strategistHasSigned
+                      ? 'You signed — waiting for client signature'
+                      : clientHasSigned
+                        ? 'Client signed — waiting for your signature'
+                        : 'Agreement signed'
                   : hasAgreementSent
                     ? 'Waiting for signatures'
                     : 'Send service agreement to client'}
@@ -343,8 +343,8 @@ export function ActivityTimeline({
                 {formatDate(agreementTask?.updatedAt || client.user.createdAt)}
               </span>
 
-              {/* Signature status sub-steps (only shown for dual-signing envelopes) */}
-              {hasAgreementSent && !hasAgreementSigned && strategistCeremonyUrl && (
+              {/* Signature status sub-steps (shown when not both parties have signed) */}
+              {hasAgreementSent && !(strategistHasSigned && clientHasSigned) && strategistCeremonyUrl && (
                 <div className="mt-2 flex flex-col gap-1.5">
                   <div className="flex items-center gap-2">
                     {clientHasSigned ? (
@@ -373,8 +373,8 @@ export function ActivityTimeline({
                 </div>
               )}
 
-              {/* Signed state: badge + download / sign actions */}
-              {hasAgreementSigned && (
+              {/* Signed state: badge + download / sign actions (only when both signed) */}
+              {hasAgreementSigned && strategistHasSigned && clientHasSigned && (
                 <div className="mt-2 flex flex-col gap-2">
                   <div className="flex items-center gap-2">
                     {strategistHasSigned && (

@@ -93,12 +93,14 @@ const createSignatureField = (role: string): SignatureField => ({
 // INITIAL TEMPLATE (HTML for Tiptap) - Ariex Service Agreement
 // ============================================================================
 
-const getInitialTemplate = (clientName: string, strategistName: string = 'Ariex Tax Strategist') => {
+const getInitialTemplate = (clientName: string, strategistName: string = 'Ariex Tax Strategist', price: number = 499) => {
   const today = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
+
+  const formattedPrice = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(price);
   
   return `
 <hr />
@@ -119,7 +121,7 @@ const getInitialTemplate = (clientName: string, strategistName: string = 'Ariex 
 </ul>
 <hr />
 <h2>SERVICE FEE</h2>
-<p><strong>Total Fee:</strong> $499 USD</p>
+<p><strong>Total Fee:</strong> ${formattedPrice} USD</p>
 <p>Payment is due upon signing of this agreement.</p>
 <hr />
 <h2>TERMS AND CONDITIONS</h2>
@@ -1050,14 +1052,14 @@ export function AgreementSheet({
   const handleSkipUpload = useCallback(() => {
     const firstPage: Page = {
       id: generateId(),
-      content: getInitialTemplate(clientName, strategistName),
+      content: getInitialTemplate(clientName, strategistName, price),
       signatureFields: [createSignatureField('Client'), createSignatureField('Tax Strategist')],
     };
     setPages([firstPage]);
     setCurrentPageIndex(0);
     setTitle(`Ariex Tax Advisory Service Agreement`);
     setState('edit');
-  }, [clientName, strategistName]);
+  }, [clientName, strategistName, price]);
 
   // Load template when sheet opens
   useEffect(() => {
@@ -1537,16 +1539,37 @@ export function AgreementSheet({
             <div className="flex-1 overflow-auto pt-24 pr-48 pb-8 pl-64">
               {/* Page container with min-height for signature area at bottom */}
               <div className="flex min-h-[calc(100vh-200px)] flex-col">
-                <input
-                  type="text"
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  className="w-full border-none bg-transparent text-2xl font-semibold outline-none placeholder:text-zinc-400 focus:outline-none"
-                  placeholder="Enter document title..."
-                />
+                {/* Agreement title & price fields */}
+                <div className="mb-4 flex items-end gap-4">
+                  <div className="flex-1">
+                    <label className="mb-1 block text-xs font-medium text-zinc-400 uppercase tracking-wider">Agreement Title</label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={e => setTitle(e.target.value)}
+                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-lg font-semibold text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                      placeholder="Enter document title..."
+                    />
+                  </div>
+                  <div className="w-36">
+                    <label className="mb-1 block text-xs font-medium text-zinc-400 uppercase tracking-wider">Service Fee</label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm font-medium text-zinc-400">$</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={price}
+                        onChange={e => setPrice(Number(e.target.value) || 0)}
+                        className="w-full rounded-lg border border-zinc-200 bg-white py-2 pr-3 pl-7 text-lg font-semibold text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                        placeholder="499"
+                      />
+                    </div>
+                  </div>
+                </div>
 
                 {/* Page indicator */}
-                <p className="mt-1 text-xs font-semibold text-zinc-400 uppercase">
+                <p className="text-xs font-semibold text-zinc-400 uppercase">
                   Page {currentPageIndex + 1} of {pages.length}
                 </p>
 
