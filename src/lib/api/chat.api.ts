@@ -86,18 +86,43 @@ async function chatApiRequest<T>(endpoint: string, options: RequestInit = {}): P
  * Create or get existing chat between users
  * POST /chat
  * API expects: userId1, userId2, createdByUserId
+ *
+ * IDs are sorted before sending so both participants always resolve
+ * to the same chat room regardless of call order.
  */
 export async function createOrGetChat(
   userId1: string,
   userId2: string,
   createdByUserId: string
 ): Promise<Chat> {
-  console.log('[ChatAPI] Creating/getting chat between:', userId1, 'and', userId2);
-
-  return chatApiRequest<Chat>('/chat', {
-    method: 'POST',
-    body: JSON.stringify({ userId1, userId2, createdByUserId }),
+  const [sorted1, sorted2] = [userId1, userId2].sort();
+  console.log('🔴 [DEBUG Chat] createOrGetChat IDs:', {
+    userId1,
+    userId2,
+    createdByUserId,
+    sorted1,
+    sorted2,
   });
+  const chatResponse = await chatApiRequest<Chat>('/chat', {
+    method: 'POST',
+    body: JSON.stringify({ userId1: sorted1, userId2: sorted2, createdByUserId }),
+  });
+  try {
+    require('fs').appendFileSync(
+      '/tmp/chat-debug.log',
+      JSON.stringify({
+        time: new Date().toISOString(),
+        userId1,
+        userId2,
+        createdByUserId,
+        sorted1,
+        sorted2,
+        chatId: chatResponse.id,
+      }) + '\n'
+    );
+  } catch (e) {}
+
+  return chatResponse;
 }
 
 /**

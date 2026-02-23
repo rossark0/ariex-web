@@ -113,48 +113,79 @@ Always maintain professional legal language appropriate for financial agreements
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, documentContent, userMessage, chatHistory, pdfBase64, clientName, currentPageIndex, totalPages } = body;
+    const {
+      action,
+      documentContent,
+      userMessage,
+      chatHistory,
+      pdfBase64,
+      clientName,
+      currentPageIndex,
+      totalPages,
+    } = body;
 
     const openai = getOpenAI();
 
     if (action === 'chat') {
-      return handleDocumentChat(openai, documentContent, userMessage, chatHistory, clientName, currentPageIndex, totalPages);
-    } else if (action === 'ocr-pdf') {
-      // OCR PDF using OpenAI Vision
-      return handlePdfOcr(openai, pdfBase64, clientName);
-    } else {
-      return NextResponse.json(
-        { error: 'Invalid action. Use "chat" or "ocr-pdf"' },
-        { status: 400 }
+      return handleDocumentChat(
+        openai,
+        documentContent,
+        userMessage,
+        chatHistory,
+        clientName,
+        currentPageIndex,
+        totalPages
       );
+    } else if (action === 'ocr-pdf') {
+      // Legacy: OCR PDF (may not work since Vision API needs images, not raw PDF)
+      return handlePdfOcr(openai, pdfBase64 ? [pdfBase64] : [], clientName);
+    } else if (action === 'ocr-images') {
+      // OCR images (base64 PNG) using OpenAI Vision
+      const { images } = body;
+      if (!images || !Array.isArray(images) || images.length === 0) {
+        return NextResponse.json({ error: 'No images provided' }, { status: 400 });
+      }
+      return handlePdfOcr(openai, images, clientName);
+    } else if (action === 'fetch-pdf') {
+      // Proxy fetch to bypass CORS on the client
+      const { pdfUrl } = body;
+      if (!pdfUrl) {
+        return NextResponse.json({ error: 'No PDF URL provided' }, { status: 400 });
+      }
+      return handleFetchPdfProxy(pdfUrl);
+    } else {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
   } catch (error: unknown) {
     console.error('[AI Document Editor] Error:', error);
-    
+
     // Handle OpenAI API errors by checking error properties
     const err = error as { status?: number; code?: string; message?: string };
-    
+
     if (err.code === 'invalid_api_key' || err.status === 401) {
       return NextResponse.json(
-        { error: 'Invalid OpenAI API key. Please check your OPENAI_API_KEY in .env.local and restart the server.' },
+        {
+          error:
+            'Invalid OpenAI API key. Please check your OPENAI_API_KEY in .env.local and restart the server.',
+        },
         { status: 401 }
       );
     }
-    
+
     if (err.status === 429) {
       return NextResponse.json(
         { error: 'OpenAI rate limit exceeded. Please try again in a moment.' },
         { status: 429 }
       );
     }
-    
+
     if (err.status && err.status >= 400) {
       return NextResponse.json(
         { error: `OpenAI API error: ${err.message || 'Unknown error'}` },
         { status: err.status }
       );
     }
-    
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
@@ -175,9 +206,10 @@ async function handleDocumentChat(
   currentPageIndex?: number,
   totalPages?: number
 ) {
-  const pageInfo = currentPageIndex && totalPages 
-    ? `\n\nYou are currently editing page ${currentPageIndex} of ${totalPages}.`
-    : '';
+  const pageInfo =
+    currentPageIndex && totalPages
+      ? `\n\nYou are currently editing page ${currentPageIndex} of ${totalPages}.`
+      : '';
 
   const messages: ChatCompletionMessageParam[] = [
     {
@@ -230,26 +262,122 @@ async function handleDocumentChat(
 }
 
 // ============================================================================
-// PDF Text Extraction Handler
-// NOTE: PDF parsing libraries (pdf-parse, pdfjs-dist, unpdf) have compatibility
-// issues with Next.js Turbo bundler. For now, return a helpful error message.
-// TODO: Consider using an external API service for PDF parsing.
+// Image OCR Handler (using OpenAI Vision)
+// Accepts an array of base64 PNG images (one per PDF page) and uses gpt-4o
+// vision to extract the text content as TipTap-compatible HTML.
 // ============================================================================
 
 async function handlePdfOcr(
-  _openai: OpenAI,
-  pdfBase64: string,
-  _clientName?: string
+  openai: OpenAI,
+  imageBase64Array: string[],
+  clientName?: string
 ): Promise<NextResponse> {
-  if (!pdfBase64) {
-    return NextResponse.json({ error: 'No PDF data provided' }, { status: 400 });
+  if (!imageBase64Array || imageBase64Array.length === 0) {
+    return NextResponse.json({ error: 'No images provided' }, { status: 400 });
   }
 
-  // PDF parsing is currently disabled due to Next.js Turbo compatibility issues
-  // Libraries tried: pdf-parse (test file bug), pdfjs-dist (worker issues), unpdf (serverless bundle issues)
-  // Return a helpful message instead
-  return NextResponse.json({
-    error: 'PDF upload is temporarily unavailable. Please copy and paste your document content directly into the chat, or manually type the content into the editor.',
-    suggestion: 'You can describe what content you want and the AI will help create it for you.',
-  }, { status: 503 });
+  try {
+    // Build image content parts for the Vision API
+    const imageContents = imageBase64Array.map(img => ({
+      type: 'image_url' as const,
+      image_url: {
+        url: `data:image/png;base64,${img}`,
+        detail: 'high' as const,
+      },
+    }));
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      max_tokens: 16384,
+      temperature: 0.1,
+      messages: [
+        {
+          role: 'system',
+          content: `You are an expert document OCR assistant. Your job is to extract the full text content from document page images and convert it into clean HTML suitable for a TipTap rich text editor.
+
+Use these HTML elements:
+- <h1>, <h2>, <h3> for headings
+- <p> for paragraphs
+- <ul>/<ol> with <li> for lists
+- <strong> and <em> for emphasis
+- <hr> for horizontal rules/section dividers
+
+IMPORTANT RULES:
+1. Extract ALL text content faithfully — do not summarize or skip sections
+2. Preserve the document's original structure, headings, and formatting
+3. Output ONLY valid HTML content, no markdown
+4. Do NOT wrap the entire output in any container tags
+5. Respond with a JSON object in this exact format:
+{
+  "pages": [{ "pageNumber": 1, "content": "<h2>Title</h2><p>Content...</p>" }],
+  "title": "Document Title"
+}
+6. Create one entry per page image provided
+${clientName ? `7. The client name is: ${clientName}` : ''}`,
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Please extract the full content from these ${imageBase64Array.length} document page image(s) and convert to structured HTML.`,
+            },
+            ...imageContents,
+          ],
+        },
+      ],
+      response_format: { type: 'json_object' },
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      return NextResponse.json({ error: 'No response from AI' }, { status: 500 });
+    }
+
+    const parsed: PdfOcrResult = JSON.parse(content);
+
+    if (!parsed.pages || parsed.pages.length === 0) {
+      return NextResponse.json({
+        pages: [{ pageNumber: 1, content: '<p>Could not extract content from the document.</p>' }],
+        title: parsed.title || 'Extracted Document',
+      });
+    }
+
+    return NextResponse.json(parsed);
+  } catch (error) {
+    console.error('[AI Document Editor] Image OCR error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to process images' },
+      { status: 500 }
+    );
+  }
+}
+
+// ============================================================================
+// Proxy Fetch PDF Handler
+// Fetches a PDF from a URL server-side (to bypass CORS) and returns base64
+// ============================================================================
+
+async function handleFetchPdfProxy(pdfUrl: string): Promise<NextResponse> {
+  try {
+    const response = await fetch(pdfUrl);
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: `Failed to fetch PDF: ${response.status} ${response.statusText}` },
+        { status: response.status }
+      );
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+
+    return NextResponse.json({ base64 });
+  } catch (error) {
+    console.error('[AI Document Editor] Proxy fetch error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch PDF' },
+      { status: 500 }
+    );
+  }
 }

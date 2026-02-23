@@ -66,6 +66,7 @@ export function SideSheet({
       window.addEventListener('keydown', handleEscape);
     }
     return () => window.removeEventListener('keydown', handleEscape);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, onClose]);
 
   const handleClose = () => {

@@ -5,7 +5,7 @@ import AppLayout from '@/components/layout/app-layout';
 import { House, Users, Lifebuoy } from '@phosphor-icons/react';
 
 const navItems = [
-  // { href: '/compliance/home', label: 'Home', icon: House },
+  { href: '/compliance/home', label: 'Home', icon: House },
   { href: '/compliance/strategists', label: 'Strategists', icon: Users },
   { href: 'https://support.ariex.com', label: 'Support', icon: Lifebuoy },
 ];

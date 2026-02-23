@@ -1,4 +1,8 @@
 /**
+ * @deprecated Use `useClientDetailStore` from `./ClientDetailStore` instead.
+ * This vanilla Zustand store has non-standard subscription patterns.
+ * Will be removed after confirming zero consumers.
+ *
  * Client Management Store
  *
  * Vanilla Zustand store for managing strategist's client data

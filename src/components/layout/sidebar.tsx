@@ -2,12 +2,13 @@
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuth } from '@/contexts/auth/AuthStore';
+import { useClientAgreementStore } from '@/contexts/client/ClientAgreementStore';
 import { useUiStore } from '@/contexts/ui/UiStore';
+import { AgreementSelector } from '@/contexts/strategist-contexts/client-management/components/detail/agreement-selector';
 import { cn } from '@/lib/utils';
-import { Buildings, CaretDown, Command, Icon, SignOut, User, Check } from '@phosphor-icons/react';
+import { Buildings, CaretDown, Command, Icon, SignOut, User } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
 
 export interface SidebarItem {
   href: string;
@@ -28,9 +29,7 @@ export default function Sidebar({ items, className }: SidebarProps) {
   const isClientRole = user?.role === 'CLIENT';
   const isStrategistRole = user?.role === 'STRATEGIST';
   const isComplianceRole = user?.role === 'COMPLIANCE';
-  const [selectedYear, setSelectedYear] = useState(2025);
-
-  const availableYears = [2025, 2024, 2023, 2022];
+  const { agreements: clientAgreements, selectedAgreementId: clientSelectedId, setSelectedAgreementId: setClientSelectedId } = useClientAgreementStore();
 
   const handleLogout = () => {
     logout();
@@ -96,36 +95,14 @@ export default function Sidebar({ items, className }: SidebarProps) {
           </button>
         )}
 
-        {/* Year Selector for Clients */}
-        {isClientRole && (
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="w-full cursor-pointer rounded-md border border-emerald-200 py-0.5 text-xs font-medium tracking-wide text-emerald-700 transition-colors duration-500 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-900">
-                {selectedYear} TAX YEAR
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-36 px-0.5 py-1" align="start" side="top">
-              <div className="flex flex-col">
-                {availableYears.map(year => (
-                  <button
-                    key={year}
-                    onClick={() => setSelectedYear(year)}
-                    className={cn(
-                      'flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors',
-                      selectedYear === year
-                        ? 'bg-zinc-100 text-zinc-900'
-                        : 'text-zinc-600 hover:bg-zinc-50'
-                    )}
-                  >
-                    {year}
-                    {selectedYear === year && (
-                      <Check weight="bold" className="h-3.5 w-3.5 text-teal-600" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+        {/* Agreement Selector for Clients */}
+        {isClientRole && clientAgreements.length > 0 && (
+          <AgreementSelector
+            agreements={clientAgreements}
+            selectedAgreementId={clientSelectedId}
+            onSelect={setClientSelectedId}
+            compact
+          />
         )}
 
         {/* User Profile */}

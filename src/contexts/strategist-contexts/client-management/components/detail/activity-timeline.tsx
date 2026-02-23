@@ -1,8 +1,8 @@
 'use client';
 
 import type { ApiAgreement } from '@/lib/api/strategist.api';
-import { getDownloadUrl } from '@/lib/api/strategist.api';
-import type { FullClientMock } from '@/lib/mocks/client-full';
+import { getDownloadUrl, getSignedAgreementDocumentUrl } from '@/lib/api/strategist.api';
+import type { ClientInfo } from '@/contexts/strategist-contexts/client-management/ClientDetailStore';
 import { AgreementStatus } from '@/types/agreement';
 import { AcceptanceStatus } from '@/types/document';
 import type { Step5State } from '../../models/strategy.model';
@@ -43,7 +43,7 @@ interface StrategyMetadata {
 }
 
 export interface ActivityTimelineProps {
-  client: FullClientMock;
+  client: ClientInfo;
   agreements: ApiAgreement[];
   existingCharge: { id: string; paymentLink?: string; status: string; amount?: number } | null;
   signedAgreement: ApiAgreement | null;
@@ -82,6 +82,13 @@ export interface ActivityTimelineProps {
     originalName: string;
     signatureStatus?: string;
   } | null;
+
+  // Strategist signing
+  strategistCeremonyUrl?: string | null;
+  strategistHasSigned?: boolean;
+  clientHasSigned?: boolean;
+  signedAgreementDocUrl?: string | null;
+  onStrategistSign?: () => void;
 
   // Action callbacks
   onOpenAgreementModal: () => void;
@@ -128,6 +135,11 @@ export function ActivityTimeline({
   step5State,
   strategyMetadata,
   strategyDoc,
+  strategistCeremonyUrl,
+  strategistHasSigned,
+  clientHasSigned,
+  signedAgreementDocUrl,
+  onStrategistSign,
   onOpenAgreementModal,
   onOpenPaymentModal,
   onSendPaymentReminder,
@@ -146,12 +158,49 @@ export function ActivityTimeline({
   const [decliningDocId, setDecliningDocId] = useState<string | null>(null);
   const [deletingTodoId, setDeletingTodoId] = useState<string | null>(null);
   const [isAdvancingToStrategy, setIsAdvancingToStrategy] = useState(false);
+  const [isDownloadingAgreement, setIsDownloadingAgreement] = useState(false);
   // Preview state
   const [previewDoc, setPreviewDoc] = useState<{
     name: string;
     url: string | null;
     loading: boolean;
   } | null>(null);
+
+  // ─── On-demand signed agreement download ────────────────────────
+  const handleDownloadSignedAgreement = async () => {
+    // If we already have the cached URL, open it directly
+    if (signedAgreementDocUrl) {
+      window.open(signedAgreementDocUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (!signedAgreement) return;
+    setIsDownloadingAgreement(true);
+    try {
+      // 1. Try SignatureAPI deliverables via envelope ID
+      const envelopeId =
+        signedAgreement.signatureEnvelopeId ||
+        (() => {
+          const match = signedAgreement.description?.match(/__SIGNATURE_METADATA__:([\s\S]+)$/);
+          if (match) {
+            try { return JSON.parse(match[1]).envelopeId; } catch { return null; }
+          }
+          return null;
+        })();
+      if (envelopeId) {
+        const url = await getSignedAgreementDocumentUrl(envelopeId);
+        if (url) {
+          window.open(url, '_blank', 'noopener,noreferrer');
+          return;
+        }
+      }
+
+      alert('Signed agreement document is not available yet. The e-signature process may not have fully completed. Please try again later.');
+    } catch {
+      alert('Failed to fetch the signed agreement. Please try again.');
+    } finally {
+      setIsDownloadingAgreement(false);
+    }
+  };
 
   const handlePreviewDoc = async (docId: string, fileName: string) => {
     setPreviewDoc({ name: fileName, url: null, loading: true });
@@ -188,7 +237,8 @@ export function ActivityTimeline({
   })();
 
   const step1Complete = true;
-  const step2Complete = hasAgreementSigned;
+  const bothSigned = !!(strategistHasSigned && clientHasSigned);
+  const step2Complete = hasAgreementSigned && bothSigned;
 
   // ── Handlers with loading spinners ──
 
@@ -278,26 +328,135 @@ export function ActivityTimeline({
               </span>
               <span className="text-sm text-zinc-500">
                 {hasAgreementSigned
-                  ? 'Ariex Service Agreement 2024 was signed '
+                  ? (strategistHasSigned && clientHasSigned)
+                    ? 'Both parties have signed the agreement'
+                    : strategistHasSigned
+                      ? 'You signed — waiting for client signature'
+                      : clientHasSigned
+                        ? 'Client signed — waiting for your signature'
+                        : 'Agreement signed'
                   : hasAgreementSent
-                    ? 'Waiting for client to review and sign'
+                    ? 'Waiting for signatures'
                     : 'Send service agreement to client'}
               </span>
               <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
                 {formatDate(agreementTask?.updatedAt || client.user.createdAt)}
               </span>
-              {step1Complete && !hasAgreementSigned && (
-                <button
-                  onClick={onOpenAgreementModal}
-                  className={`mt-2 flex w-fit items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${
-                    hasAgreementSent
-                      ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                  }`}
-                >
-                  {hasAgreementSent ? 'Resend agreement' : 'Send agreement'}
-                </button>
+
+              {/* Signature status sub-steps (shown when not both parties have signed) */}
+              {hasAgreementSent && !(strategistHasSigned && clientHasSigned) && strategistCeremonyUrl && (
+                <div className="mt-2 flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    {clientHasSigned ? (
+                      <CheckIcon weight="bold" className="h-3.5 w-3.5 text-emerald-500" />
+                    ) : (
+                      <Clock weight="bold" className="h-3.5 w-3.5 text-zinc-400" />
+                    )}
+                    <span
+                      className={`text-xs font-medium ${clientHasSigned ? 'text-emerald-600' : 'text-zinc-500'}`}
+                    >
+                      Client {clientHasSigned ? 'signed' : 'pending'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {strategistHasSigned ? (
+                      <CheckIcon weight="bold" className="h-3.5 w-3.5 text-emerald-500" />
+                    ) : (
+                      <Clock weight="bold" className="h-3.5 w-3.5 text-zinc-400" />
+                    )}
+                    <span
+                      className={`text-xs font-medium ${strategistHasSigned ? 'text-emerald-600' : 'text-zinc-500'}`}
+                    >
+                      Strategist {strategistHasSigned ? 'signed' : 'pending'}
+                    </span>
+                  </div>
+                </div>
               )}
+
+              {/* Signed state: badge + download / sign actions (only when both signed) */}
+              {hasAgreementSigned && strategistHasSigned && clientHasSigned && (
+                <div className="mt-2 flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    {strategistHasSigned && (
+                      <span className="flex w-fit items-center gap-1 rounded bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+                        <CheckIcon weight="bold" className="h-3 w-3" />
+                        You signed
+                      </span>
+                    )}
+                    {signedAgreementDocUrl ? (
+                      <button
+                        onClick={handleDownloadSignedAgreement}
+                        disabled={isDownloadingAgreement}
+                        className="flex w-fit items-center gap-1 rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200 disabled:opacity-50"
+                      >
+                        {isDownloadingAgreement ? (
+                          <SpinnerGap weight="bold" className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <FileArrowDownIcon weight="fill" className="h-3.5 w-3.5" />
+                        )}
+                        Download signed agreement
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleDownloadSignedAgreement}
+                        disabled={isDownloadingAgreement}
+                        className="flex w-fit items-center gap-1 rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200 disabled:opacity-50"
+                      >
+                        {isDownloadingAgreement ? (
+                          <SpinnerGap weight="bold" className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <FileArrowDownIcon weight="fill" className="h-3.5 w-3.5" />
+                        )}
+                        Download signed agreement
+                      </button>
+                    )}
+                  </div>
+                  {/* Show sign button if e-signature not fully completed */}
+                  {!signedAgreementDocUrl && !strategistHasSigned && strategistCeremonyUrl && onStrategistSign && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-amber-600">
+                        E-signature not fully completed
+                      </span>
+                      <button
+                        onClick={onStrategistSign}
+                        className="flex w-fit items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                      >
+                        Complete signing
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                {/* Send / Resend agreement button */}
+                {step1Complete && !hasAgreementSigned && (
+                  <button
+                    onClick={onOpenAgreementModal}
+                    className={`mt-2 flex w-fit items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${
+                      hasAgreementSent
+                        ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                        : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                    }`}
+                  >
+                    {hasAgreementSent ? 'Resend agreement' : 'Send agreement'}
+                  </button>
+                )}
+
+                {/* Strategist sign button */}
+                {hasAgreementSent &&
+                  !strategistHasSigned &&
+                  strategistCeremonyUrl &&
+                  onStrategistSign && (
+                    <button
+                      onClick={onStrategistSign}
+                      className="mt-2 flex w-fit items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                    >
+                      Sign agreement
+                    </button>
+                  )}
+              </div>
+
               {agreementError && (
                 <span className="mt-1 text-xs text-red-500">{agreementError}</span>
               )}
@@ -696,6 +855,28 @@ export function ActivityTimeline({
                             : 'Pending'}
                       </span>
                     </div>
+
+                    {step5State.complianceRejected && (
+                      <div className="mt-2 flex flex-col gap-2 border-t border-red-200 pt-2">
+                        {/* {strategyMetadata?.rejectionReason && (
+                          <p className="text-sm text-red-700">
+                            <span className="font-medium">Reason:</span>{' '}
+                            {strategyMetadata.rejectionReason}
+                          </p>
+                        )}
+                        {strategyMetadata?.rejectedAt && (
+                          <span className="text-xs text-red-500">
+                            {formatDate(new Date(strategyMetadata.rejectedAt))}
+                          </span>
+                        )} */}
+                        <button
+                          onClick={onOpenStrategySheet}
+                          className="mt-1 w-fit rounded bg-amber-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-amber-700"
+                        >
+                          Revise strategy
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Client review sub-step (only shown if compliance approved) */}
@@ -772,15 +953,18 @@ export function ActivityTimeline({
                   </button>
                 )}
 
-              {/* View strategy doc button (available whenever strategy has been sent) */}
-              {step5State?.strategySent && onViewStrategyDocument && (
-                <button
-                  onClick={() => onViewStrategyDocument()}
-                  className="mt-2 w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200"
-                >
-                  View strategy document
-                </button>
-              )}
+              {/* View strategy doc button (available whenever strategy has been sent and not rejected) */}
+              {step5State?.strategySent &&
+                onViewStrategyDocument &&
+                !step5State?.complianceRejected &&
+                !step5State?.clientDeclined && (
+                  <button
+                    onClick={() => onViewStrategyDocument()}
+                    className="mt-2 w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200"
+                  >
+                    View strategy document
+                  </button>
+                )}
 
               {/* Completed state */}
               {step5State?.isComplete && (

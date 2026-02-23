@@ -7,7 +7,8 @@ import { AgreementCard } from '@/components/agreements/agreement-card';
 import { useUiStore } from '@/contexts/ui/UiStore';
 import { useState, useEffect } from 'react';
 import type { SignatureStatus } from '@/types/document';
-import { listDocuments, type ApiDocument } from '@/lib/api/strategist.api';
+import { listAgreements, type ApiAgreement } from '@/lib/api/strategist.api';
+import { AgreementStatus } from '@/types/agreement';
 
 // ============================================================================
 // TYPES
@@ -17,6 +18,8 @@ interface Agreement {
   id: string;
   documentName: string;
   status: SignatureStatus;
+  agreementStatus: AgreementStatus;
+  clientId: string;
   createdAt: Date;
 }
 
@@ -41,17 +44,22 @@ function formatRelativeTime(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function mapSignatureStatus(status: string | undefined): SignatureStatus {
-  switch (status?.toUpperCase()) {
-    case 'SIGNED':
+function mapAgreementStatusToSignatureStatus(
+  status: AgreementStatus,
+  signedStatus?: 'WAITING_SIGNED' | 'SIGNED'
+): SignatureStatus {
+  // If we have contract document info, use that
+  if (signedStatus === 'SIGNED') return 'SIGNED';
+  
+  // Map agreement status to signature status
+  switch (status) {
+    case AgreementStatus.COMPLETED:
       return 'SIGNED';
-    case 'SENT':
-    case 'VIEWED':
+    case AgreementStatus.PENDING_SIGNATURE:
       return 'SENT';
-    case 'DECLINED':
+    case AgreementStatus.CANCELLED:
       return 'DECLINED';
-    case 'EXPIRED':
-      return 'EXPIRED';
+    case AgreementStatus.DRAFT:
     default:
       return 'NOT_SENT';
   }
@@ -121,25 +129,26 @@ export default function StrategistAgreementsPage() {
     return () => setSelection(0, null);
   }, [selectedAgreements.size, setSelection]);
 
-  // Load documents (filter for agreements/contracts)
+  // Load agreements from API
   useEffect(() => {
     async function loadData() {
       try {
-        const docs = await listDocuments();
-        // Filter for agreement-type documents
-        const agreementDocs = docs
-          .filter(
-            d =>
-              d.type?.toLowerCase().includes('agreement') ||
-              d.type?.toLowerCase().includes('contract')
-          )
-          .map(d => ({
-            id: d.id,
-            documentName: d.name,
-            status: mapSignatureStatus(d.signatureStatus),
-            createdAt: new Date(d.createdAt),
-          }));
-        setAgreements(agreementDocs);
+        const apiAgreements = await listAgreements();
+        
+        // Map API agreements to local Agreement interface
+        const mappedAgreements = apiAgreements.map(a => ({
+          id: a.id,
+          documentName: a.name || a.title || 'Untitled Agreement',
+          status: mapAgreementStatusToSignatureStatus(
+            a.status,
+            a.contractDocument?.signedStatus
+          ),
+          agreementStatus: a.status,
+          clientId: a.clientId,
+          createdAt: new Date(a.createdAt),
+        }));
+        
+        setAgreements(mappedAgreements);
       } catch (error) {
         console.error('Failed to load agreements:', error);
       } finally {

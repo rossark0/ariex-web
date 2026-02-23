@@ -146,9 +146,19 @@ export async function sendStrategyToClient(params: {
       sentAt: new Date().toISOString(),
     };
 
+    // Preserve existing description (HTML + __SIGNATURE_METADATA__),
+    // only replace the __STRATEGY_METADATA__ block.
+    const currentAgreement = await getAgreement(agreementId);
+    const baseDesc = (currentAgreement?.description ?? '')
+      .replace(/__STRATEGY_METADATA__:[\s\S]+$/, '')
+      .trimEnd();
+    const newDesc = baseDesc
+      ? `${baseDesc}\n${serializeStrategyMetadata(strategyMetadata)}`
+      : serializeStrategyMetadata(strategyMetadata);
+
     const updated = await updateAgreementWithMetadata(agreementId, {
       status: AgreementStatus.PENDING_STRATEGY_REVIEW,
-      description: serializeStrategyMetadata(strategyMetadata),
+      description: newDesc,
     });
 
     if (updated) {
@@ -249,19 +259,23 @@ export async function rejectStrategyAsCompliance(
       console.warn('[Strategies] Document rejected but failed to revert agreement status');
     }
 
-    // Store rejection reason in metadata, preserving original sentAt
+    // Store rejection reason in metadata, preserving existing description content
     if (reason) {
       const agreement = await getAgreement(agreementId);
       const existing = parseStrategyMetadata(agreement?.description);
+      const newBlock = serializeStrategyMetadata({
+        type: 'STRATEGY',
+        strategyDocumentId: documentId,
+        sentAt: existing?.sentAt ?? new Date().toISOString(),
+        rejectedBy: 'compliance',
+        rejectionReason: reason,
+        rejectedAt: new Date().toISOString(),
+      });
+      const baseDesc = (agreement?.description ?? '')
+        .replace(/__STRATEGY_METADATA__:[\s\S]+$/, '')
+        .trimEnd();
       await updateAgreementWithMetadata(agreementId, {
-        description: serializeStrategyMetadata({
-          type: 'STRATEGY',
-          strategyDocumentId: documentId,
-          sentAt: existing?.sentAt ?? new Date().toISOString(),
-          rejectedBy: 'compliance',
-          rejectionReason: reason,
-          rejectedAt: new Date().toISOString(),
-        }),
+        description: baseDesc ? `${baseDesc}\n${newBlock}` : newBlock,
       });
     }
 
@@ -283,7 +297,7 @@ export async function rejectStrategyAsCompliance(
 /**
  * Approve a strategy document as client.
  * Sets document acceptanceStatus to ACCEPTED_BY_CLIENT.
- * If compliance has already approved, transitions agreement to COMPLETED.
+ * The strategist will then complete the agreement from their side.
  */
 export async function approveStrategyAsClient(
   agreementId: string,
@@ -302,19 +316,10 @@ export async function approveStrategyAsClient(
       return { success: false, error: 'Failed to update client approval' };
     }
 
-    // Since client can only approve AFTER compliance approved (sequential flow),
-    // both have now approved → complete the agreement
-    const completed = await updateAgreementStatus(
-      agreementId,
-      AgreementStatus.COMPLETED
-    );
-
-    if (!completed) {
-      console.warn('[Strategies] Client approved but failed to complete agreement');
-      return { success: false, error: 'Failed to complete agreement' };
-    }
-
-    console.log('[Strategies] Client approved, agreement COMPLETED');
+    // NOTE: We do NOT change agreement status here.
+    // The strategist will see this approval on their activity timeline
+    // and press "Finish Agreement" to mark it COMPLETED.
+    console.log('[Strategies] Client approved document — awaiting strategist to complete agreement');
     return { success: true };
   } catch (error) {
     console.error('[Strategies] Failed to approve as client:', error);
@@ -328,7 +333,7 @@ export async function approveStrategyAsClient(
 /**
  * Decline a strategy document as client.
  * Sets document acceptanceStatus to REJECTED_BY_CLIENT.
- * Moves agreement back to PENDING_STRATEGY — compliance approval resets too.
+ * The strategist will see this on their timeline and can revise.
  */
 export async function declineStrategyAsClient(
   agreementId: string,
@@ -348,33 +353,9 @@ export async function declineStrategyAsClient(
       return { success: false, error: 'Failed to update client decline' };
     }
 
-    // Move agreement back to PENDING_STRATEGY — full reset
-    const statusUpdated = await updateAgreementStatus(
-      agreementId,
-      AgreementStatus.PENDING_STRATEGY
-    );
-
-    if (!statusUpdated) {
-      console.warn('[Strategies] Document declined but failed to revert agreement status');
-    }
-
-    // Store decline reason in metadata, preserving original sentAt
-    if (reason) {
-      const agreement = await getAgreement(agreementId);
-      const existing = parseStrategyMetadata(agreement?.description);
-      await updateAgreementWithMetadata(agreementId, {
-        description: serializeStrategyMetadata({
-          type: 'STRATEGY',
-          strategyDocumentId: documentId,
-          sentAt: existing?.sentAt ?? new Date().toISOString(),
-          rejectedBy: 'client',
-          rejectionReason: reason,
-          rejectedAt: new Date().toISOString(),
-        }),
-      });
-    }
-
-    console.log('[Strategies] Client declined, agreement back to PENDING_STRATEGY');
+    // NOTE: We do NOT change agreement status here.
+    // The strategist will see the rejection on their timeline and handle it.
+    console.log('[Strategies] Client declined document', reason ? `— reason: ${reason}` : '');
     return { success: true };
   } catch (error) {
     console.error('[Strategies] Failed to decline as client:', error);

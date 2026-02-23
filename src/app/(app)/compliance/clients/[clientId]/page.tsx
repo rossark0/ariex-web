@@ -1,16 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
-import { useRouter } from 'next/navigation';
-import { getFullClientById } from '@/lib/mocks/client-full';
-import { getStrategistById } from '@/lib/mocks/strategist-full';
-import {
-  getClientTimelineAndStatus,
-  CLIENT_STATUS_CONFIG,
-  type ClientStatusKey,
-} from '@/lib/client-status';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useComplianceClientDetail } from '@/contexts/compliance/hooks/use-compliance-client-detail';
+import type { ClientStatusKey } from '@/lib/client-status';
+import type { ApiDocument } from '@/lib/api/strategist.api';
 import {
   BuildingsIcon,
   EnvelopeIcon,
@@ -18,6 +15,11 @@ import {
   PhoneIcon,
   Check as CheckIcon,
   ChatCircle,
+  CheckCircle,
+  XCircle,
+  SpinnerGap,
+  WarningCircle,
+  StarFour as StarFourIcon,
 } from '@phosphor-icons/react';
 import { Check, Clock, Strategy, Warning } from '@phosphor-icons/react/dist/ssr';
 import { Button } from '@/components/ui/button';
@@ -30,16 +32,27 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
-import { StrategySheet } from '@/components/strategy/strategy-sheet';
+import { AgreementSelector } from '@/contexts/strategist-contexts/client-management/components/detail/agreement-selector';
+import { useAiPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
 import { useUiStore } from '@/contexts/ui/UiStore';
 import { ChevronDown } from 'lucide-react';
+
+const StrategyReviewSheet = dynamic(
+  () =>
+    import('@/components/compliance/strategy-review-sheet').then(m => ({
+      default: m.StrategyReviewSheet,
+    })),
+  { ssr: false }
+);
 
 interface Props {
   params: { clientId: string };
 }
 
-function formatCurrency(amount: number | null): string {
-  if (amount === null) return '—';
+// ─── Helpers ─────────────────────────────────────────────────────────────
+
+function formatCurrency(amount: number | null | undefined): string {
+  if (amount == null) return '—';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -48,7 +61,10 @@ function formatCurrency(amount: number | null): string {
   }).format(amount);
 }
 
-function formatDate(date: Date): string {
+function formatDate(dateInput: string | Date | null | undefined): string {
+  if (!dateInput) return '—';
+  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  if (isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -56,7 +72,7 @@ function formatDate(date: Date): string {
   });
 }
 
-function getInitials(name: string | null): string {
+function getInitials(name: string | null | undefined): string {
   if (!name) return '??';
   return name
     .split(' ')
@@ -66,7 +82,8 @@ function getInitials(name: string | null): string {
     .slice(0, 2);
 }
 
-function formatRelativeTime(date: Date): string {
+function formatRelativeTime(dateInput: string | Date): string {
+  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -83,15 +100,13 @@ function formatRelativeTime(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function groupDocumentsByDate(
-  documents: (typeof import('@/lib/mocks/client-full').fullClientMocks)[0]['documents']
-) {
+function groupDocumentsByDate(documents: ApiDocument[]) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
 
-  const groups: { label: string; documents: typeof documents }[] = [];
+  const groups: { label: string; documents: ApiDocument[] }[] = [];
 
   const todayDocs = documents.filter(d => {
     const docDate = new Date(d.createdAt);
@@ -116,13 +131,298 @@ function groupDocumentsByDate(
   return groups;
 }
 
+// ─── Rejection Modal ──────────────────────────────────────────────────────
+
+function RejectStrategyModal({
+  isOpen,
+  isRejecting,
+  onClose,
+  onReject,
+}: {
+  isOpen: boolean;
+  isRejecting: boolean;
+  onClose: () => void;
+  onReject: (reason: string) => void;
+}) {
+  const [reason, setReason] = useState('');
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-100000 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <h3 className="mb-1 text-lg font-semibold text-zinc-900">Reject Strategy</h3>
+        <p className="mb-4 text-sm text-zinc-500">
+          Provide a reason for the rejection. The strategist will be notified.
+        </p>
+        <textarea
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          placeholder="Enter rejection reason…"
+          rows={4}
+          className="mb-4 w-full resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none"
+        />
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={isRejecting}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={!reason.trim() || isRejecting}
+            onClick={() => onReject(reason.trim())}
+          >
+            {isRejecting ? (
+              <>
+                <SpinnerGap className="mr-1.5 h-4 w-4 animate-spin" />
+                Rejecting…
+              </>
+            ) : (
+              'Reject Strategy'
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Approve Confirmation Modal ───────────────────────────────────────────
+
+function ApproveStrategyModal({
+  isOpen,
+  isApproving,
+  onClose,
+  onApprove,
+}: {
+  isOpen: boolean;
+  isApproving: boolean;
+  onClose: () => void;
+  onApprove: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-100000 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <h3 className="mb-1 text-lg font-semibold text-zinc-900">Approve Strategy</h3>
+        <p className="mb-4 text-sm text-zinc-500">
+          Once approved, this strategy will be sent to the client for review. This action cannot be
+          undone.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={isApproving}>
+            Cancel
+          </Button>
+          <Button
+            onClick={onApprove}
+            disabled={isApproving}
+            className="bg-emerald-600 text-white hover:bg-emerald-700"
+          >
+            {isApproving ? (
+              <>
+                <SpinnerGap className="mr-1.5 h-4 w-4 animate-spin" />
+                Approving…
+              </>
+            ) : (
+              'Confirm Approval'
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Comments Panel ───────────────────────────────────────────────────────
+
+function CommentsPanel({
+  comments,
+  isLoading,
+  onAddComment,
+}: {
+  comments: { id: string; body: string; createdAt: string; userId?: string; userName?: string }[];
+  isLoading: boolean;
+  onAddComment: (body: string) => Promise<boolean>;
+}) {
+  const [newComment, setNewComment] = useState('');
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!newComment.trim()) return;
+    setIsSending(true);
+    const success = await onAddComment(newComment.trim());
+    if (success) setNewComment('');
+    setIsSending(false);
+  };
+
+  return (
+    <div className="mt-6 mb-6">
+      <h2 className="mb-4 text-base font-medium text-zinc-900">Comments</h2>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 py-4 text-sm text-zinc-400">
+          <SpinnerGap className="h-4 w-4 animate-spin" />
+          Loading comments…
+        </div>
+      ) : comments.length === 0 ? (
+        <p className="py-4 text-sm text-zinc-400">No comments yet</p>
+      ) : (
+        <div className="mb-4 flex flex-col gap-3">
+          {comments.map(c => (
+            <div key={c.id} className="rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-sm font-medium text-zinc-700">
+                  {c.userName || 'Compliance'}
+                </span>
+                <span className="text-xs text-zinc-400">{formatRelativeTime(c.createdAt)}</span>
+              </div>
+              <p className="text-sm leading-relaxed text-zinc-600">{c.body}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add comment */}
+      <div className="flex gap-2">
+        <input
+          value={newComment}
+          onChange={e => setNewComment(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
+          placeholder="Add a comment…"
+          className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none"
+          disabled={isSending}
+        />
+        <Button size="sm" onClick={handleSubmit} disabled={!newComment.trim() || isSending}>
+          {isSending ? <SpinnerGap className="h-4 w-4 animate-spin" /> : 'Send'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Loading Skeleton ─────────────────────────────────────────────────────
+
+function LoadingState() {
+  return (
+    <div className="flex min-h-full flex-col bg-white">
+      <div className="mx-auto w-full max-w-2xl animate-pulse px-4 pt-20">
+        <div className="mb-4 h-12 w-12 rounded-full bg-zinc-200" />
+        <div className="mb-2 h-8 w-48 rounded bg-zinc-200" />
+        <div className="mb-8 h-6 w-32 rounded bg-zinc-100" />
+        <div className="mb-4 h-40 rounded-xl bg-zinc-100" />
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex gap-4">
+              <div className="h-2 w-2 rounded-full bg-zinc-200" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-3/4 rounded bg-zinc-200" />
+                <div className="h-3 w-1/2 rounded bg-zinc-100" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────
+
 export default function ComplianceClientDetailPage({ params }: Props) {
   useRoleRedirect('COMPLIANCE');
   const router = useRouter();
-  const client = getFullClientById(params.clientId);
+  const searchParams = useSearchParams();
+  const strategistId = searchParams.get('strategistId') || '';
+
+  const {
+    client,
+    clientName,
+    clientProfile,
+    clientAgreements,
+    selectedAgreementId,
+    agreement,
+    documents,
+    todoLists,
+    todos,
+    strategyDocument,
+    strategyMetadata,
+    strategyPdfUrl,
+    timeline,
+    statusKey,
+    statusConfig,
+    isLoading,
+    isApproving,
+    isRejecting,
+    error,
+    handleApproveStrategy,
+    handleRejectStrategy,
+    handleSelectAgreement,
+    refresh,
+  } = useComplianceClientDetail(params.clientId, strategistId);
+
+  const todoTitles = useMemo(() => {
+    const map = new Map<string, string>();
+    todos.forEach(t => map.set(t.id, t.title));
+    return map;
+  }, [todos]);
+
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isStrategySheetOpen, setIsStrategySheetOpen] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
   const { setSidebarCollapsed, isSidebarCollapsed } = useUiStore();
+
+  // ─── AI Page Context ─────────────────────────────────────────────────
+  useAiPageContext({
+    userRole: 'COMPLIANCE',
+    client: client
+      ? {
+          id: client.id,
+          name: clientName,
+          email: client.email,
+          phoneNumber: clientProfile?.phoneNumber,
+          businessName: clientProfile?.businessName,
+          businessType: clientProfile?.businessType,
+          city: clientProfile?.city,
+          state: clientProfile?.state,
+          estimatedIncome: clientProfile?.estimatedIncome,
+          filingStatus: clientProfile?.filingStatus,
+          dependents: clientProfile?.dependents,
+          statusKey,
+        }
+      : null,
+    documents: documents.map(d => ({
+      id: d.id,
+      name: d.name,
+      type: d.type,
+      status: d.status,
+      category: d.category,
+      acceptanceStatus: d.acceptanceStatus,
+      uploadedBy: d.uploadedBy,
+      createdAt: d.createdAt,
+    })),
+    agreements: agreement
+      ? [
+          {
+            id: agreement.id,
+            name: agreement.name,
+            status: agreement.status,
+            price:
+              typeof agreement.price === 'string' ? parseFloat(agreement.price) : agreement.price,
+            createdAt: agreement.createdAt,
+          },
+        ]
+      : [],
+    strategy: {
+      sent: timeline.step5State.strategySent,
+      phase: timeline.step5State.phase,
+      isComplete: timeline.step5State.isComplete,
+    },
+  });
 
   // Collapse sidebar when entering this page
   useEffect(() => {
@@ -132,53 +432,117 @@ export default function ComplianceClientDetailPage({ params }: Props) {
     };
   }, [setSidebarCollapsed]);
 
+  // Auto-dismiss action feedback
+  useEffect(() => {
+    if (actionFeedback) {
+      const t = setTimeout(() => setActionFeedback(null), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [actionFeedback]);
+
   const toggleDocSelection = (docId: string) => {
     setSelectedDocs(prev => {
       const next = new Set(prev);
-      if (next.has(docId)) {
-        next.delete(docId);
-      } else {
-        next.add(docId);
-      }
+      if (next.has(docId)) next.delete(docId);
+      else next.add(docId);
       return next;
     });
   };
 
-  if (!client) {
+  const onApprove = useCallback(async () => {
+    const success = await handleApproveStrategy();
+    setIsApproveModalOpen(false);
+    setIsStrategySheetOpen(false);
+    if (success) {
+      setActionFeedback({
+        type: 'success',
+        message: 'Strategy approved — sent to client for review.',
+      });
+      refresh();
+    } else {
+      setActionFeedback({
+        type: 'error',
+        message: 'Failed to approve strategy. Please try again.',
+      });
+    }
+  }, [handleApproveStrategy, refresh]);
+
+  const onReject = useCallback(
+    async (reason: string) => {
+      const success = await handleRejectStrategy(reason);
+      setIsRejectModalOpen(false);
+      setIsStrategySheetOpen(false);
+      if (success) {
+        setActionFeedback({
+          type: 'success',
+          message: 'Strategy rejected — strategist has been notified.',
+        });
+        refresh();
+      } else {
+        setActionFeedback({
+          type: 'error',
+          message: 'Failed to reject strategy. Please try again.',
+        });
+      }
+    },
+    [handleRejectStrategy, refresh]
+  );
+
+  // ─── Loading / Error states ──────────────────────────────────────────
+
+  if (isLoading) return <LoadingState />;
+
+  if (error || !client) {
     return (
       <section className="flex flex-col items-center justify-center gap-4 p-12">
         <Warning className="h-12 w-12 text-amber-500" weight="duotone" />
-        <h1 className="text-xl font-semibold text-zinc-900">Client Not Found</h1>
+        <h1 className="text-xl font-semibold text-zinc-900">{error || 'Client Not Found'}</h1>
         <p className="text-zinc-500">
-          The client with ID &quot;{params.clientId}&quot; does not exist.
+          {error
+            ? 'There was a problem loading this client.'
+            : `The client with ID "${params.clientId}" does not exist.`}
         </p>
-        <Button onClick={() => router.push('/compliance/clients')}>Back to Clients</Button>
+        <div className="flex gap-2">
+          {error && (
+            <Button onClick={refresh} variant="outline">
+              Retry
+            </Button>
+          )}
+          <Button onClick={() => router.back()}>Go Back</Button>
+        </div>
       </section>
     );
   }
 
-  // Timeline and status
-  const timeline = getClientTimelineAndStatus(client);
+  // ─── Derived data ────────────────────────────────────────────────────
+
   const {
     step1Complete,
     step2Complete,
     step3Complete,
     step4Complete,
-    step5Complete,
+    step5State,
     step2Sent,
     step3Sent,
     step4Sent,
-    step5Sent,
-    statusKey,
-    statusConfig,
   } = timeline;
 
-  const agreementTask = client.onboardingTasks.find(t => t.type === 'sign_agreement');
-  const docsTask = client.onboardingTasks.find(t => t.type === 'upload_documents');
-  const payment = client.payments[0];
-  const strategyDoc = client.documents.find(
-    d => d.category === 'contract' && d.originalName.toLowerCase().includes('strategy')
-  );
+  const profile = clientProfile;
+  const agreementPrice = agreement?.price
+    ? typeof agreement.price === 'string'
+      ? parseFloat(agreement.price)
+      : agreement.price
+    : null;
+
+  const nonStrategyDocs = documents.filter(d => {
+    const type = (d.type || '').toUpperCase();
+    const category = (d.category || '').toLowerCase();
+    const name = (d.name || '').toLowerCase();
+    if (type === 'STRATEGY' || name.includes('strategy')) return false;
+    if (category === 'contract' || type === 'AGREEMENT') return false;
+    return true;
+  });
+  const uploadedCount = nonStrategyDocs.length;
 
   const statusIconMap: Record<ClientStatusKey, typeof Clock> = {
     awaiting_agreement: Clock,
@@ -190,10 +554,10 @@ export default function ComplianceClientDetailPage({ params }: Props) {
     awaiting_signature: Clock,
     active: Check,
   };
-  const PlanIcon = statusIconMap[statusKey];
+  const PlanIcon = statusIconMap[statusKey] || Clock;
 
-  const uploadedCount = client.documents.filter(d => d.category !== 'contract').length;
-  const strategist = getStrategistById(client.strategistId);
+  const isComplianceReview = step5State.phase === 'compliance_review';
+  const strategyDocName = strategyDocument?.name?.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan';
 
   return (
     <div className="flex min-h-full flex-col bg-white">
@@ -209,16 +573,18 @@ export default function ComplianceClientDetailPage({ params }: Props) {
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
+            {strategistId && (
+              <>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link href={`/compliance/strategists/${strategistId}`}>Strategist</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+              </>
+            )}
             <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link href={`/compliance/strategists/${client.strategistId}`}>
-                  {strategist?.user.name || 'Unknown Strategist'}
-                </Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{client.user.name}</BreadcrumbPage>
+              <BreadcrumbPage>{clientName}</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -229,23 +595,43 @@ export default function ComplianceClientDetailPage({ params }: Props) {
           {/* Banner color */}
           <div className="absolute top-0 left-0 -z-10 h-24 w-full bg-zinc-50" />
 
+          {/* Action feedback banner */}
+          {actionFeedback && (
+            <div
+              className={`mb-4 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium ${
+                actionFeedback.type === 'success'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'border-red-200 bg-red-50 text-red-700'
+              }`}
+            >
+              {actionFeedback.type === 'success' ? (
+                <CheckCircle className="h-4 w-4" weight="fill" />
+              ) : (
+                <WarningCircle className="h-4 w-4" weight="fill" />
+              )}
+              {actionFeedback.message}
+            </div>
+          )}
+
           {/* Header Section */}
           <div className="flex flex-col gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800 text-2xl font-medium text-white">
-              {getInitials(client.user.name)}
+              {getInitials(clientName)}
             </div>
-            <h1 className="z-20 text-2xl font-semibold">{client.user.name}</h1>
+            <h1 className="z-20 text-2xl font-semibold">{clientName}</h1>
 
             {/* Action Buttons */}
             <div className="mb-6 flex w-full items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 {/* Status Badge */}
-                <div
-                  className={`flex items-center gap-1.5 rounded-lg border border-dashed ${statusConfig.borderClassName} px-2 py-1 text-sm font-medium ${statusConfig.textClassName}`}
-                >
-                  <PlanIcon className="h-4 w-4" />
-                  <span>{statusConfig.label}</span>
-                </div>
+                {statusConfig && (
+                  <div
+                    className={`flex items-center gap-1.5 rounded-lg border border-dashed ${statusConfig.borderClassName} px-2 py-1 text-sm font-medium ${statusConfig.textClassName}`}
+                  >
+                    <PlanIcon className="h-4 w-4" />
+                    <span>{statusConfig.label}</span>
+                  </div>
+                )}
 
                 {/* Add to Folder Button */}
                 <button className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
@@ -254,64 +640,139 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                 </button>
               </div>
 
+              {/* Strategy button — same position as strategist's client-header.tsx */}
               <button
-                onClick={() => setIsStrategySheetOpen(true)}
-                className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-emerald-600 px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+                disabled={!strategyPdfUrl}
+                onClick={strategyPdfUrl ? () => setIsStrategySheetOpen(true) : undefined}
+                className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-sm font-medium transition-colors ${
+                  strategyPdfUrl
+                    ? 'cursor-pointer border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600'
+                    : 'cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400'
+                }`}
               >
-                <ChatCircle className="h-4 w-4" />
+                <StarFourIcon weight="fill" className="h-4 w-4" />
                 <span>Strategy</span>
               </button>
             </div>
+
+            {/* Agreement Selector */}
+            {clientAgreements.length > 0 && (
+              <AgreementSelector
+                agreements={clientAgreements}
+                selectedAgreementId={selectedAgreementId}
+                onSelect={handleSelectAgreement}
+              />
+            )}
+
+            {/* Compliance Review Action Bar */}
+            {isComplianceReview && (
+              <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-5">
+                <h3 className="mb-1 text-sm font-semibold text-amber-800">
+                  Compliance Review Required
+                </h3>
+                <p className="mb-4 text-sm text-amber-700">
+                  Review the tax strategy document and approve or reject it before it&apos;s sent to
+                  the client.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setIsApproveModalOpen(true)}
+                    disabled={isApproving || isRejecting}
+                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                  >
+                    {isApproving ? (
+                      <>
+                        <SpinnerGap className="mr-1.5 h-4 w-4 animate-spin" />
+                        Approving…
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="mr-1.5 h-4 w-4" weight="fill" />
+                        Approve Strategy
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsRejectModalOpen(true)}
+                    disabled={isApproving || isRejecting}
+                    className="border-red-200 text-red-600 hover:bg-red-50"
+                  >
+                    <XCircle className="mr-1.5 h-4 w-4" weight="fill" />
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Previous rejection reason */}
+            {strategyMetadata?.rejectionReason && (
+              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-5">
+                <h3 className="mb-1 text-sm font-semibold text-red-800">
+                  Previously Rejected
+                  {strategyMetadata.rejectedBy ? ` by ${strategyMetadata.rejectedBy}` : ''}
+                </h3>
+                <p className="text-sm text-red-700">{strategyMetadata.rejectionReason}</p>
+                {strategyMetadata.rejectedAt && (
+                  <p className="mt-1 text-xs text-red-500">
+                    {formatDate(strategyMetadata.rejectedAt)}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* About Section */}
             <div className="mb-4 rounded-xl bg-zinc-50 p-5">
               <div className="mb-4 flex items-center gap-2">
                 <span className="text-sm text-zinc-500">About</span>
                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-800 text-xs font-medium text-white">
-                  {getInitials(client.user.name)}
+                  {getInitials(clientName)}
                 </div>
-                <span className="text-sm font-medium text-zinc-500">{client.user.name}</span>
+                <span className="text-sm font-medium text-zinc-500">{clientName}</span>
               </div>
 
               <p className="mb-5 text-[15px] leading-relaxed text-zinc-700">
-                {client.user.name} is the owner of {client.profile.businessName || 'a business'},
-                {client.profile.businessType ? ` a ${client.profile.businessType}` : ''} based in{' '}
-                {client.profile.city}, {client.profile.state}.
-                {client.profile.estimatedIncome
-                  ? ` Estimated annual income of ${formatCurrency(client.profile.estimatedIncome)}.`
+                {clientName} is the owner of {profile?.businessName || 'a business'}
+                {profile?.businessType ? `, a ${profile.businessType}` : ''}
+                {profile?.city || profile?.state
+                  ? ` based in ${[profile?.city, profile?.state].filter(Boolean).join(', ')}`
                   : ''}
-                {client.profile.filingStatus
-                  ? ` Filing status: ${client.profile.filingStatus.replace('_', ' ')}.`
+                .
+                {profile?.estimatedIncome
+                  ? ` Estimated annual income of ${formatCurrency(profile.estimatedIncome)}.`
+                  : ''}
+                {profile?.filingStatus
+                  ? ` Filing status: ${profile.filingStatus.replace('_', ' ')}.`
                   : ''}
               </p>
 
               <div className="flex flex-col gap-2.5">
                 <a
-                  href={`mailto:${client.user.email}`}
+                  href={`mailto:${client.email}`}
                   className="flex items-center gap-2.5 text-sm text-zinc-600 hover:text-zinc-900"
                 >
                   <EnvelopeIcon weight="fill" className="h-4 w-4 text-zinc-400" />
                   <span className="underline decoration-zinc-300 underline-offset-2 hover:decoration-zinc-500">
-                    {client.user.email}
+                    {client.email}
                   </span>
                 </a>
 
-                {client.profile.phoneNumber && (
+                {(profile?.phoneNumber || profile?.phone) && (
                   <a
-                    href={`tel:${client.profile.phoneNumber}`}
+                    href={`tel:${profile?.phoneNumber || profile?.phone}`}
                     className="flex items-center gap-2.5 text-sm text-zinc-600 hover:text-zinc-900"
                   >
                     <PhoneIcon weight="fill" className="h-4 w-4 text-zinc-400" />
                     <span className="underline decoration-zinc-300 underline-offset-2 hover:decoration-zinc-500">
-                      {client.profile.phoneNumber}
+                      {profile?.phoneNumber || profile?.phone}
                     </span>
                   </a>
                 )}
 
-                {client.profile.businessName && (
+                {profile?.businessName && (
                   <div className="flex items-center gap-2.5 text-sm text-zinc-600">
                     <BuildingsIcon weight="fill" className="h-4 w-4 text-zinc-400" />
-                    <span>{client.profile.businessName}</span>
+                    <span>{profile.businessName}</span>
                   </div>
                 )}
               </div>
@@ -330,13 +791,13 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                     <div className="absolute top-5 bottom-2 -left-[19px] w-[2px] bg-emerald-200" />
                     <div className="flex flex-1 flex-col">
                       <span className="font-medium text-zinc-900">
-                        Account created for {client.profile.businessName || client.user.name}
+                        Account created for {profile?.businessName || clientName}
                       </span>
                       <span className="text-sm text-zinc-500">
                         Client onboarding initiated by strategist
                       </span>
                       <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                        {formatDate(client.user.createdAt)}
+                        {formatDate(client.createdAt)}
                       </span>
                     </div>
                   </div>
@@ -361,13 +822,15 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                       </span>
                       <span className="text-sm text-zinc-500">
                         {step2Complete
-                          ? 'Ariex Service Agreement 2024 was signed'
+                          ? (agreement?.name || 'Ariex Service Agreement') + ' was signed'
                           : step2Sent
                             ? 'Waiting for client to review and sign'
                             : 'Send service agreement to client'}
                       </span>
                       <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                        {formatDate(agreementTask?.updatedAt || client.user.createdAt)}
+                        {step2Complete
+                          ? formatDate(agreement?.updatedAt)
+                          : formatDate(agreement?.createdAt || client.createdAt)}
                       </span>
                     </div>
                   </div>
@@ -385,24 +848,24 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                     <div className="flex flex-1 flex-col">
                       <span className="font-medium text-zinc-900">
                         {step3Complete
-                          ? `Payment received · ${formatCurrency(payment?.amount || 499)}`
+                          ? `Payment received · ${formatCurrency(agreementPrice)}`
                           : step3Sent
-                            ? `Payment pending · ${formatCurrency(payment?.amount || 499)}`
+                            ? `Payment pending · ${formatCurrency(agreementPrice)}`
                             : 'Payment link pending'}
                       </span>
                       <span className="text-sm text-zinc-500">
                         {step3Complete
-                          ? `${payment?.description || 'Onboarding Fee'} via ${payment?.paymentMethod || 'Stripe'}`
+                          ? 'Onboarding Fee via Stripe'
                           : step3Sent
                             ? 'Awaiting payment via Stripe link'
                             : 'Send payment link to client'}
                       </span>
                       <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                        {payment?.paidAt
-                          ? formatDate(payment.paidAt)
-                          : payment?.dueDate
-                            ? `Due ${formatDate(payment.dueDate)}`
-                            : formatDate(client.user.createdAt)}
+                        {step3Complete
+                          ? formatDate(agreement?.updatedAt)
+                          : step3Sent
+                            ? 'Pending'
+                            : formatDate(client.createdAt)}
                       </span>
                     </div>
                   </div>
@@ -433,49 +896,171 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                             : 'Request documents from client'}
                       </span>
                       <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                        {formatDate(docsTask?.updatedAt || client.user.createdAt)}
+                        {step4Complete && nonStrategyDocs.length > 0
+                          ? formatDate(nonStrategyDocs[nonStrategyDocs.length - 1]?.createdAt)
+                          : step4Sent
+                            ? 'Pending'
+                            : formatDate(client.createdAt)}
                       </span>
                     </div>
                   </div>
 
-                  {/* Step 5: Strategy Phase */}
+                  {/* Step 5: Strategy Phase (Compliance -> Client Approval) */}
                   <div className="relative flex gap-4">
                     <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
                       <div
-                        className={`h-2 w-2 rounded-full ${step5Sent || step5Complete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                        className={`h-2 w-2 rounded-full ${step5State.strategySent || step5State.isComplete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
                       />
                     </div>
                     <div className="flex flex-1 flex-col">
                       <span className="font-medium text-zinc-900">
-                        {step5Complete
+                        {step5State.isComplete
                           ? 'Tax strategy approved'
-                          : step5Sent
-                            ? 'Strategy sent for approval'
-                            : 'Tax strategy pending'}
+                          : step5State.phase === 'client_review'
+                            ? 'Strategy awaiting client approval'
+                            : step5State.phase === 'client_declined'
+                              ? 'Client declined strategy'
+                              : step5State.phase === 'compliance_review'
+                                ? 'Strategy under compliance review'
+                                : step5State.phase === 'compliance_rejected'
+                                  ? 'Compliance rejected strategy'
+                                  : step5State.strategySent
+                                    ? 'Strategy sent for review'
+                                    : 'Tax strategy pending'}
                       </span>
                       <span className="text-sm text-zinc-500">
-                        {step5Complete
-                          ? strategyDoc?.originalName.replace(/\.[^/.]+$/, '') ||
-                            'Tax Strategy Plan'
-                          : step5Sent
-                            ? 'Awaiting compliance review of tax strategy'
-                            : 'Ready to create personalized tax strategy'}
+                        {step5State.isComplete
+                          ? 'Both compliance and client have approved'
+                          : step5State.phase === 'client_review'
+                            ? 'Compliance approved — waiting for client to approve or decline'
+                            : step5State.phase === 'client_declined'
+                              ? 'Client has declined the strategy. Strategist must revise.'
+                              : step5State.phase === 'compliance_review'
+                                ? 'Waiting for compliance team to review and approve'
+                                : step5State.phase === 'compliance_rejected'
+                                  ? 'Compliance has rejected the strategy. Strategist must revise.'
+                                  : 'Ready to create personalized tax strategy'}
                       </span>
                       <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-                        {strategyDoc?.signedAt
-                          ? formatDate(strategyDoc.signedAt)
-                          : strategyDoc?.createdAt
-                            ? formatDate(strategyDoc.createdAt)
-                            : 'Not started'}
+                        {strategyDocument?.createdAt
+                          ? formatDate(strategyDocument.createdAt)
+                          : 'Not started'}
                       </span>
-                      {step5Complete && (
+
+                      {/* Compliance & Client review sub-steps */}
+                      {step5State.strategySent && (
+                        <div className="mt-3 flex flex-col gap-2">
+                          <div
+                            className={`rounded-lg border p-2.5 ${
+                              step5State.complianceRejected
+                                ? 'border-red-200 bg-red-50'
+                                : step5State.complianceApproved
+                                  ? 'border-emerald-200 bg-emerald-50'
+                                  : 'border-amber-200 bg-amber-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {step5State.complianceApproved ? (
+                                <CheckIcon
+                                  weight="bold"
+                                  className="h-4 w-4 shrink-0 text-emerald-500"
+                                />
+                              ) : step5State.complianceRejected ? (
+                                <XCircle weight="bold" className="h-4 w-4 shrink-0 text-red-500" />
+                              ) : (
+                                <Clock weight="bold" className="h-4 w-4 shrink-0 text-amber-500" />
+                              )}
+                              <span
+                                className={`text-sm font-medium ${
+                                  step5State.complianceRejected
+                                    ? 'text-red-700'
+                                    : step5State.complianceApproved
+                                      ? 'text-emerald-700'
+                                      : 'text-amber-700'
+                                }`}
+                              >
+                                Compliance review
+                              </span>
+                              <span
+                                className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                                  step5State.complianceRejected
+                                    ? 'bg-red-100 text-red-600'
+                                    : step5State.complianceApproved
+                                      ? 'bg-emerald-100 text-emerald-600'
+                                      : 'bg-amber-100 text-amber-600'
+                                }`}
+                              >
+                                {step5State.complianceRejected
+                                  ? 'Rejected'
+                                  : step5State.complianceApproved
+                                    ? 'Approved'
+                                    : 'Pending'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {step5State.complianceApproved && (
+                            <div
+                              className={`rounded-lg border p-2.5 ${
+                                step5State.clientDeclined
+                                  ? 'border-red-200 bg-red-50'
+                                  : step5State.clientApproved
+                                    ? 'border-emerald-200 bg-emerald-50'
+                                    : 'border-teal-200 bg-teal-50'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {step5State.clientApproved ? (
+                                  <CheckIcon
+                                    weight="bold"
+                                    className="h-4 w-4 shrink-0 text-emerald-500"
+                                  />
+                                ) : step5State.clientDeclined ? (
+                                  <XCircle
+                                    weight="bold"
+                                    className="h-4 w-4 shrink-0 text-red-500"
+                                  />
+                                ) : (
+                                  <Clock weight="bold" className="h-4 w-4 shrink-0 text-teal-500" />
+                                )}
+                                <span
+                                  className={`text-sm font-medium ${
+                                    step5State.clientDeclined
+                                      ? 'text-red-700'
+                                      : step5State.clientApproved
+                                        ? 'text-emerald-700'
+                                        : 'text-teal-700'
+                                  }`}
+                                >
+                                  Client review
+                                </span>
+                                <span
+                                  className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                                    step5State.clientDeclined
+                                      ? 'bg-red-100 text-red-600'
+                                      : step5State.clientApproved
+                                        ? 'bg-emerald-100 text-emerald-600'
+                                        : 'bg-teal-100 text-teal-600'
+                                  }`}
+                                >
+                                  {step5State.clientDeclined
+                                    ? 'Declined'
+                                    : step5State.clientApproved
+                                      ? 'Approved'
+                                      : 'Pending'}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {strategyPdfUrl && (
                         <button
-                          onClick={() =>
-                            router.push(`/compliance/clients/${params.clientId}/strategy`)
-                          }
+                          onClick={() => setIsStrategySheetOpen(true)}
                           className="mt-2 w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-200"
                         >
-                          View strategy
+                          View strategy document
                         </button>
                       )}
                     </div>
@@ -488,16 +1073,9 @@ export default function ComplianceClientDetailPage({ params }: Props) {
             <div>
               <div className="flex w-full items-center justify-between">
                 <h2 className="mb-8 text-base font-medium text-zinc-900">Documents</h2>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push(`/compliance/clients/${params.clientId}/documents`)}
-                >
-                  View All
-                </Button>
               </div>
 
-              {client.documents.length === 0 && (
+              {nonStrategyDocs.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <div className="relative mb-6 h-28 w-28">
                     <div className="absolute top-2 left-2 h-20 w-16 -rotate-6 rounded-lg border border-zinc-200 bg-white shadow-sm">
@@ -526,11 +1104,11 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                 </div>
               )}
 
-              {client.documents.length > 0 && (
-                <div className="">
+              {nonStrategyDocs.length > 0 && (
+                <div>
                   {groupDocumentsByDate(
-                    [...client.documents].sort(
-                      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+                    [...nonStrategyDocs].sort(
+                      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                     )
                   )
                     .slice(0, 2)
@@ -566,9 +1144,15 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                   </div>
                                   <div className="flex flex-1 flex-col">
                                     <span className="font-medium text-zinc-900">
-                                      {doc.originalName.replace(/\.[^/.]+$/, '')}
+                                      {(
+                                        doc.name ||
+                                        (doc.todoId && todoTitles.get(doc.todoId)) ||
+                                        'Untitled'
+                                      ).replace(/\.[^/.]+$/, '')}
                                     </span>
-                                    <span className="text-sm text-zinc-500">Client</span>
+                                    <span className="text-sm text-zinc-500">
+                                      {doc.uploadedByName || 'Client'}
+                                    </span>
                                   </div>
                                   <span className="text-sm text-zinc-400">
                                     {formatRelativeTime(doc.createdAt)}
@@ -580,22 +1164,18 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                         </div>
                       </div>
                     ))}
-
-                  {/* {client.documents.length > 3 && (
-                    <div className="mt-2 flex justify-center pb-8">
-                      <Button
-                        variant="outline"
-                        onClick={() =>
-                          router.push(`/compliance/clients/${params.clientId}/documents`)
-                        }
-                      >
-                        View all {client.documents.length} documents
-                      </Button>
-                    </div>
-                  )} */}
                 </div>
               )}
             </div>
+
+            {/* Comments Panel */}
+            {/* {strategyDocument && (
+              <CommentsPanel
+                comments={chatMessages}
+                isLoading={isLoadingChat}
+                onAddComment={handleSendMessage}
+              />
+            )} */}
           </div>
         </div>
       </div>
@@ -605,12 +1185,60 @@ export default function ComplianceClientDetailPage({ params }: Props) {
         onClearSelection={() => setSelectedDocs(new Set())}
       />
 
-      {/* Strategy Sheet */}
-      <StrategySheet
-        client={client}
-        isOpen={isStrategySheetOpen}
-        onClose={() => setIsStrategySheetOpen(false)}
+      {/* Rejection Modal */}
+      <RejectStrategyModal
+        isOpen={isRejectModalOpen}
+        isRejecting={isRejecting}
+        onClose={() => setIsRejectModalOpen(false)}
+        onReject={onReject}
       />
+
+      {/* Approval Confirmation Modal */}
+      <ApproveStrategyModal
+        isOpen={isApproveModalOpen}
+        isApproving={isApproving}
+        onClose={() => setIsApproveModalOpen(false)}
+        onApprove={onApprove}
+      />
+
+      {/* Strategy Review Sheet */}
+      {strategyPdfUrl && (
+        <StrategyReviewSheet
+          role="compliance"
+          isOpen={isStrategySheetOpen}
+          onClose={() => {
+            setIsStrategySheetOpen(false);
+            refresh();
+          }}
+          pdfUrl={strategyPdfUrl}
+          documentTitle={strategyDocument?.name?.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan'}
+          otherUserId={strategistId}
+          onApprove={
+            isComplianceReview
+              ? async () => {
+                  const ok = await handleApproveStrategy();
+                  if (ok) {
+                    setIsStrategySheetOpen(false);
+                    refresh();
+                  }
+                  return ok;
+                }
+              : undefined
+          }
+          onReject={
+            isComplianceReview
+              ? async (reason: string) => {
+                  const ok = await handleRejectStrategy(reason);
+                  if (ok) {
+                    setIsStrategySheetOpen(false);
+                    refresh();
+                  }
+                  return ok;
+                }
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }

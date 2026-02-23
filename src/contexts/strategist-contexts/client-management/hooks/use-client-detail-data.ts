@@ -1,6 +1,12 @@
+/**
+ * @deprecated Use `useClientDetailStore` from `../ClientDetailStore` instead.
+ * This hook is kept for reference during migration but is no longer used by page.tsx.
+ * Will be removed after confirming zero consumers.
+ */
+
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useUiStore } from '@/contexts/ui/UiStore';
 import { getFullClientById, type FullClientMock } from '@/lib/mocks/client-full';
 import {
@@ -21,6 +27,9 @@ import {
   updateDocumentAcceptance,
   updateAgreementStatus,
   deleteDocument,
+  getStrategistSigningInfo,
+  getSignedAgreementDocumentUrl,
+  getLinkedComplianceUsers,
 } from '@/lib/api/strategist.api';
 import { sendAgreementToClient } from '@/lib/api/agreements.actions';
 import {
@@ -28,6 +37,13 @@ import {
   completeAgreement,
   getStrategyDocumentUrl,
 } from '@/lib/api/strategies.actions';
+import {
+  createOrGetChat,
+  getChatMessages,
+  sendMessage as sendChatMessage,
+} from '@/lib/api/chat.api';
+import { useAuth } from '@/contexts/auth/AuthStore';
+
 import {
   computeStep5State,
   parseStrategyMetadata,
@@ -73,6 +89,8 @@ export interface ClientDetailData {
   // Agreement state
   activeAgreement: ApiAgreement | undefined;
   signedAgreement: ApiAgreement | null;
+  selectedAgreementId: string | null;
+  setSelectedAgreementId: (id: string) => void;
   isLoadingAgreements: boolean;
   isAgreementModalOpen: boolean;
   agreementError: string | null;
@@ -134,6 +152,12 @@ export interface ClientDetailData {
   statusKey: ClientStatusKey;
   todoTitles: Map<string, string>;
 
+  // Strategist signing & signed document
+  strategistCeremonyUrl: string | null;
+  strategistHasSigned: boolean;
+  clientHasSigned: boolean;
+  signedAgreementDocUrl: string | null;
+
   // Handlers
   toggleDocSelection: (docId: string) => void;
   handleSendAgreement: (data: AgreementSendData) => Promise<void>;
@@ -149,7 +173,17 @@ export interface ClientDetailData {
   handleViewStrategyDocument: () => Promise<void>;
   handleDeleteTodo: () => Promise<void>;
   handleViewDocument: (docId: string) => Promise<void>;
+  handleStrategistSign: () => void;
   refreshAgreements: () => Promise<void>;
+
+  // Strategy review (chat with compliance)
+  // Strategy review (chat with compliance)
+  strategyReviewPdfUrl: string | null;
+  complianceUserId: string | null;
+  complianceUsers: (ApiClient & { complianceUserId?: string })[];
+  isStrategyReviewOpen: boolean;
+  setIsStrategyReviewOpen: (open: boolean) => void;
+  handleSendRevisedStrategy: (data: StrategySendData) => Promise<void>;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────
@@ -191,10 +225,19 @@ export function useClientDetailData(clientId: string): ClientDetailData {
   const [deletingTodoId, setDeletingTodoId] = useState<string | null>(null);
   const [todoToDelete, setTodoToDelete] = useState<{ id: string; title: string } | null>(null);
 
+  // ─── Agreement Selection State ────────────────────────────────
+  const [selectedAgreementId, setSelectedAgreementId] = useState<string | null>(null);
+
   // ─── Strategy State ──────────────────────────────────────────
   const [isStrategySheetOpen, setIsStrategySheetOpen] = useState(false);
   const [isCompletingAgreement, setIsCompletingAgreement] = useState(false);
   const [isAdvancingToStrategy, setIsAdvancingToStrategy] = useState(false);
+
+  // ─── Strategist Signing State ─────────────────────────────────
+  const [strategistCeremonyUrl, setStrategistCeremonyUrl] = useState<string | null>(null);
+  const [strategistHasSigned, setStrategistHasSigned] = useState(false);
+  const [clientHasSigned, setClientHasSigned] = useState(false);
+  const [signedAgreementDocUrl, setSignedAgreementDocUrl] = useState<string | null>(null);
 
   // ─── Envelope Sync State ─────────────────────────────────────
   const [envelopeStatuses, setEnvelopeStatuses] = useState<Record<string, string>>({});
@@ -243,6 +286,13 @@ export function useClientDetailData(clientId: string): ClientDetailData {
           `Client ${clientId}`
         );
         setAgreements(data);
+        // Auto-select the newest agreement on first load
+        if (!selectedAgreementId && data.length > 0) {
+          const newest = [...data].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )[0];
+          setSelectedAgreementId(newest.id);
+        }
       } catch (error) {
         console.error('[Hook] Failed to load agreements:', error);
       } finally {
@@ -250,26 +300,89 @@ export function useClientDetailData(clientId: string): ClientDetailData {
       }
     }
     if (clientId) loadAgreements();
-  }, [clientId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId, selectedAgreementId]);
 
+  // ─── Reset stale state on agreement switch ───────────────────
   useEffect(() => {
+    if (!selectedAgreementId) return;
+    // Reset signing info refs so they re-fetch for the new agreement
+    hasFetchedSigningInfoRef.current = false;
+    // Clear stale per-agreement data
+    setSignedAgreementDocUrl(null);
+    setStrategistCeremonyUrl(null);
+    setStrategistHasSigned(false);
+    setClientHasSigned(false);
+    setExistingCharge(null);
+    setClientDocuments([]);
+  }, [selectedAgreementId]);
+
+  // ─── Helper: extract envelope ID from agreement metadata or fields ─────
+  const getEnvelopeIdFromAgreement = useCallback((agreement: ApiAgreement): string | null => {
+    // Try the direct field first
+    if (agreement.signatureEnvelopeId) return agreement.signatureEnvelopeId;
+    // Parse from description metadata
+    if (agreement.description) {
+      const match = agreement.description.match(/__SIGNATURE_METADATA__:([\s\S]+)$/);
+      if (match) {
+        try {
+          const metadata = JSON.parse(match[1]);
+          if (metadata.envelopeId) return metadata.envelopeId;
+        } catch { /* ignore */ }
+      }
+    }
+    return null;
+  }, []);
+
+  // ─── Helper: get the SIGNED document URL ──────────────────────────────
+  const fetchSignedDocUrl = useCallback(async (agreement: ApiAgreement): Promise<string | null> => {
+    // ONLY use SignatureAPI deliverables — this is the only source guaranteed
+    // to return the actual signed PDF with embedded signatures.
+    // Do NOT fall back to S3 (signedDocumentFileId) or contractDocumentId
+    // as those contain the unsigned original.
+    const envelopeId = getEnvelopeIdFromAgreement(agreement);
+    if (envelopeId) {
+      try {
+        const url = await getSignedAgreementDocumentUrl(envelopeId);
+        if (url) {
+          console.log('[Hook] Got signed doc URL via SignatureAPI deliverables');
+          return url;
+        }
+      } catch {
+        console.warn('[Hook] SignatureAPI deliverables fetch failed');
+      }
+    }
+
+    return null;
+  }, [getEnvelopeIdFromAgreement]);
+
+  // ─── Strategist Signing Info ──────────────────────────────────
+  const hasFetchedSigningInfoRef = useRef(false);
+
+  // ─── Parallel data loading after agreements are available ───
+  useEffect(() => {
+    if (agreements.length === 0) return;
+    let cancelled = false;
+
+    const target = agreements.find(a => a.id === selectedAgreementId) ?? agreements[0];
+
+    // 1. Load documents
     async function loadDocuments() {
-      const first = agreements[0];
-      if (!first) {
+      if (!target) {
         setIsLoadingDocuments(false);
         return;
       }
       setIsLoadingDocuments(true);
       try {
-        const docs = await listAgreementDocuments(first.id);
+        const docs = await listAgreementDocuments(target.id);
 
         // Ensure the agreement's contract document is included
         // (it may be missing if the agreementId linkage failed during creation)
-        if (first.contractDocumentId) {
-          const alreadyIncluded = docs.some(d => d.id === first.contractDocumentId);
+        if (target.contractDocumentId) {
+          const alreadyIncluded = docs.some(d => d.id === target.contractDocumentId);
           if (!alreadyIncluded) {
             try {
-              const contractDoc = await getDocumentById(first.contractDocumentId);
+              const contractDoc = await getDocumentById(target.contractDocumentId);
               if (contractDoc) docs.unshift(contractDoc);
             } catch {
               // Contract doc fetch failed — continue with what we have
@@ -277,40 +390,144 @@ export function useClientDetailData(clientId: string): ClientDetailData {
           }
         }
 
-        setClientDocuments(docs);
+        if (!cancelled) setClientDocuments(docs);
       } catch (error) {
         console.error('[Hook] Failed to load documents:', error);
       } finally {
-        setIsLoadingDocuments(false);
+        if (!cancelled) setIsLoadingDocuments(false);
       }
     }
-    if (agreements.length > 0) loadDocuments();
-  }, [agreements]);
 
-  useEffect(() => {
-    async function syncEnvelopeStatuses() {
-      if (hasSyncedEnvelopesRef.current || agreements.length === 0) return;
-      hasSyncedEnvelopesRef.current = true;
-      const statuses: Record<string, string> = {};
-      for (const agreement of agreements) {
-        const envelopeId = agreement.signatureEnvelopeId;
-        if (envelopeId) {
-          try {
-            const result = await getAgreementEnvelopeStatus(agreement.id, envelopeId);
-            if (result.status) {
-              statuses[agreement.id] = result.status;
-              logAgreementStatus(
-                'strategist',
-                agreement.id,
-                agreement.status as AgreementStatus,
-                `Envelope: ${result.status}`
-              );
-            }
-          } catch (e) {
-            console.error('[Hook] Failed to get envelope status:', e);
+    // 2. Fetch charges
+    async function fetchChargesParallel() {
+      setIsLoadingCharges(true);
+      const selectedAgreement = agreements.find(a => a.id === selectedAgreementId);
+      const signed =
+        (selectedAgreement && isAgreementSigned(selectedAgreement.status)
+          ? selectedAgreement
+          : null) ?? agreements.find(a => isAgreementSigned(a.status));
+      if (!signed) {
+        if (!cancelled) {
+          setExistingCharge(null);
+          setIsLoadingCharges(false);
+        }
+        return;
+      }
+      try {
+        const charges = await getChargesForAgreement(signed.id);
+        if (cancelled) return;
+        const pendingCharge = charges.find(c => c.status === 'pending') || charges[0];
+        setExistingCharge(pendingCharge || null);
+
+        // Auto-advance: if charge is paid but agreement still at PENDING_PAYMENT,
+        // advance it so the flow isn't stuck.
+        const paidCharge = charges.find(c => c.status === 'paid');
+        if (paidCharge && signed.status === AgreementStatus.PENDING_PAYMENT) {
+          updateAgreementStatus(signed.id, AgreementStatus.PENDING_TODOS_COMPLETION)
+            .then(() => refreshAgreements())
+            .catch(err => console.error('[Hook] Failed to auto-advance agreement:', err));
+        }
+      } catch (error) {
+        console.error('[Hook] Failed to fetch charges:', error);
+        if (!cancelled) setExistingCharge(null);
+      } finally {
+        if (!cancelled) setIsLoadingCharges(false);
+      }
+    }
+
+    // 3. Fetch signing info
+    async function fetchSigningInfoParallel() {
+      if (hasFetchedSigningInfoRef.current) return;
+      const active =
+        agreements.find(a => a.id === selectedAgreementId) ??
+        [...agreements].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )[0];
+
+      if (
+        !active ||
+        active.status === AgreementStatus.DRAFT ||
+        active.status === AgreementStatus.CANCELLED
+      ) {
+        return;
+      }
+      hasFetchedSigningInfoRef.current = true;
+
+      try {
+        const info = await getStrategistSigningInfo(active.id);
+        if (cancelled) return;
+
+        setStrategistHasSigned(info.strategistHasSigned);
+        setClientHasSigned(info.clientHasSigned);
+        if (info.strategistCeremonyUrl) {
+          setStrategistCeremonyUrl(info.strategistCeremonyUrl);
+        }
+        if (info.signedDocumentUrl) {
+          setSignedAgreementDocUrl(info.signedDocumentUrl);
+        } else if (isAgreementSigned(active.status)) {
+          const url = await fetchSignedDocUrl(active);
+          if (!cancelled && url) setSignedAgreementDocUrl(url);
+        }
+      } catch (error) {
+        console.error('[Hook] getStrategistSigningInfo failed:', error);
+        if (!cancelled) {
+          const active2 =
+            agreements.find(a => a.id === selectedAgreementId) ??
+            [...agreements].sort(
+              (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            )[0];
+          if (active2 && isAgreementSigned(active2.status)) {
+            const url = await fetchSignedDocUrl(active2);
+            if (!cancelled && url) setSignedAgreementDocUrl(url);
           }
         }
       }
+    }
+
+    // Fire all three in parallel
+    Promise.allSettled([loadDocuments(), fetchChargesParallel(), fetchSigningInfoParallel()]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [agreements, selectedAgreementId, fetchSignedDocUrl, refreshAgreements]);
+
+  // ─── Envelope status sync (parallel) ─────────────────────────
+  useEffect(() => {
+    if (hasSyncedEnvelopesRef.current || agreements.length === 0) return;
+    hasSyncedEnvelopesRef.current = true;
+    let cancelled = false;
+
+    async function syncEnvelopeStatuses() {
+      // Fire all envelope status checks in parallel
+      const agreementsWithEnvelopes = agreements.filter(a => a.signatureEnvelopeId);
+      if (agreementsWithEnvelopes.length === 0) return;
+
+      const results = await Promise.allSettled(
+        agreementsWithEnvelopes.map(async agreement => {
+          const result = await getAgreementEnvelopeStatus(
+            agreement.id,
+            agreement.signatureEnvelopeId!
+          );
+          return { agreementId: agreement.id, status: result.status, agreement };
+        })
+      );
+
+      if (cancelled) return;
+
+      const statuses: Record<string, string> = {};
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value.status) {
+          statuses[result.value.agreementId] = result.value.status;
+          logAgreementStatus(
+            'strategist',
+            result.value.agreementId,
+            result.value.agreement.status as AgreementStatus,
+            `Envelope: ${result.value.status}`
+          );
+        }
+      }
+
       if (Object.keys(statuses).length > 0) {
         setEnvelopeStatuses(statuses);
         if (Object.values(statuses).some(s => s === 'completed')) {
@@ -318,31 +535,15 @@ export function useClientDetailData(clientId: string): ClientDetailData {
         }
       }
     }
-    syncEnvelopeStatuses();
-  }, [agreements, refreshAgreements]);
 
-  useEffect(() => {
-    async function fetchCharges() {
-      setIsLoadingCharges(true);
-      const signed = agreements.find(a => isAgreementSigned(a.status));
-      if (!signed) {
-        setExistingCharge(null);
-        setIsLoadingCharges(false);
-        return;
-      }
-      try {
-        const charges = await getChargesForAgreement(signed.id);
-        const pendingCharge = charges.find(c => c.status === 'pending') || charges[0];
-        setExistingCharge(pendingCharge || null);
-      } catch (error) {
-        console.error('[Hook] Failed to fetch charges:', error);
-        setExistingCharge(null);
-      } finally {
-        setIsLoadingCharges(false);
-      }
-    }
-    fetchCharges();
-  }, [agreements]);
+    syncEnvelopeStatuses().catch(err =>
+      console.error('[Hook] Failed to sync envelope statuses:', err)
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [agreements, refreshAgreements]);
 
   // ─── Doc Selection Sync ──────────────────────────────────────
 
@@ -400,45 +601,96 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     );
   }, [selectedDocs.size, setSelection, handleDownloadSelected, handleDeleteSelected]);
 
-  // ─── Computed State ──────────────────────────────────────────
+  // ─── Computed State (memoized) ─────────────────────────────
 
-  const sortedAgreements = [...agreements].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  const sortedAgreements = useMemo(
+    () =>
+      [...agreements].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ),
+    [agreements]
   );
-  const activeAgreement = sortedAgreements[0];
-  const allTodos = activeAgreement?.todoLists?.flatMap(list => list.todos || []) || [];
 
-  const hasAgreementSent = agreements.some(
-    a => a.status !== AgreementStatus.DRAFT && a.status !== AgreementStatus.CANCELLED
+  const activeAgreement = useMemo(
+    () => agreements.find(a => a.id === selectedAgreementId) ?? sortedAgreements[0],
+    [agreements, selectedAgreementId, sortedAgreements]
   );
-  const envelopeIsCompleted =
-    activeAgreement && envelopeStatuses[activeAgreement.id] === 'completed';
-  const hasAgreementSigned =
-    agreements.some(a => isAgreementSigned(a.status)) || !!envelopeIsCompleted;
-  const signedAgreement =
-    agreements.find(a => isAgreementSigned(a.status)) ||
-    (hasAgreementSigned ? activeAgreement : null) ||
-    null;
+
+  const allTodos = useMemo(
+    () => activeAgreement?.todoLists?.flatMap(list => list.todos || []) || [],
+    [activeAgreement]
+  );
+
+  const hasAgreementSent = useMemo(
+    () =>
+      activeAgreement
+        ? activeAgreement.status !== AgreementStatus.DRAFT &&
+          activeAgreement.status !== AgreementStatus.CANCELLED
+        : false,
+    [activeAgreement]
+  );
+
+  const envelopeIsCompleted = useMemo(
+    () => activeAgreement && envelopeStatuses[activeAgreement.id] === 'completed',
+    [activeAgreement, envelopeStatuses]
+  );
+
+  const hasAgreementSigned = useMemo(
+    () =>
+      activeAgreement
+        ? isAgreementSigned(activeAgreement.status) || !!envelopeIsCompleted
+        : false,
+    [activeAgreement, envelopeIsCompleted]
+  );
+
+  const signedAgreement = useMemo(
+    () =>
+      (activeAgreement && isAgreementSigned(activeAgreement.status) ? activeAgreement : null) ||
+      (hasAgreementSigned ? activeAgreement : null) ||
+      null,
+    [activeAgreement, hasAgreementSigned]
+  );
 
   const hasPaymentSent = !!existingCharge;
-  const hasPaymentReceived = !!(signedAgreement && isAgreementPaid(signedAgreement.status));
-
-  const documentTodos = allTodos.filter(
-    todo => !todo.title.toLowerCase().includes('sign') && todo.title.toLowerCase() !== 'pay'
+  const hasPaymentReceived = useMemo(
+    () => !!(signedAgreement && isAgreementPaid(signedAgreement.status)),
+    [signedAgreement]
   );
-  const uploadedDocCount = documentTodos.filter(
-    todo => todo.status === 'completed' || todo.document?.uploadStatus === 'FILE_UPLOADED'
-  ).length;
-  const acceptedDocCount = documentTodos.filter(
-    todo => todo.document?.acceptanceStatus === AcceptanceStatus.ACCEPTED_BY_STRATEGIST
-  ).length;
+
+  const documentTodos = useMemo(
+    () =>
+      allTodos.filter(
+        todo => !todo.title.toLowerCase().includes('sign') && todo.title.toLowerCase() !== 'pay'
+      ),
+    [allTodos]
+  );
+
+  const uploadedDocCount = useMemo(
+    () =>
+      documentTodos.filter(
+        todo => todo.status === 'completed' || todo.document?.uploadStatus === 'FILE_UPLOADED'
+      ).length,
+    [documentTodos]
+  );
+
+  const acceptedDocCount = useMemo(
+    () =>
+      documentTodos.filter(
+        todo => todo.document?.acceptanceStatus === AcceptanceStatus.ACCEPTED_BY_STRATEGIST
+      ).length,
+    [documentTodos]
+  );
+
   const totalDocTodos = documentTodos.length;
   const hasDocumentsRequested = totalDocTodos > 0;
   const hasAllDocumentsUploaded = totalDocTodos > 0 && uploadedDocCount >= totalDocTodos;
   const hasAllDocumentsAccepted = totalDocTodos > 0 && acceptedDocCount >= totalDocTodos;
 
-  const todoTitles = new Map<string, string>();
-  for (const todo of allTodos) todoTitles.set(todo.id, todo.title);
+  const todoTitles = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const todo of allTodos) m.set(todo.id, todo.title);
+    return m;
+  }, [allTodos]);
 
   // Timeline steps
   const step3Sent = hasAgreementSigned && (hasPaymentSent || hasPaymentReceived);
@@ -447,20 +699,33 @@ export function useClientDetailData(clientId: string): ClientDetailData {
   // ─── Step 5: Strategy Compliance → Client Approval ──────────
 
   // Parse strategy metadata from agreement description
-  const strategyMetadata = parseStrategyMetadata(signedAgreement?.description) as
-    | (StrategyMetadata & ModelStrategyMetadata)
-    | null;
+  const strategyMetadata = useMemo(
+    () =>
+      parseStrategyMetadata(signedAgreement?.description) as
+        | (StrategyMetadata & ModelStrategyMetadata)
+        | null,
+    [signedAgreement?.description]
+  );
+
   const strategyDocumentId = strategyMetadata?.strategyDocumentId ?? null;
 
   // Find the strategy document from loaded documents (for acceptanceStatus)
-  const strategyApiDoc = strategyDocumentId
-    ? (clientDocuments.find(d => d.id === strategyDocumentId) ?? null)
-    : null;
+  const strategyApiDoc = useMemo(
+    () =>
+      strategyDocumentId
+        ? (clientDocuments.find(d => d.id === strategyDocumentId) ?? null)
+        : null,
+    [strategyDocumentId, clientDocuments]
+  );
 
   // Compute Step 5 state machine
-  const step5State = computeStep5State(
-    activeAgreement?.status ?? '',
-    strategyApiDoc?.acceptanceStatus ?? null
+  const step5State = useMemo(
+    () =>
+      computeStep5State(
+        activeAgreement?.status ?? '',
+        strategyApiDoc?.acceptanceStatus ?? null
+      ),
+    [activeAgreement?.status, strategyApiDoc?.acceptanceStatus]
   );
 
   // Backward-compat derived fields (Phase 4 will remove these)
@@ -469,21 +734,25 @@ export function useClientDetailData(clientId: string): ClientDetailData {
   const step5Complete: boolean | string = step5State.isComplete;
 
   // Keep old strategyDoc shape for backward compat (from mock client docs)
-  const strategyDoc =
-    client?.documents.find(
-      d => d.category === 'contract' && d.originalName.toLowerCase().includes('strategy')
-    ) || null;
+  const strategyDoc = useMemo(
+    () =>
+      client?.documents.find(
+        d => d.category === 'contract' && d.originalName.toLowerCase().includes('strategy')
+      ) || null,
+    [client?.documents]
+  );
 
   // Status key — now uses step5State for strategy sub-phases
-  let statusKey: ClientStatusKey;
-  if (!hasAgreementSigned) statusKey = 'awaiting_agreement';
-  else if (!step3Complete) statusKey = 'awaiting_payment';
-  else if (!hasAllDocumentsAccepted) statusKey = 'awaiting_documents';
-  else if (step5State.isComplete) statusKey = 'active';
-  else if (step5State.phase === 'client_review') statusKey = 'awaiting_approval';
-  else if (step5State.phase === 'compliance_review') statusKey = 'awaiting_compliance';
-  else if (step5State.strategySent) statusKey = 'awaiting_compliance';
-  else statusKey = 'ready_for_strategy';
+  const statusKey: ClientStatusKey = useMemo(() => {
+    if (!hasAgreementSigned) return 'awaiting_agreement';
+    if (!step3Complete) return 'awaiting_payment';
+    if (!hasAllDocumentsAccepted) return 'awaiting_documents';
+    if (step5State.isComplete) return 'active';
+    if (step5State.phase === 'client_review') return 'awaiting_approval';
+    if (step5State.phase === 'compliance_review') return 'awaiting_compliance';
+    if (step5State.strategySent) return 'awaiting_compliance';
+    return 'ready_for_strategy';
+  }, [hasAgreementSigned, step3Complete, hasAllDocumentsAccepted, step5State]);
 
   // ─── Handlers ────────────────────────────────────────────────
 
@@ -522,6 +791,7 @@ export function useClientDetailData(clientId: string): ClientDetailData {
             return { ...a, signatureCeremonyUrl: a.signatureCeremonyUrl || stored[a.id] };
           });
           setAgreements(enriched);
+          if (result.agreementId) setSelectedAgreementId(result.agreementId);
         } catch {
           setAgreements([
             {
@@ -549,7 +819,7 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     }
   };
 
-  const handleAcceptDocument = async (documentId: string) => {
+  const handleAcceptDocument = useCallback(async (documentId: string) => {
     try {
       const success = await updateDocumentAcceptance(
         documentId,
@@ -559,9 +829,9 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     } catch (error) {
       console.error('Failed to accept document:', error);
     }
-  };
+  }, [refreshAgreements]);
 
-  const handleDeclineDocument = async (documentId: string) => {
+  const handleDeclineDocument = useCallback(async (documentId: string) => {
     try {
       const success = await updateDocumentAcceptance(
         documentId,
@@ -571,7 +841,7 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     } catch (error) {
       console.error('Failed to decline document:', error);
     }
-  };
+  }, [refreshAgreements]);
 
   const handleAdvanceToStrategy = async () => {
     if (!signedAgreement) return;
@@ -759,26 +1029,111 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     }
   };
 
-  const handleViewStrategyDocument = async () => {
+  // ─── Strategy Review Sheet (chat with compliance) ─────
+  // ─── Strategy Review Sheet (chat with compliance) ─────
+  const { user: authUser } = useAuth();
+  const [strategyReviewPdfUrl, setStrategyReviewPdfUrl] = useState<string | null>(null);
+  const [complianceUserId, setComplianceUserId] = useState<string | null>(null);
+  const [complianceUsers, setComplianceUsers] = useState<
+    (ApiClient & { complianceUserId?: string })[]
+  >([]);
+  const [isStrategyReviewOpen, setIsStrategyReviewOpen] = useState(false);
+
+  useEffect(() => {
     if (!strategyDocumentId) return;
-    const result = await getStrategyDocumentUrl(strategyDocumentId);
-    if (result.success && result.url) window.open(result.url, '_blank');
-    else alert('Strategy document not yet available. Please try again in a moment.');
+    let cancelled = false;
+    (async () => {
+      const result = await getStrategyDocumentUrl(strategyDocumentId);
+      if (!cancelled && result.success && result.url) {
+        setStrategyReviewPdfUrl(result.url);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [strategyDocumentId]);
+
+  // Find linked compliance user ID just once
+  useEffect(() => {
+    if (!authUser?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const fetchedUsers = await getLinkedComplianceUsers();
+        if (!cancelled && fetchedUsers.length > 0) {
+          // Add the true `complianceUserId` back into each user object for easy mapping in the frontend
+          const mappedUsers = fetchedUsers.map((u: any) => ({
+            ...u,
+            complianceUserId: u.complianceUserId || u.userId || u.id,
+          }));
+
+          setComplianceUsers(mappedUsers);
+
+          // The backend may return a mapping object (ComplianceStrategistMapping) or a User object.
+          // In a mapping object, the actual user ID is in `complianceUserId`.
+          // We cast to any to safely check, then fallback to `id` if it's a direct user object.
+          const targetUser: any =
+            mappedUsers.find((u: any) => u.email?.includes('koged')) || mappedUsers[0];
+          const actualUserId = targetUser.complianceUserId;
+
+          setComplianceUserId(actualUserId);
+        }
+      } catch {
+        // Non-critical
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser?.id]);
+
+  const handleViewStrategyDocument = async () => {
+    if (strategyReviewPdfUrl) {
+      setIsStrategyReviewOpen(true);
+    } else if (strategyDocumentId) {
+      const result = await getStrategyDocumentUrl(strategyDocumentId);
+      if (result.success && result.url) {
+        setStrategyReviewPdfUrl(result.url);
+        setIsStrategyReviewOpen(true);
+      } else {
+        alert('Strategy document not yet available. Please try again in a moment.');
+      }
+    }
   };
 
   // Backward compat alias (Phase 4 will remove)
   const handleDownloadSignedStrategy = handleViewStrategyDocument;
 
-  const handleDeleteTodo = async () => {
+  const handleSendRevisedStrategy = async (data: StrategySendData) => {
+    if (!signedAgreement || !apiClient) return;
+    try {
+      const result = await sendStrategyToClient({
+        agreementId: signedAgreement.id,
+        clientId: apiClient.id,
+        clientName: apiClient.name || apiClient.fullName || apiClient.email.split('@')[0],
+        clientEmail: apiClient.email,
+        strategistName: 'Ariex Tax Strategist',
+        data,
+      });
+      if (result.success) {
+        setIsStrategyReviewOpen(false);
+        await refreshAgreements();
+      }
+    } catch (error) {
+      console.error('Failed to send revised strategy:', error);
+    }
+  };
+
+  const handleDeleteTodo = useCallback(async () => {
     if (!todoToDelete) return;
     setDeletingTodoId(todoToDelete.id);
     const success = await deleteTodo(todoToDelete.id);
     if (success) await refreshAgreements();
     setDeletingTodoId(null);
     setTodoToDelete(null);
-  };
+  }, [todoToDelete, refreshAgreements]);
 
-  const handleViewDocument = async (docId: string) => {
+  const handleViewDocument = useCallback(async (docId: string) => {
     setViewingDocId(docId);
     try {
       const url = await getDownloadUrl(docId);
@@ -788,7 +1143,13 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     } finally {
       setViewingDocId(null);
     }
-  };
+  }, []);
+
+  const handleStrategistSign = useCallback(() => {
+    if (strategistCeremonyUrl) {
+      window.open(strategistCeremonyUrl, '_blank');
+    }
+  }, [strategistCeremonyUrl]);
 
   // ─── Return ──────────────────────────────────────────────────
 
@@ -800,6 +1161,8 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     clientDocuments,
     activeAgreement,
     signedAgreement,
+    selectedAgreementId,
+    setSelectedAgreementId,
     isLoadingAgreements,
     isAgreementModalOpen,
     agreementError,
@@ -851,6 +1214,10 @@ export function useClientDetailData(clientId: string): ClientDetailData {
       : null,
     statusKey,
     todoTitles,
+    strategistCeremonyUrl,
+    strategistHasSigned,
+    clientHasSigned,
+    signedAgreementDocUrl,
     toggleDocSelection,
     handleSendAgreement,
     handleAcceptDocument,
@@ -865,6 +1232,13 @@ export function useClientDetailData(clientId: string): ClientDetailData {
     handleViewStrategyDocument,
     handleDeleteTodo,
     handleViewDocument,
+    handleStrategistSign,
     refreshAgreements,
+    strategyReviewPdfUrl,
+    complianceUserId,
+    complianceUsers,
+    isStrategyReviewOpen,
+    setIsStrategyReviewOpen,
+    handleSendRevisedStrategy,
   };
 }

@@ -21,7 +21,9 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { MiniFileStack } from '@/components/ui/mini-document-illustration';
-import type { FullClientMock } from '@/lib/mocks/client-full';
+import type { ClientInfo } from '@/contexts/strategist-contexts/client-management/ClientDetailStore';
+import { Chat } from '@/components/chat';
+import type { ApiClient } from '@/lib/api/strategist.api';
 
 // ============================================================================
 // TYPES
@@ -33,11 +35,17 @@ interface Page {
 }
 
 interface StrategySheetProps {
-  client: FullClientMock;
+  client: ClientInfo;
   agreementId: string;
   isOpen: boolean;
   onClose: () => void;
   onSend: (data: StrategySendData) => Promise<void>;
+  /** When provided, the sheet renders the rejected strategy PDF instead of a blank template */
+  rejectedPdfUrl?: string | null;
+  /** Used for internal chat with compliance team */
+  complianceUserId?: string | null;
+  /** List of all compliance team members for dropdown selection */
+  complianceUsers?: (ApiClient & { complianceUserId?: string })[];
 }
 
 export interface StrategySendData {
@@ -77,16 +85,211 @@ const createEmptyPage = (): Page => ({
 });
 
 // ============================================================================
+// PDF to Images (client-side via pdf.js CDN + server proxy)
+// ============================================================================
+
+const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168';
+
+/** Load pdf.js library from CDN (once). */
+function loadPdfJs(): Promise<void> {
+  if ((window as any).pdfjsLib) return Promise.resolve(); // eslint-disable-line
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = `${PDFJS_CDN}/pdf.min.mjs`;
+    script.type = 'module';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load pdf.js'));
+    document.head.appendChild(script);
+  });
+}
+
+/**
+ * Convert a PDF URL to an array of base64 PNG images (one per page).
+ * Uses a server API to fetch the PDF (evading CORS), then uses pdf.js
+ * loaded from CDN to render each page to canvas.
+ */
+async function pdfUrlToBase64Images(pdfUrl: string, clientName: string): Promise<string[]> {
+  // 1. Fetch PDF base64 from server proxy (avoids CORS issues on direct S3 links)
+  const proxyResponse = await fetch('/api/ai/document-editor', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'fetch-pdf', pdfUrl, clientName }),
+  });
+
+  if (!proxyResponse.ok) {
+    const err = await proxyResponse.json();
+    throw new Error(err.error || 'Failed to fetch PDF from server proxy');
+  }
+
+  const { base64 } = await proxyResponse.json();
+  if (!base64) throw new Error('No base64 data received from proxy');
+
+  // Convert base64 to Uint8Array (ArrayBuffer)
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  const arrayBuffer = bytes.buffer;
+
+  // 2. Try loading pdf.js from CDN
+  await loadPdfJs();
+
+  const pdfjsLib = (window as any).pdfjsLib; // eslint-disable-line
+
+  if (!pdfjsLib) {
+    // Fallback: try dynamic import from CDN
+    const mod = await (Function(
+      'return import("' + PDFJS_CDN + '/pdf.min.mjs")'
+    )() as Promise<any>); // eslint-disable-line
+    if (!mod?.getDocument) throw new Error('pdf.js could not be loaded');
+    mod.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.mjs`;
+    return renderPdfPages(mod, arrayBuffer);
+  }
+
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.mjs`;
+  return renderPdfPages(pdfjsLib, arrayBuffer);
+}
+
+// eslint-disable-next-line
+async function renderPdfPages(pdfjsLib: any, data: ArrayBuffer): Promise<string[]> {
+  const pdf = await pdfjsLib.getDocument({ data }).promise;
+  const images: string[] = [];
+  const scale = 2; // high-res for better OCR
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d')!;
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    // Get base64 PNG (strip the data:image/png;base64, prefix)
+    const dataUrl = canvas.toDataURL('image/png');
+    images.push(dataUrl.split(',')[1]);
+  }
+
+  return images;
+}
+
+/**
+ * Convert markdown text (from PDF extraction) to TipTap-compatible HTML.
+ */
+function markdownToHtml(markdown: string): string {
+  const lines = markdown.split('\n');
+  const htmlParts: string[] = [];
+  let inList: 'ul' | 'ol' | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Empty line = close any open list
+    if (!trimmed) {
+      if (inList) {
+        htmlParts.push(inList === 'ul' ? '</ul>' : '</ol>');
+        inList = null;
+      }
+      continue;
+    }
+
+    // Headings
+    if (trimmed.startsWith('### ')) {
+      if (inList) {
+        htmlParts.push(inList === 'ul' ? '</ul>' : '</ol>');
+        inList = null;
+      }
+      htmlParts.push(`<h3>${inlineFormat(trimmed.slice(4))}</h3>`);
+      continue;
+    }
+    if (trimmed.startsWith('## ')) {
+      if (inList) {
+        htmlParts.push(inList === 'ul' ? '</ul>' : '</ol>');
+        inList = null;
+      }
+      htmlParts.push(`<h2>${inlineFormat(trimmed.slice(3))}</h2>`);
+      continue;
+    }
+    if (trimmed.startsWith('# ')) {
+      if (inList) {
+        htmlParts.push(inList === 'ul' ? '</ul>' : '</ol>');
+        inList = null;
+      }
+      htmlParts.push(`<h1>${inlineFormat(trimmed.slice(2))}</h1>`);
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^[-*_]{3,}$/.test(trimmed)) {
+      if (inList) {
+        htmlParts.push(inList === 'ul' ? '</ul>' : '</ol>');
+        inList = null;
+      }
+      htmlParts.push('<hr>');
+      continue;
+    }
+
+    // Unordered list
+    if (/^[-*]\s/.test(trimmed)) {
+      if (inList !== 'ul') {
+        if (inList) htmlParts.push('</ol>');
+        htmlParts.push('<ul>');
+        inList = 'ul';
+      }
+      htmlParts.push(`<li>${inlineFormat(trimmed.slice(2))}</li>`);
+      continue;
+    }
+
+    // Ordered list
+    const olMatch = trimmed.match(/^(\d+)[.)]\s(.*)/);
+    if (olMatch) {
+      if (inList !== 'ol') {
+        if (inList) htmlParts.push('</ul>');
+        htmlParts.push('<ol>');
+        inList = 'ol';
+      }
+      htmlParts.push(`<li>${inlineFormat(olMatch[2])}</li>`);
+      continue;
+    }
+
+    // Regular paragraph
+    if (inList) {
+      htmlParts.push(inList === 'ul' ? '</ul>' : '</ol>');
+      inList = null;
+    }
+    htmlParts.push(`<p>${inlineFormat(trimmed)}</p>`);
+  }
+
+  if (inList) htmlParts.push(inList === 'ul' ? '</ul>' : '</ol>');
+
+  return htmlParts.join('');
+}
+
+/** Convert markdown inline formatting (bold, italic) to HTML */
+function inlineFormat(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/__(.+?)__/g, '<strong>$1</strong>')
+    .replace(/_(.+?)_/g, '<em>$1</em>');
+}
+
+// ============================================================================
 // INITIAL TEMPLATE (HTML for Tiptap) - Tax Strategy Document
 // ============================================================================
 
-const getInitialTemplate = (clientName: string, businessName: string | null, strategistName: string) => {
+const getInitialTemplate = (
+  clientName: string,
+  businessName: string | null,
+  strategistName: string
+) => {
   const today = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
-  
+
   return `
 <hr />
 <p><strong>Date:</strong> ${today}</p>
@@ -668,14 +871,19 @@ export function StrategySheet({
   isOpen,
   onClose,
   onSend,
+  rejectedPdfUrl,
+  complianceUserId,
+  complianceUsers,
 }: StrategySheetProps) {
   const strategistName = 'Ariex Tax Strategist';
   const clientName = client.user.name || 'Client';
   const businessName = client.profile.businessName;
+  const isReviseMode = !!rejectedPdfUrl;
 
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form state
@@ -684,6 +892,20 @@ export function StrategySheet({
   // Multi-page state
   const [pages, setPages] = useState<Page[]>([createEmptyPage()]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+
+  // Tab state for right panel (AI Assistant vs Compliance Chat)
+  const [activeTab, setActiveTab] = useState<'ai' | 'compliance'>('ai');
+
+  // Selected compliance user for chat
+  const [selectedComplianceUserId, setSelectedComplianceUserId] = useState<string | null>(
+    complianceUserId ?? null
+  );
+
+  useEffect(() => {
+    if (complianceUserId) {
+      setSelectedComplianceUserId(complianceUserId);
+    }
+  }, [complianceUserId]);
 
   // Get current page
   const currentPage = pages[currentPageIndex];
@@ -699,19 +921,72 @@ export function StrategySheet({
     }
   }, [isOpen]);
 
-  // Load template when opened
+  // Load template or rejected PDF content when opened
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+
+    setError(null);
+    setCurrentPageIndex(0);
+
+    if (isReviseMode) {
+      // Revise mode: fetch PDF proxy to avoid CORS, render to images using pdf.js,
+      // then send images to Vision API for HTML extraction
+      setIsLoadingContent(true);
+      setTitle(`Tax Strategy - ${clientName} (Revised)`);
+      setPages([{ id: generateId(), content: '<p>Loading rejected strategy content…</p>' }]);
+
+      (async () => {
+        try {
+          // Step 1: Fetch PDF via proxy and render to PNG images client-side
+          const images = await pdfUrlToBase64Images(rejectedPdfUrl!, clientName);
+
+          if (!images.length) {
+            throw new Error('No pages found in PDF');
+          }
+
+          // Step 2: Send images to Vision API for content extraction
+          const ocrResponse = await fetch('/api/ai/document-editor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'ocr-images',
+              images,
+              clientName,
+            }),
+          });
+
+          const data = await ocrResponse.json();
+
+          if (!ocrResponse.ok || !data.pages || data.pages.length === 0) {
+            throw new Error(data.error || 'Failed to extract content from strategy');
+          }
+
+          const extractedPages: Page[] = data.pages.map((p: { content: string }) => ({
+            id: generateId(),
+            content: p.content,
+          }));
+          setPages(extractedPages);
+          if (data.title) setTitle(data.title);
+        } catch (err) {
+          console.error('Failed to load rejected strategy content:', err);
+          setPages([{ id: generateId(), content: '' }]);
+          setError(
+            'We couldn\u2019t load the previous strategy content automatically. You can start fresh or paste the content manually.'
+          );
+        } finally {
+          setIsLoadingContent(false);
+        }
+      })();
+    } else {
+      // Normal mode: load default template
       const firstPage: Page = {
         id: generateId(),
         content: getInitialTemplate(clientName, businessName, strategistName),
       };
       setPages([firstPage]);
-      setCurrentPageIndex(0);
       setTitle(`Tax Strategy - ${clientName}`);
-      setError(null);
     }
-  }, [isOpen, clientName, businessName, strategistName]);
+  }, [isOpen, clientName, businessName, strategistName, isReviseMode, rejectedPdfUrl]);
 
   // Prevent body scroll
   useEffect(() => {
@@ -1038,30 +1313,32 @@ export function StrategySheet({
 
         {/* Two-Column Layout */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Left Column - Document Editor */}
+          {/* Left Column - Document Editor or Rejected PDF */}
           <div className="relative flex flex-1 flex-col overflow-hidden">
             {/* Action buttons - top right of left column */}
             <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
-              <button
-                onClick={handleExportPdf}
-                disabled={isExporting || !pages.some(p => p.content.trim())}
-                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 disabled:opacity-50"
-              >
-                {isExporting ? (
-                  <>
-                    <SpinnerGap className="h-4 w-4 animate-spin" />
-                    <span>Exporting...</span>
-                  </>
-                ) : (
-                  <>
-                    <FilePdfIcon weight="fill" className="h-4 w-4" />
-                    <span>Export as PDF</span>
-                  </>
-                )}
-              </button>
+              {!isReviseMode && (
+                <button
+                  onClick={handleExportPdf}
+                  disabled={isExporting || !pages.some(p => p.content.trim())}
+                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 disabled:opacity-50"
+                >
+                  {isExporting ? (
+                    <>
+                      <SpinnerGap className="h-4 w-4 animate-spin" />
+                      <span>Exporting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FilePdfIcon weight="fill" className="h-4 w-4" />
+                      <span>Export as PDF</span>
+                    </>
+                  )}
+                </button>
+              )}
               <button
                 onClick={handleSend}
-                disabled={isSending || !pages.some(p => p.content.trim())}
+                disabled={isSending || isLoadingContent || !pages.some(p => p.content.trim())}
                 className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-500 bg-emerald-500 px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-emerald-600 disabled:opacity-50"
               >
                 {isSending ? (
@@ -1070,34 +1347,45 @@ export function StrategySheet({
                     <span>Sending...</span>
                   </>
                 ) : (
-                  <span>Send to compliance</span>
+                  <span>{isReviseMode ? 'Send revised strategy' : 'Send to compliance'}</span>
                 )}
               </button>
             </div>
 
             {/* Page Content Area */}
             <div className="flex-1 overflow-auto pt-24 pr-48 pb-8 pl-64">
-              <div className="flex min-h-[calc(100vh-200px)] flex-col">
-                <input
-                  type="text"
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  className="w-full border-none bg-transparent text-2xl font-semibold outline-none placeholder:text-zinc-400 focus:outline-none"
-                  placeholder="Enter document title..."
-                />
-
-                <p className="mt-1 text-xs font-semibold text-zinc-400 uppercase">
-                  Page {currentPageIndex + 1} of {pages.length}
-                </p>
-
-                <div className="flex-1">
-                  <TiptapEditor
-                    key={currentPage.id}
-                    content={currentPage.content}
-                    onChange={updateCurrentPageContent}
-                  />
+              {isLoadingContent ? (
+                <div className="flex h-full items-center justify-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <SpinnerGap className="h-8 w-8 animate-spin text-emerald-500" />
+                    <p className="text-sm font-medium text-zinc-500">
+                      Loading rejected strategy content…
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex min-h-[calc(100vh-200px)] flex-col">
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    className="w-full border-none bg-transparent text-2xl font-semibold outline-none placeholder:text-zinc-400 focus:outline-none"
+                    placeholder="Enter document title..."
+                  />
+
+                  <p className="mt-1 text-xs font-semibold text-zinc-400 uppercase">
+                    Page {currentPageIndex + 1} of {pages.length}
+                  </p>
+
+                  <div className="flex-1">
+                    <TiptapEditor
+                      key={currentPage.id}
+                      content={currentPage.content}
+                      onChange={updateCurrentPageContent}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Page Navigation */}
@@ -1110,18 +1398,95 @@ export function StrategySheet({
             />
           </div>
 
-          {/* Right Column - AI Assistant */}
-          <div className="w-[400px] shrink-0 border-l border-zinc-200 bg-white p-4">
-            <AiAssistant
-              clientName={clientName}
-              documentContent={currentPage.content}
-              currentPageIndex={currentPageIndex}
-              totalPages={pages.length}
-              onUpdateContent={updateCurrentPageContent}
-              onAddPage={addPageWithContent}
-              onGoToPage={setCurrentPageIndex}
-              onDeletePage={deletePage}
-            />
+          {/* Right Column - Tabs & Content */}
+          <div className="flex w-[400px] shrink-0 flex-col border-l border-zinc-200 bg-white">
+            {/* Tabs for Revise Mode */}
+            {isReviseMode && (
+              <div className="flex border-b border-zinc-200">
+                <button
+                  onClick={() => setActiveTab('ai')}
+                  className={cn(
+                    'flex-1 border-b-2 py-3 text-sm font-semibold transition-colors',
+                    activeTab === 'ai'
+                      ? 'border-emerald-500 text-emerald-600'
+                      : 'border-transparent text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700'
+                  )}
+                >
+                  AI Assistant
+                </button>
+                <button
+                  onClick={() => setActiveTab('compliance')}
+                  className={cn(
+                    'flex-1 border-b-2 py-3 text-sm font-semibold transition-colors',
+                    activeTab === 'compliance'
+                      ? 'border-emerald-500 text-emerald-600'
+                      : 'border-transparent text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700'
+                  )}
+                >
+                  Compliance Chat
+                </button>
+              </div>
+            )}
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-hidden">
+              {activeTab === 'ai' || !isReviseMode ? (
+                <div className="h-full w-full overflow-y-auto p-4">
+                  <AiAssistant
+                    clientName={clientName}
+                    documentContent={currentPage.content}
+                    currentPageIndex={currentPageIndex}
+                    totalPages={pages.length}
+                    onUpdateContent={updateCurrentPageContent}
+                    onAddPage={addPageWithContent}
+                    onGoToPage={setCurrentPageIndex}
+                    onDeletePage={deletePage}
+                  />
+                </div>
+              ) : (
+                <div className="flex h-full flex-col px-4">
+                  {complianceUsers && complianceUsers.length > 1 && (
+                    <div className="mt-2 mb-4">
+                      <label
+                        htmlFor="compliance-select"
+                        className="mb-1 block text-xs font-medium text-zinc-500"
+                      >
+                        Select Compliance Team Member
+                      </label>
+                      <select
+                        id="compliance-select"
+                        value={selectedComplianceUserId || ''}
+                        onChange={e => setSelectedComplianceUserId(e.target.value)}
+                        className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm ring-emerald-500 outline-none focus:border-emerald-500 focus:ring-1"
+                      >
+                        {complianceUsers.map(user => (
+                          <option
+                            key={user.complianceUserId || user.id}
+                            value={user.complianceUserId || user.id}
+                          >
+                            {user.email}
+                            {/* (ID: {(user.complianceUserId || user.id).slice(0, 8)}...) */}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {selectedComplianceUserId ? (
+                    <Chat
+                      mode="single"
+                      otherUserId={selectedComplianceUserId}
+                      clientName="Compliance Team"
+                      placeholder="Message compliance team..."
+                    />
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+                      <p className="text-zinc-500">Connecting to compliance chat...</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

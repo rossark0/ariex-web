@@ -58,7 +58,7 @@ export default function ConfirmEmailPage() {
             <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
               Check your email
             </h1>
-            <p className="mt-2 text-zinc-500">Enter the verification code we sent you</p>
+            <p className="mt-2 text-zinc-500">Click the confirmation link we sent you</p>
           </div>
 
           {/* Confirm Email Form */}

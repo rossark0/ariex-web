@@ -322,7 +322,44 @@ export async function signIn(
         };
       } catch (userError) {
         console.error('[Auth] Failed to fetch user data via cognitoSub:', userError);
-        // Keep the user from response if API call fails
+
+        // User not found in DB — this is a self-registered user who confirmed
+        // their email via the link. Create user in DB and assign STRATEGIST role.
+        if (!user || user.id === 'unknown') {
+          try {
+            console.log('[Auth] User not found in DB, creating with STRATEGIST role...');
+
+            // Create user in database
+            const createUserResult = await apiRequest<{ id: string }>('/users', {
+              method: 'POST',
+              body: JSON.stringify({
+                email: data.email,
+                cognitoSub,
+              }),
+            });
+
+            // Assign STRATEGIST role to new user
+            await apiRequest(`/users/${createUserResult.id}/roles`, {
+              method: 'POST',
+              body: JSON.stringify({
+                roleType: 'STRATEGIST',
+              }),
+            });
+
+            console.log('[Auth] Created user with STRATEGIST role:', createUserResult.id);
+
+            user = {
+              id: createUserResult.id,
+              email: data.email,
+              name: user?.name || data.email.split('@')[0],
+              role: 'STRATEGIST',
+              cognitoSub,
+            };
+          } catch (createError) {
+            console.error('[Auth] Failed to create user in DB:', createError);
+            // Keep the fallback user from response if creation fails
+          }
+        }
       }
     }
 

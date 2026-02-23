@@ -94,8 +94,9 @@ export interface ClientAgreement {
       status: string;
       document?: {
         id: string;
-        signedStatus: string;
-        uploadStatus: string;
+        signedStatus?: string;
+        uploadStatus?: string;
+        acceptanceStatus?: string;
         files?: Array<{
           id: string;
           originalName: string;
@@ -604,19 +605,13 @@ export async function syncAgreementSignatureStatus(
       return { success: false, error: 'Could not get envelope details from SignatureAPI' };
     }
 
-    // Check if envelope is completed OR if the client recipient has completed
-    // SignatureAPI envelope status: processing, in_progress, completed, failed, canceled
-    // SignatureAPI recipient status: awaiting, pending, sent, completed, rejected, etc.
+    // Only advance to PENDING_PAYMENT when the envelope is fully completed
+    // (all signers have signed). With dual signing (client + strategist), the
+    // envelope stays in_progress until both finish. Individual recipient status
+    // of "completed" is NOT enough — we need ALL parties to have signed.
     const isEnvelopeCompleted = envelopeDetails.status === 'completed';
 
-    // Also check if the client recipient has completed
-    const clientRecipient = envelopeDetails.recipients?.find(
-      r => r.key === 'client' || r.type === 'signer'
-    );
-    const isRecipientCompleted = clientRecipient?.status === 'completed';
-
-    // If envelope is completed OR client recipient has completed, mark as signed
-    if (isEnvelopeCompleted || isRecipientCompleted) {
+    if (isEnvelopeCompleted) {
       let documentSignSuccess = false;
       let agreementUpdateSuccess = false;
 
@@ -712,7 +707,7 @@ export async function syncStrategySignatureStatus(
     // Find the agreement that has this strategy envelope ID
     // The envelope ID is stored in the agreement's description as metadata
     const agreements = await getClientAgreements();
-    
+
     // Find agreement with matching strategy envelope ID in its metadata
     const targetAgreement = agreements.find(a => {
       // Check if description contains strategy metadata with this envelope ID
@@ -733,7 +728,12 @@ export async function syncStrategySignatureStatus(
       return { success: false, error: 'Agreement not found for this envelope' };
     }
 
-    console.log('[API] Found agreement:', targetAgreement.id, 'Current status:', targetAgreement.status);
+    console.log(
+      '[API] Found agreement:',
+      targetAgreement.id,
+      'Current status:',
+      targetAgreement.status
+    );
 
     // Update agreement status to PENDING_STRATEGY_REVIEW (client signed, strategist reviews)
     // Strategist will manually complete it by clicking "Finish Agreement"
@@ -743,17 +743,24 @@ export async function syncStrategySignatureStatus(
       return { success: true, agreementId: targetAgreement.id };
     } catch (updateError) {
       console.error('[API] Failed to update agreement status:', updateError);
-      
+
       // Try fallback with PATCH
       try {
         await apiRequest(`/agreements/${targetAgreement.id}`, {
           method: 'PATCH',
           body: JSON.stringify({ status: AgreementStatus.PENDING_STRATEGY_REVIEW }),
         });
-        console.log('[API] ✅ Agreement updated to PENDING_STRATEGY_REVIEW (via PATCH):', targetAgreement.id);
+        console.log(
+          '[API] ✅ Agreement updated to PENDING_STRATEGY_REVIEW (via PATCH):',
+          targetAgreement.id
+        );
         return { success: true, agreementId: targetAgreement.id };
       } catch {
-        return { success: false, agreementId: targetAgreement.id, error: 'Failed to update agreement status' };
+        return {
+          success: false,
+          agreementId: targetAgreement.id,
+          error: 'Failed to update agreement status',
+        };
       }
     }
   } catch (error) {
@@ -829,6 +836,37 @@ export async function getChargesForAgreement(agreementId: string): Promise<Clien
     return charges;
   } catch (err) {
     console.error('[ClientAPI] Failed to fetch charges:', err);
+    return [];
+  }
+}
+
+/**
+ * Get all charges for the current client
+ */
+export async function getAllChargesForClient(): Promise<ClientCharge[]> {
+  try {
+    console.log('[ClientAPI] Fetching all charges for client');
+    const rawCharges = await apiRequest<any[]>('/charges');
+    console.log('[ClientAPI] All charges response:', JSON.stringify(rawCharges, null, 2));
+
+    // Map backend fields to frontend interface
+    const charges: ClientCharge[] = rawCharges.map(c => ({
+      id: c.id,
+      agreementId: c.agreementId,
+      amount: c.amountCents ? c.amountCents / 100 : c.amount || 0,
+      currency: c.currency || 'usd',
+      status: c.status,
+      description: c.description,
+      paymentLink: c.paymentLink,
+      paymentIntentId: c.stripePaymentIntentId || c.paymentIntentId,
+      checkoutSessionId: c.stripeCheckoutSessionId || c.checkoutSessionId,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    }));
+
+    return charges;
+  } catch (err) {
+    console.error('[ClientAPI] Failed to fetch all charges:', err);
     return [];
   }
 }
@@ -950,7 +988,7 @@ export async function getClientDashboardData(): Promise<ClientDashboardData | nu
                 // Attach document info to todo (including acceptanceStatus)
                 todo.document = {
                   id: matchingDoc.id,
-                  uploadStatus: matchingDoc.uploadStatus,
+                  uploadStatus: matchingDoc.uploadStatus || 'PENDING',
                   acceptanceStatus: matchingDoc.acceptanceStatus,
                   files: matchingDoc.files,
                 };
@@ -1020,28 +1058,31 @@ export async function getSignedAgreementUrl(envelopeId: string): Promise<string 
 }
 
 /**
- * Get the signed document URL - tries S3 first (if stored), then SignatureAPI
- * This provides a fallback mechanism for retrieving signed documents
+ * Get the signed document URL.
+ * IMPORTANT: Always prefers SignatureAPI deliverables (guaranteed to be the
+ * actual signed PDF with embedded signatures). Only falls back to S3 if
+ * SignatureAPI is unavailable, since S3 may contain the unsigned original.
  */
 export async function getSignedDocumentDownloadUrl(
   signedDocumentFileId: string | null | undefined,
   envelopeId: string | null | undefined
 ): Promise<string | null> {
-  // Strategy 1: Try S3 file ID if we have it (stored by webhook)
-  if (signedDocumentFileId) {
-    try {
-      const s3Url = await getDocumentDownloadUrl(signedDocumentFileId);
-      if (s3Url) return s3Url;
-    } catch {
-      // Fall through to SignatureAPI
-    }
-  }
-
-  // Strategy 2: Fallback to SignatureAPI
+  // Strategy 1 (preferred): SignatureAPI deliverables — always the signed PDF
   if (envelopeId) {
     try {
       const signatureUrl = await getSignedDocumentUrl(envelopeId);
       if (signatureUrl) return signatureUrl;
+    } catch {
+      // Fall through to S3
+    }
+  }
+
+  // Strategy 2 (fallback): S3 file ID stored by webhook after signing
+  // NOTE: Only used when SignatureAPI deliverables are unavailable
+  if (signedDocumentFileId) {
+    try {
+      const s3Url = await getDocumentDownloadUrl(signedDocumentFileId);
+      if (s3Url) return s3Url;
     } catch {
       // No signed document available
     }
