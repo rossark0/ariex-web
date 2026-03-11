@@ -50,9 +50,30 @@ export default function ClientPaymentsPage() {
   const { user } = useAuth();
   const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set());
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [clientProfile, setClientProfile] = useState<FullClientMock | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const setSelection = useUiStore(state => state.setSelection);
 
-  const clientProfile = user ? getFullUserProfile(user) as FullClientMock | null : null;
+  // Fetch client profile
+  useEffect(() => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
+    const loadProfile = async () => {
+      try {
+        const profile = await getFullUserProfile(user);
+        setClientProfile(profile as FullClientMock | null);
+      } catch (error) {
+        console.error('Failed to load client profile:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [user]);
 
   // Sync selection state with UiStore for global AI floating chatbot
   useEffect(() => {
@@ -68,6 +89,14 @@ export default function ClientPaymentsPage() {
           <h1 className="text-xl font-semibold text-zinc-900">Not authenticated</h1>
           <p className="text-zinc-500">Please sign in to view your payments.</p>
         </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-900" />
       </div>
     );
   }

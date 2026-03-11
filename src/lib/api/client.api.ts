@@ -787,6 +787,31 @@ export interface ClientCharge {
   updatedAt: string;
 }
 
+function normalizeClientChargeStatus(
+  status: unknown
+): ClientCharge['status'] {
+  if (status === 'pending' || status === 'paid' || status === 'cancelled' || status === 'failed') {
+    return status;
+  }
+  return 'pending';
+}
+
+function mapToClientCharge(raw: any): ClientCharge {
+  return {
+    id: raw?.id,
+    agreementId: raw?.agreementId,
+    amount: raw?.amountCents ? raw.amountCents / 100 : raw?.amount || 0,
+    currency: raw?.currency || 'usd',
+    status: normalizeClientChargeStatus(raw?.status ?? raw?.paymentStatus),
+    description: raw?.description,
+    paymentLink: raw?.paymentLink,
+    paymentIntentId: raw?.stripePaymentIntentId || raw?.paymentIntentId,
+    checkoutSessionId: raw?.stripeCheckoutSessionId || raw?.checkoutSessionId,
+    createdAt: raw?.createdAt || new Date().toISOString(),
+    updatedAt: raw?.updatedAt || new Date().toISOString(),
+  };
+}
+
 /**
  * Update agreement status
  * Used for status transitions in the agreement lifecycle
@@ -819,19 +844,7 @@ export async function getChargesForAgreement(agreementId: string): Promise<Clien
     console.log('[ClientAPI] Charges response:', JSON.stringify(rawCharges, null, 2));
 
     // Map backend fields to frontend interface
-    const charges: ClientCharge[] = rawCharges.map(c => ({
-      id: c.id,
-      agreementId: c.agreementId,
-      amount: c.amountCents ? c.amountCents / 100 : c.amount || 0,
-      currency: c.currency || 'usd',
-      status: c.status,
-      description: c.description,
-      paymentLink: c.paymentLink,
-      paymentIntentId: c.stripePaymentIntentId || c.paymentIntentId,
-      checkoutSessionId: c.stripeCheckoutSessionId || c.checkoutSessionId,
-      createdAt: c.createdAt,
-      updatedAt: c.updatedAt,
-    }));
+    const charges: ClientCharge[] = rawCharges.map(mapToClientCharge);
 
     return charges;
   } catch (err) {
@@ -850,24 +863,41 @@ export async function getAllChargesForClient(): Promise<ClientCharge[]> {
     console.log('[ClientAPI] All charges response:', JSON.stringify(rawCharges, null, 2));
 
     // Map backend fields to frontend interface
-    const charges: ClientCharge[] = rawCharges.map(c => ({
-      id: c.id,
-      agreementId: c.agreementId,
-      amount: c.amountCents ? c.amountCents / 100 : c.amount || 0,
-      currency: c.currency || 'usd',
-      status: c.status,
-      description: c.description,
-      paymentLink: c.paymentLink,
-      paymentIntentId: c.stripePaymentIntentId || c.paymentIntentId,
-      checkoutSessionId: c.stripeCheckoutSessionId || c.checkoutSessionId,
-      createdAt: c.createdAt,
-      updatedAt: c.updatedAt,
-    }));
+    const charges: ClientCharge[] = rawCharges.map(mapToClientCharge);
 
     return charges;
   } catch (err) {
     console.error('[ClientAPI] Failed to fetch all charges:', err);
     return [];
+  }
+}
+
+/**
+ * Verify if a charge payment was successful
+ * @param chargeId - The charge ID to verify
+ * @returns Updated charge data with latest payment status
+ */
+export async function verifyCharge(chargeId: string): Promise<ClientCharge | null> {
+  try {
+    console.log('[ClientAPI] Verifying charge:', chargeId);
+    const result = await apiRequest<any>(`/charges/verify/${chargeId}`, {
+      method: 'POST',
+    });
+    console.log('[ClientAPI] Verify charge response:', JSON.stringify(result, null, 2));
+
+    // Handle multiple possible API response shapes:
+    // 1) charge object directly
+    // 2) { charge: {...} }
+    // 3) { data: {...} } or { data: { charge: {...} } }
+    const chargePayload = result?.charge || result?.data?.charge || result?.data || result;
+    if (!chargePayload || typeof chargePayload !== 'object') {
+      return null;
+    }
+
+    return mapToClientCharge(chargePayload);
+  } catch (error) {
+    console.error('[ClientAPI] Failed to verify charge:', error);
+    throw error;
   }
 }
 

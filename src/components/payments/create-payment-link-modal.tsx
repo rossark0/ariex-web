@@ -10,6 +10,7 @@ import {
   type ApiClient,
   type ApiAgreement,
 } from '@/lib/api/strategist.api';
+import { billingStore } from '@/contexts/strategist-contexts/billing/BillingStore';
 
 interface CreatePaymentLinkModalProps {
   isOpen: boolean;
@@ -165,9 +166,13 @@ export function CreatePaymentLinkModal({
         throw new Error('Failed to create charge');
       }
 
+      const { successUrl, cancelUrl } = billingStore.getState().getPaymentRedirectUrls();
+
       // Step 2: Generate payment link
       const link = await generatePaymentLink(charge.id, {
         customerEmail: selectedClient?.email,
+        successUrl,
+        cancelUrl,
       });
 
       if (!link) {
