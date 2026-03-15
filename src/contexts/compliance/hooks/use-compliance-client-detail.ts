@@ -43,6 +43,7 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
   const strategyDocument = useStore(complianceStore, s => s.strategyDocument);
   const isLoading = useStore(complianceStore, s => s.isLoadingClientDetail);
   const error = useStore(complianceStore, s => s.clientDetailError);
+  const documentsError = useStore(complianceStore, s => s.documentsError);
 
   // Fetch on mount
   useEffect(() => {
@@ -188,6 +189,7 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
     isApproving,
     isRejecting,
     error,
+    documentsError,
 
     // Actions
     handleApproveStrategy,

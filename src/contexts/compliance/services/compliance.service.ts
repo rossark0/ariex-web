@@ -13,6 +13,7 @@ import {
   getComplianceClientById,
   getStrategistAgreements,
   getComplianceAgreement,
+  getComplianceDocument,
   getAgreementDocuments,
   getAgreementFiles,
   getAgreementTodoLists,
@@ -164,6 +165,14 @@ export async function fetchClientDetail(
       .filter(a => a.clientId === clientId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
+    if (clientAgreements.length === 0 && agreements.length > 0) {
+      console.warn(
+        '[Compliance] No agreements matched for clientId', clientId,
+        '— total strategist agreements:', agreements.length,
+        '— clientIds found:', [...new Set(agreements.map(a => a.clientId).filter(Boolean))]
+      );
+    }
+
     store.setClientAgreements(clientAgreements);
 
     // Auto-select the most recent agreement
@@ -178,7 +187,7 @@ export async function fetchClientDetail(
     }
 
     // Step 2: Fetch all agreement-related data in parallel
-    await loadAgreementData(agreement.id);
+    await loadAgreementData(agreement);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to load client detail';
     store.setClientDetailError(message);
@@ -190,24 +199,49 @@ export async function fetchClientDetail(
 
 /**
  * Load documents, files, todos for a specific agreement and update the store.
+ * Mirrors the strategist store behaviour: if the agreement has a contractDocumentId
+ * that is not already in the documents list, fetch it separately and prepend it.
  */
-async function loadAgreementData(agreementId: string): Promise<void> {
+async function loadAgreementData(agreement: ApiAgreement): Promise<void> {
+  const agreementId = agreement.id;
   const store = complianceStore.getState();
-  const [documents, files, todoLists, todos] = await Promise.all([
-    getAgreementDocuments(agreementId),
-    getAgreementFiles(agreementId),
-    getAgreementTodoLists(agreementId),
-    getAgreementTodos(agreementId),
-  ]);
+  store.setDocumentsError(null);
 
-  store.setClientDocuments(documents);
-  store.setClientFiles(files);
-  store.setClientTodoLists(todoLists);
-  store.setClientTodos(todos);
+  try {
+    const [documents, files, todoLists, todos] = await Promise.all([
+      getAgreementDocuments(agreementId),
+      getAgreementFiles(agreementId),
+      getAgreementTodoLists(agreementId),
+      getAgreementTodos(agreementId),
+    ]);
 
-  // Find strategy document
-  const strategyDoc = findStrategyDocument(documents);
-  store.setStrategyDocument(strategyDoc);
+    // If the contract document is not already in the list, fetch it separately
+    // and prepend it (same pattern as the strategist ClientDetailStore).
+    if (agreement.contractDocumentId) {
+      const alreadyIncluded = documents.some(d => d.id === agreement.contractDocumentId);
+      if (!alreadyIncluded) {
+        try {
+          const contractDoc = await getComplianceDocument(agreement.contractDocumentId);
+          if (contractDoc) documents.unshift(contractDoc);
+        } catch {
+          // Non-critical — list still shows without it
+        }
+      }
+    }
+
+    store.setClientDocuments(documents);
+    store.setClientFiles(files);
+    store.setClientTodoLists(todoLists);
+    store.setClientTodos(todos);
+
+    // Find strategy document
+    const strategyDoc = findStrategyDocument(documents);
+    store.setStrategyDocument(strategyDoc);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to load documents';
+    console.error('[Compliance] loadAgreementData failed for agreement', agreementId, error);
+    store.setDocumentsError(message);
+  }
 }
 
 /**
@@ -232,7 +266,7 @@ export async function selectComplianceAgreement(agreementId: string): Promise<vo
 
   // Reload data for newly selected agreement
   try {
-    await loadAgreementData(agreementId);
+    await loadAgreementData(agreement);
   } catch (error) {
     console.error('[Compliance] Failed to load agreement data:', error);
   }

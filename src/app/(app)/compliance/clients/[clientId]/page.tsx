@@ -11,6 +11,7 @@ import type { ApiDocument } from '@/lib/api/strategist.api';
 import {
   BuildingsIcon,
   EnvelopeIcon,
+  Eye,
   FileIcon,
   PhoneIcon,
   Check as CheckIcon,
@@ -20,7 +21,9 @@ import {
   SpinnerGap,
   WarningCircle,
   StarFour as StarFourIcon,
+  Seal as SealIcon,
 } from '@phosphor-icons/react';
+import { getComplianceDocumentUrl } from '@/lib/api/compliance.api';
 import { Check, Clock, Strategy, Warning } from '@phosphor-icons/react/dist/ssr';
 import { Button } from '@/components/ui/button';
 import {
@@ -355,6 +358,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
     isApproving,
     isRejecting,
     error,
+    documentsError,
     handleApproveStrategy,
     handleRejectStrategy,
     handleSelectAgreement,
@@ -368,6 +372,8 @@ export default function ComplianceClientDetailPage({ params }: Props) {
   }, [todos]);
 
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  const [openingDocId, setOpeningDocId] = useState<string | null>(null);
+  const [signedDocUrl, setSignedDocUrl] = useState<string | null>(null);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isStrategySheetOpen, setIsStrategySheetOpen] = useState(false);
@@ -376,6 +382,17 @@ export default function ComplianceClientDetailPage({ params }: Props) {
     message: string;
   } | null>(null);
   const { setSidebarCollapsed, isSidebarCollapsed } = useUiStore();
+
+  // Fetch signed document URL when agreement changes
+  useEffect(() => {
+    if (!agreement?.signedDocumentFileId) {
+      setSignedDocUrl(null);
+      return;
+    }
+    getComplianceDocumentUrl(agreement.signedDocumentFileId, agreement.id).then(url =>
+      setSignedDocUrl(url)
+    );
+  }, [agreement?.signedDocumentFileId, agreement?.id]);
 
   // ─── AI Page Context ─────────────────────────────────────────────────
   useAiPageContext({
@@ -535,15 +552,10 @@ export default function ComplianceClientDetailPage({ params }: Props) {
       : agreement.price
     : null;
 
-  const nonStrategyDocs = documents.filter(d => {
-    const type = (d.type || '').toUpperCase();
-    const category = (d.category || '').toLowerCase();
-    const name = (d.name || '').toLowerCase();
-    if (type === 'STRATEGY' || name.includes('strategy')) return false;
-    if (category === 'contract' || type === 'AGREEMENT') return false;
-    return true;
-  });
-  const uploadedCount = nonStrategyDocs.length;
+  const allDocs = documents;
+  // Keep backward compat — used in step-4 date display
+  const nonStrategyDocs = allDocs;
+  const uploadedCount = allDocs.length;
 
   const statusIconMap: Record<ClientStatusKey, typeof Clock> = {
     awaiting_agreement: Clock,
@@ -1071,7 +1083,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                 <h2 className="mb-8 text-base font-medium text-zinc-900">Documents</h2>
               </div>
 
-              {nonStrategyDocs.length === 0 && (
+              {nonStrategyDocs.length === 0 && !documentsError && (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <div className="relative mb-6 h-28 w-28">
                     <div className="absolute top-2 left-2 h-20 w-16 -rotate-6 rounded-lg border border-zinc-200 bg-white shadow-sm">
@@ -1100,6 +1112,17 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                 </div>
               )}
 
+              {documentsError && (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <WarningCircle className="mb-4 h-10 w-10 text-red-400" weight="duotone" />
+                  <p className="mb-1.5 text-sm font-medium text-zinc-800">Failed to load documents</p>
+                  <p className="mb-4 text-xs text-zinc-400">{documentsError}</p>
+                  <Button size="sm" variant="outline" onClick={refresh}>
+                    Retry
+                  </Button>
+                </div>
+              )}
+
               {nonStrategyDocs.length > 0 && (
                 <div>
                   {groupDocumentsByDate(
@@ -1107,13 +1130,15 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                     )
                   )
-                    .slice(0, 2)
                     .map(group => (
                       <div key={group.label} className="mb-6">
                         <p className="mb-3 text-sm font-medium text-zinc-400">{group.label}</p>
                         <div className="flex flex-col">
-                          {group.documents.slice(0, 3).map(doc => {
+                          {group.documents.map(doc => {
                             const isSelected = selectedDocs.has(doc.id);
+                            const isContractDoc =
+                              agreement?.contractDocumentId &&
+                              doc.id === agreement.contractDocumentId;
                             return (
                               <div key={doc.id} className="group relative">
                                 <div
@@ -1138,19 +1163,64 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
                                     <FileIcon className="h-5 w-5 text-zinc-400" />
                                   </div>
-                                  <div className="flex flex-1 flex-col">
-                                    <span className="font-medium text-zinc-900">
-                                      {(
-                                        doc.name ||
-                                        (doc.todoId && todoTitles.get(doc.todoId)) ||
-                                        'Untitled'
-                                      ).replace(/\.[^/.]+$/, '')}
-                                    </span>
+                                  <div className="flex flex-1 flex-col gap-0.5">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-zinc-900">
+                                        {(
+                                          doc.name ||
+                                          (doc.todoId && todoTitles.get(doc.todoId)) ||
+                                          doc.type ||
+                                          'Untitled'
+                                        ).replace(/\.[^/.]+$/, '')}
+                                      </span>
+                                      {isContractDoc && (
+                                        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-700">
+                                          Signed
+                                        </span>
+                                      )}
+                                    </div>
                                     <span className="text-sm text-zinc-500">
                                       {doc.uploadedByName || 'Client'}
                                     </span>
                                   </div>
-                                  <span className="text-sm text-zinc-400">
+                                  {isContractDoc && signedDocUrl && (
+                                    <a
+                                      href={signedDocUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={e => e.stopPropagation()}
+                                      className="flex h-8 shrink-0 items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
+                                      title="View signed copy"
+                                    >
+                                      <SealIcon weight="fill" className="h-3.5 w-3.5" />
+                                      View signed copy
+                                    </a>
+                                  )}
+                                  <button
+                                    onClick={async e => {
+                                      e.stopPropagation();
+                                      setOpeningDocId(doc.id);
+                                      try {
+                                        const url = await getComplianceDocumentUrl(
+                                          doc.id,
+                                          agreement?.id
+                                        );
+                                        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                                      } finally {
+                                        setOpeningDocId(null);
+                                      }
+                                    }}
+                                    disabled={openingDocId === doc.id}
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 opacity-0 transition-all group-hover:opacity-100 hover:bg-zinc-50 hover:text-zinc-700 disabled:opacity-50"
+                                    title="Open document"
+                                  >
+                                    {openingDocId === doc.id ? (
+                                      <SpinnerGap className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Eye weight="bold" className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                  <span className="shrink-0 text-sm text-zinc-400">
                                     {formatRelativeTime(doc.createdAt)}
                                   </span>
                                 </div>
