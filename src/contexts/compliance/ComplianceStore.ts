@@ -43,6 +43,7 @@ export interface ComplianceState {
   strategyDocument: ApiDocument | null;
   isLoadingClientDetail: boolean;
   clientDetailError: string | null;
+  documentsError: string | null;
 
   // ─── Comments ────────────────────────────────────────────────
   comments: ComplianceComment[];
@@ -78,6 +79,7 @@ export interface ComplianceState {
   setStrategyDocument: (doc: ApiDocument | null) => void;
   setIsLoadingClientDetail: (loading: boolean) => void;
   setClientDetailError: (error: string | null) => void;
+  setDocumentsError: (error: string | null) => void;
 
   // Comments
   setComments: (comments: ComplianceComment[]) => void;
@@ -118,6 +120,7 @@ const initialState = {
   strategyDocument: null,
   isLoadingClientDetail: false,
   clientDetailError: null,
+  documentsError: null,
 
   comments: [],
   isLoadingComments: false,
@@ -158,6 +161,7 @@ export const complianceStore = createStore<ComplianceState>(set => ({
   setStrategyDocument: strategyDocument => set({ strategyDocument }),
   setIsLoadingClientDetail: isLoadingClientDetail => set({ isLoadingClientDetail }),
   setClientDetailError: clientDetailError => set({ clientDetailError }),
+  setDocumentsError: documentsError => set({ documentsError }),
 
   // Comments
   setComments: comments => set({ comments }),
@@ -179,6 +183,7 @@ export const complianceStore = createStore<ComplianceState>(set => ({
       strategyDocument: null,
       isLoadingClientDetail: false,
       clientDetailError: null,
+      documentsError: null,
       comments: [],
       isLoadingComments: false,
     }),

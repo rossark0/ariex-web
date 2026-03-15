@@ -378,7 +378,7 @@ export async function getAgreementDocuments(agreementId: string): Promise<ApiDoc
     return Array.isArray(result) ? result : (result.data ?? []);
   } catch (error) {
     console.error('[Compliance API] Failed to list agreement documents:', error);
-    return [];
+    throw error;
   }
 }
 
