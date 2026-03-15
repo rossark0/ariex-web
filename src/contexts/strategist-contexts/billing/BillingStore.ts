@@ -10,6 +10,26 @@ import type { Charge } from '@/lib/api/strategist.api';
 
 export type ChargeFilter = 'all' | 'pending' | 'paid' | 'failed' | 'cancelled';
 
+const BILLING_PAYMENT_SUCCESS_PATH = '/client/billing?payment=success';
+const BILLING_PAYMENT_CANCEL_PATH = '/client/billing?payment=cancel';
+
+function resolveFrontendBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+
+  return process.env.NEXT_PUBLIC_APP_URL || 'https://ariex-web-nine.vercel.app';
+}
+
+function buildAbsoluteUrl(baseUrl: string, pathOrUrl: string): string {
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    return pathOrUrl;
+  }
+
+  const normalizedPath = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
+  return `${baseUrl}${normalizedPath}`;
+}
+
 export interface BillingState {
   // Charges
   charges: Charge[];
@@ -19,6 +39,8 @@ export interface BillingState {
   // Filters
   chargeFilter: ChargeFilter;
   searchQuery: string;
+  paymentSuccessPath: string;
+  paymentCancelPath: string;
 
   // Selected charge (for detail view if needed)
   selectedCharge: Charge | null;
@@ -40,6 +62,7 @@ export interface BillingState {
   getTotalPending: () => number;
   getTotalPaid: () => number;
   getTotalFailed: () => number;
+  getPaymentRedirectUrls: () => { successUrl: string; cancelUrl: string };
 
   // Reset
   reset: () => void;
@@ -52,6 +75,8 @@ const initialState = {
 
   chargeFilter: 'all' as const,
   searchQuery: '',
+  paymentSuccessPath: BILLING_PAYMENT_SUCCESS_PATH,
+  paymentCancelPath: BILLING_PAYMENT_CANCEL_PATH,
 
   selectedCharge: null,
 };
@@ -116,6 +141,16 @@ export const billingStore = createStore<BillingState>((set, get) => ({
     return state.charges
       .filter((c: Charge) => c.status === 'failed')
       .reduce((sum: number, c: Charge) => sum + c.amount, 0);
+  },
+
+  getPaymentRedirectUrls: (): { successUrl: string; cancelUrl: string } => {
+    const state = get();
+    const baseUrl = resolveFrontendBaseUrl();
+
+    return {
+      successUrl: buildAbsoluteUrl(baseUrl, state.paymentSuccessPath),
+      cancelUrl: buildAbsoluteUrl(baseUrl, state.paymentCancelPath),
+    };
   },
 
   // Reset all state

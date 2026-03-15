@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { getAllChargesForClient } from '@/lib/api/client.api';
+import { getAllChargesForClient, verifyCharge, generatePaymentLink as generatePaymentLinkAPI } from '@/lib/api/client.api';
 import { useClientBilling, type ChargeFilter } from '@/contexts/client/ClientBillingStore';
 import { clientBillingStore } from '@/contexts/client/ClientBillingStore';
 import {
@@ -16,6 +16,9 @@ import {
 
 export default function ClientBillingPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingChargeId, setLoadingChargeId] = useState<string | null>(null);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Use client billing store
   const charges = useClientBilling(state => state.charges);
@@ -58,6 +61,56 @@ export default function ClientBillingPage() {
     clientBillingStore.setState({ searchQuery: query });
   };
 
+  const handleVerifyCharge = async (chargeId: string) => {
+    setLoadingChargeId(chargeId);
+    try {
+      await verifyCharge(chargeId);
+      await loadCharges();
+      clientBillingStore.setState({ chargesError: null });
+    } catch (error) {
+      console.error('Failed to verify charge:', error);
+      clientBillingStore.setState({
+        chargesError: error instanceof Error ? error.message : 'Failed to verify charge',
+      });
+    } finally {
+      setLoadingChargeId(null);
+    }
+  };
+
+  const handleGeneratePaymentLink = async (chargeId: string) => {
+    setLoadingChargeId(chargeId);
+    try {
+      const link = await generatePaymentLinkAPI(chargeId);
+      if (link) {
+        setGeneratedLink(link);
+        clientBillingStore.setState({ chargesError: null });
+      }
+    } catch (error) {
+      console.error('Failed to generate payment link:', error);
+      clientBillingStore.setState({
+        chargesError: error instanceof Error ? error.message : 'Failed to generate payment link',
+      });
+    } finally {
+      setLoadingChargeId(null);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!generatedLink) return;
+    try {
+      await navigator.clipboard.writeText(generatedLink);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleCloseSuccessMessage = () => {
+    setGeneratedLink(null);
+    setCopySuccess(false);
+  };
+
   return (
     <div className="flex min-h-full flex-col">
       <div className="flex-1">
@@ -79,6 +132,35 @@ export default function ClientBillingPage() {
           <div className="mx-auto w-full max-w-[1200px]">
             {chargesError && <ErrorMessage message={chargesError} />}
 
+            {/* Generated Payment Link Success Message */}
+            {generatedLink && (
+              <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-emerald-900">Payment Link Generated</h3>
+                    <p className="mt-1 text-sm text-emerald-700">Your payment link is ready to share:</p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <code className="flex-1 rounded bg-white px-3 py-2 font-mono text-xs text-zinc-600 break-all">
+                        {generatedLink}
+                      </code>
+                      <button
+                        onClick={handleCopyLink}
+                        className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700"
+                      >
+                        {copySuccess ? 'Copied!' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCloseSuccessMessage}
+                    className="text-emerald-400 hover:text-emerald-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Search and Filters */}
             <SearchBar value={searchQuery} onChange={handleSearchChange} onRefresh={loadCharges} />
 
@@ -86,7 +168,16 @@ export default function ClientBillingPage() {
             <FilterTabs activeFilter={chargeFilter} onFilterChange={handleFilterChange} />
 
             {/* Content */}
-            {isLoading ? <LoadingState /> : <ChargesTable charges={filteredCharges} />}
+            {isLoading ? (
+              <LoadingState />
+            ) : (
+              <ChargesTable
+                charges={filteredCharges}
+                onVerifyCharge={handleVerifyCharge}
+                onGeneratePaymentLink={handleGeneratePaymentLink}
+                loadingChargeId={loadingChargeId}
+              />
+            )}
           </div>
         </div>
       </div>
