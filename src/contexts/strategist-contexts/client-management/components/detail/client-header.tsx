@@ -78,11 +78,6 @@ export const ClientHeader = memo(function ClientHeader({
                 <span>{statusConfig.label}</span>
               </div>
 
-              {/* Add to Folder Button */}
-              {/* <button className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
-                <span>Add to folder</span>
-                <ChevronDown className="h-4 w-4" />
-              </button> */}
             </div>
 
             <button

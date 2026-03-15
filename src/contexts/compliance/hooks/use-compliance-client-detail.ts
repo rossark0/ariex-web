@@ -176,6 +176,7 @@ export function useComplianceClientDetail(clientId: string, strategistId: string
     strategyDocument,
     strategyMetadata,
     strategyPdfUrl,
+    resolvedStrategyDocId,
 
     // Timeline / status
     timeline,

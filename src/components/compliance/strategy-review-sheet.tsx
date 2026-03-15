@@ -23,6 +23,9 @@ import html2canvas from 'html2canvas';
 import { Button } from '@/components/ui/button';
 import { Chat } from '@/components/chat';
 import type { ApiClient } from '@/lib/api/strategist.api';
+import { addComplianceComment, addDocumentComment, getDocumentComments } from '@/lib/api/compliance.api';
+import type { GenericComment } from '@/lib/api/compliance.api';
+import { formatRelativeTime } from '@/utils/format-date';
 import type { ClientInfo } from '@/contexts/strategist-contexts/client-management/ClientDetailStore';
 import type { StrategySendData } from '@/components/strategy/strategy-sheet';
 
@@ -39,8 +42,12 @@ interface StrategyReviewSheetBaseProps {
   isOpen: boolean;
   onClose: () => void;
   documentTitle?: string;
+  /** The strategy document ID — used to load/post scoped comments */
+  documentId?: string | null;
   /** Used for internal chat with compliance/strategist */
   otherUserId?: string | null;
+  /** When true, comments are shown in read-only mode (no input box) */
+  readOnly?: boolean;
 }
 
 interface ComplianceReviewProps extends StrategyReviewSheetBaseProps {
@@ -169,6 +176,138 @@ function PageNavigation({
 }
 
 // ============================================================================
+// COMMENTS SECTION (compliance role — scoped to a strategy document)
+// ============================================================================
+
+export function CommentsSection({
+  documentId,
+  strategistUserId,
+  readOnly = false,
+}: {
+  documentId: string | null;
+  strategistUserId: string | null;
+  readOnly?: boolean;
+}) {
+  const [comments, setComments] = useState<GenericComment[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const loadComments = (id: string) => {
+    setIsLoading(true);
+    setFetchError(null);
+    getDocumentComments(id)
+      .then(result => {
+        setComments(result);
+      })
+      .catch(err => {
+        console.error('[CommentsSection] fetch error:', err);
+        setComments([]);
+        setFetchError(String(err));
+      })
+      .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    if (!documentId) {
+      setComments([]);
+      return;
+    }
+    loadComments(documentId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documentId]);
+
+  const canSubmit = !!newComment.trim() && !!documentId && !!strategistUserId;
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setIsSending(true);
+    try {
+      // 1. Write to compliance_comment table (compliance record)
+      await addComplianceComment({
+        strategistUserId: strategistUserId!,
+        documentId: documentId!,
+        body: newComment.trim(),
+      });
+      // 2. Write to generic comment table so strategist can read via GET /comment/{documentId}
+      const genericComment = await addDocumentComment(documentId!, newComment.trim());
+      setComments(prev => [genericComment, ...prev]);
+      setNewComment('');
+    } catch (err) {
+      console.error('[CommentsSection] submit error:', err);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        {isLoading ? (
+          <div className="flex items-center gap-2 py-4 text-sm text-zinc-400">
+            <SpinnerGap className="h-4 w-4 animate-spin" />
+            Loading comments…
+          </div>
+        ) : fetchError ? (
+          <div className="py-4">
+            <p className="text-sm text-red-500 break-all">{fetchError}</p>
+            <button
+              onClick={() => documentId && loadComments(documentId)}
+              className="mt-2 text-xs text-zinc-500 underline hover:text-zinc-700"
+            >Retry</button>
+          </div>
+        ) : !documentId ? (
+          <p className="py-4 text-sm text-zinc-400">Document not linked — comments unavailable.</p>
+        ) : comments.length === 0 ? (
+          <p className="py-4 text-sm text-zinc-400">No comments yet</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {comments.map(c => (
+              <div key={c.id} className="rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3">
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-sm font-medium text-zinc-700">Compliance</span>
+                  <span className="text-xs text-zinc-400">{formatRelativeTime(c.createdAt)}</span>
+                </div>
+                <p className="text-sm leading-relaxed text-zinc-600">{c.body}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {!readOnly && (
+        <div className="border-t border-zinc-100 p-4">
+          {!documentId && (
+            <p className="mb-2 text-xs text-amber-500">Strategy document not linked — can’t post comments.</p>
+          )}
+          <div className="flex gap-2">
+            <input
+              value={newComment}
+              onChange={e => setNewComment(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
+              placeholder="Add a comment…"
+              disabled={isSending || !documentId || !strategistUserId}
+              className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none disabled:opacity-50"
+            />
+            <button
+              onClick={handleSubmit}
+              disabled={!canSubmit || isSending}
+              className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40"
+            >
+              {isSending ? (
+                <SpinnerGap className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowUp weight="bold" className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // TIPTAP EDITOR (reused from strategy-sheet)
 // ============================================================================
 
@@ -180,6 +319,8 @@ interface TiptapEditorProps {
 }
 
 function TiptapEditor({ content, onChange }: TiptapEditorProps) {
+  const isInternalUpdate = useRef(false);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
@@ -194,14 +335,16 @@ function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       },
     },
     onUpdate({ editor: e }) {
+      isInternalUpdate.current = true;
       onChange(e.getHTML());
     },
   });
 
   useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
+    if (editor && !isInternalUpdate.current && content !== editor.getHTML()) {
       editor.commands.setContent(content);
     }
+    isInternalUpdate.current = false;
   }, [content, editor]);
 
   if (!editor) return null;
@@ -218,7 +361,9 @@ export function StrategyReviewSheet({
   isOpen,
   onClose,
   documentTitle,
+  documentId,
   otherUserId,
+  readOnly,
   ...props
 }: StrategyReviewSheetProps) {
   // If we are a strategist, extract the additional props
@@ -277,7 +422,8 @@ export function StrategyReviewSheet({
       setTitle(documentTitle || `Tax Strategy - ${clientName}`);
       setError(null);
     }
-  }, [isOpen, role, props, documentTitle]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, role, documentTitle]);
 
   // Prevent body scroll
   useEffect(() => {
@@ -583,60 +729,68 @@ export function StrategyReviewSheet({
             )}
           </div>
 
-          {/* RIGHT COLUMN — Chat */}
-          <div className="flex w-[380px] shrink-0 flex-col border-l border-zinc-200 bg-white px-4">
+          {/* RIGHT COLUMN — Comments / Chat */}
+          <div className="flex w-[380px] shrink-0 flex-col border-l border-zinc-200 bg-white">
             <div className="border-b border-zinc-200 px-6 py-4">
-              <h3 className="font-semibold text-zinc-900">
-                {role === 'compliance' ? 'Strategist Chat' : 'Compliance Chat'}
-              </h3>
+              <h3 className="font-semibold text-zinc-900">Comments</h3>
               <p className="text-sm text-zinc-500">
-                {role === 'compliance'
-                  ? 'Discuss this strategy with the strategist.'
-                  : 'Discuss this strategy with compliance.'}
+                {readOnly
+                  ? 'Compliance comments on this strategy.'
+                  : role === 'compliance'
+                  ? 'Leave comments on this strategy for the strategist.'
+                  : 'Compliance comments on this strategy.'}
               </p>
             </div>
 
-            <div className="flex-1 overflow-hidden px-4">
-              {role === 'strategist' && complianceUsers && complianceUsers.length > 1 && (
-                <div className="mt-2 mb-4">
-                  <label
-                    htmlFor="compliance-select"
-                    className="mb-1 block text-xs font-medium text-zinc-500"
-                  >
-                    Select Compliance Team Member
-                  </label>
-                  <select
-                    id="compliance-select"
-                    value={selectedUserId || ''}
-                    onChange={e => setSelectedUserId(e.target.value)}
-                    className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm ring-emerald-500 outline-none focus:border-emerald-500 focus:ring-1"
-                  >
-                    {complianceUsers.map((user: ApiClient & { complianceUserId?: string }) => (
-                      <option
-                        key={user.complianceUserId || user.id}
-                        value={user.complianceUserId || user.id}
-                      >
-                        {user.email} (ID: {(user.complianceUserId || user.id).slice(0, 8)}...)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+            {role === 'compliance' ? (
+              <CommentsSection
+                documentId={documentId ?? null}
+                strategistUserId={otherUserId ?? null}
+                readOnly={readOnly}
+              />
+            ) : (
+              <div className="flex-1 overflow-hidden px-4">
+                {complianceUsers && complianceUsers.length > 1 && (
+                  <div className="mt-2 mb-4">
+                    <label
+                      htmlFor="compliance-select"
+                      className="mb-1 block text-xs font-medium text-zinc-500"
+                    >
+                      Select Compliance Team Member
+                    </label>
+                    <select
+                      id="compliance-select"
+                      value={selectedUserId || ''}
+                      onChange={e => setSelectedUserId(e.target.value)}
+                      className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm ring-emerald-500 outline-none focus:border-emerald-500 focus:ring-1"
+                    >
+                      {complianceUsers.map((user: ApiClient & { complianceUserId?: string }) => (
+                        <option
+                          key={user.complianceUserId || user.id}
+                          value={user.complianceUserId || user.id}
+                        >
+                          {user.email} (ID: {(user.complianceUserId || user.id).slice(0, 8)}...)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-              {selectedUserId ? (
-                <Chat
-                  mode="single"
-                  otherUserId={selectedUserId}
-                  clientName={role === 'compliance' ? 'Strategist' : 'Compliance Team'}
-                  placeholder="Message..."
-                  showHeader={false}
-                />
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center p-8 text-center text-zinc-500">
-                  <p>Connecting to chat...</p>
-                </div>
-              )}
-            </div>
+                {selectedUserId ? (
+                  <Chat
+                    mode="single"
+                    otherUserId={selectedUserId}
+                    clientName="Compliance Team"
+                    placeholder="Message..."
+                    showHeader={false}
+                  />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center p-8 text-center text-zinc-500">
+                    <p>Connecting to chat...</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

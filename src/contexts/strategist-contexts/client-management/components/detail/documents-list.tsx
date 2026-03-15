@@ -13,7 +13,6 @@ import {
 } from '@phosphor-icons/react';
 import { Loader2 } from 'lucide-react';
 import { EmptyDocumentsIllustration } from '@/components/ui/empty-documents-illustration';
-import { DocumentPreviewModal } from '@/components/ui/document-preview-modal';
 import {
   formatRelativeTime,
   groupDocumentsByDate,
@@ -60,23 +59,7 @@ export const DocumentsList = memo(function DocumentsList({
   onViewDocument,
   onRequestDocuments,
 }: DocumentsListProps) {
-  // Preview state
-  const [previewDoc, setPreviewDoc] = useState<{
-    name: string;
-    url: string | null;
-    loading: boolean;
-  } | null>(null);
-
-  const handlePreview = async (doc: ApiDocument) => {
-    setPreviewDoc({ name: doc.name || 'Document', url: null, loading: true });
-    try {
-      const url = await getDownloadUrl(doc.id);
-      setPreviewDoc(prev => (prev ? { ...prev, url: url || null, loading: false } : null));
-    } catch {
-      setPreviewDoc(prev => (prev ? { ...prev, loading: false } : null));
-    }
-  };
-
+  const [openingDocId, setOpeningDocId] = useState<string | null>(null);
   // Separate pending requests from completed uploads
   const pendingTodos = documentTodos.filter(
     todo => todo.status !== 'completed' && todo.document?.uploadStatus !== 'FILE_UPLOADED'
@@ -259,14 +242,25 @@ export const DocumentsList = memo(function DocumentsList({
                           </a>
                         )}
                         <button
-                          onClick={e => {
+                          onClick={async e => {
                             e.stopPropagation();
-                            handlePreview(doc);
+                            setOpeningDocId(doc.id);
+                            try {
+                              const url = await getDownloadUrl(doc.id);
+                              if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                            } finally {
+                              setOpeningDocId(null);
+                            }
                           }}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 opacity-0 transition-all group-hover:opacity-100 hover:bg-zinc-50 hover:text-zinc-700"
-                          title="Preview document"
+                          disabled={openingDocId === doc.id}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 opacity-0 transition-all group-hover:opacity-100 hover:bg-zinc-50 hover:text-zinc-700 disabled:opacity-50"
+                          title="Open document"
                         >
-                          <Eye weight="bold" className="h-4 w-4" />
+                          {openingDocId === doc.id ? (
+                            <SpinnerGapIcon className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Eye weight="bold" className="h-4 w-4" />
+                          )}
                         </button>
                         <span className="shrink-0 text-sm text-zinc-400">
                           {formatRelativeTime(new Date(doc.createdAt))}
@@ -280,14 +274,7 @@ export const DocumentsList = memo(function DocumentsList({
           ))}
         </div>
       )}
-      {/* Preview Modal */}
-      <DocumentPreviewModal
-        isOpen={!!previewDoc}
-        onClose={() => setPreviewDoc(null)}
-        url={previewDoc?.url || null}
-        fileName={previewDoc?.name || ''}
-        isLoading={previewDoc?.loading}
-      />
+
     </div>
   );
 })

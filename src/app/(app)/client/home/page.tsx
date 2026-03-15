@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
 import { useRouter } from 'next/navigation';
-import { FileIcon, Check, SpinnerGap, Check as CheckIcon, DownloadSimple } from '@phosphor-icons/react';
+import { FileIcon, Check, SpinnerGap, Check as CheckIcon, DownloadSimple, Eye } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { EmptyDocumentsIllustration } from '@/components/ui/empty-documents-illustration';
 import { TodoUploadItem } from '@/components/documents/todo-upload-item';
@@ -158,6 +158,7 @@ export default function ClientDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  const [openingDocId, setOpeningDocId] = useState<string | null>(null);
   const { setSelection, setDownloadingSelection } = useUiStore();
   const { selectedAgreementId, setAgreements: setStoreAgreements } = useClientAgreementStore();
 
@@ -1216,10 +1217,33 @@ export default function ClientDashboardPage() {
                                 </span>
                               </div>
 
-                              {/* Timestamp */}
-                              <span className="text-sm text-zinc-400">
-                                {formatRelativeTime(doc.createdAt)}
-                              </span>
+                              {/* Timestamp + open button */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-zinc-400">
+                                  {formatRelativeTime(doc.createdAt)}
+                                </span>
+                                <button
+                                  onClick={async e => {
+                                    e.stopPropagation();
+                                    setOpeningDocId(doc.id);
+                                    try {
+                                      const url = await getDocumentDownloadUrl(doc.id);
+                                      if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                                    } finally {
+                                      setOpeningDocId(null);
+                                    }
+                                  }}
+                                  disabled={openingDocId === doc.id}
+                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-400 opacity-0 transition-opacity hover:bg-zinc-100 hover:text-zinc-700 group-hover:opacity-100 disabled:opacity-40"
+                                  title="Open document"
+                                >
+                                  {openingDocId === doc.id ? (
+                                    <SpinnerGap className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Eye className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+                              </div>
                             </div>
                           </div>
                         );
