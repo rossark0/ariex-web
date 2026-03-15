@@ -528,15 +528,26 @@ export async function getComplianceDocumentUrl(
 // ============================================================================
 
 /**
- * Add a compliance comment for a strategist or document.
- *
- * @param data.strategistUserId - Required: the strategist this comment is about
- * @param data.documentId - Optional: link comment to a specific document
- * @param data.body - The comment text
+ * Generic comment — returned by GET /comment
+ */
+export interface GenericComment {
+  id: string;
+  body: string;
+  documentId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  userId?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Add a compliance comment.
+ * Writes to the compliance_comment entity only (POST /compliance/add-comment).
+ * To also make the comment visible to the strategist, call addDocumentComment separately.
  */
 export async function addComplianceComment(data: {
   strategistUserId: string;
-  documentId?: string;
+  documentId: string;
   body: string;
 }): Promise<ComplianceComment> {
   return apiRequest<ComplianceComment>('/compliance/add-comment', {
@@ -546,18 +557,52 @@ export async function addComplianceComment(data: {
 }
 
 /**
- * Get comments for a document using the generic comment endpoint
+ * Add a comment to a document via the generic comment entity.
+ * Use this when the comment must be visible via GET /comment/{documentId}
+ *
+ * @param documentId - The document to attach the comment to
+ * @param body - The comment text
  */
-export async function getDocumentComments(documentId: string): Promise<ComplianceComment[]> {
-  try {
-    const result = await apiRequest<ComplianceComment[] | { data: ComplianceComment[] }>(
-      `/comment?filter=documentId||$eq||${documentId}&sort=createdAt,DESC`
-    );
-    return Array.isArray(result) ? result : (result.data ?? []);
-  } catch (error) {
-    console.error('[Compliance API] Failed to get document comments:', error);
-    return [];
+export async function addDocumentComment(
+  documentId: string,
+  body: string
+): Promise<GenericComment> {
+  return apiRequest<GenericComment>(`/comment/${documentId}`, {
+    method: 'POST',
+    body: JSON.stringify({ body }),
+  });
+}
+
+/**
+ * Get comments for a document — GET /comment/{documentId}
+ * Used by the strategist to read compliance comments.
+ */
+export async function getDocumentComments(documentId: string): Promise<GenericComment[]> {
+  // Primary: GET /comment/{documentId}
+  const primary = await apiRequest<unknown>(`/comment/${documentId}`).catch(e => ({ __error: String(e) }));
+
+  if ('__error' in (primary as any)) {
+    // Fallback: GET /comment?filter=documentId||$eq||{documentId}
+    try {
+      const fallback = await apiRequest<GenericComment[] | { data: GenericComment[] }>(
+        `/comment?filter=documentId||$eq||${documentId}&sort=createdAt,DESC`
+      );
+      return Array.isArray(fallback) ? fallback : (fallback.data ?? []);
+    } catch (err) {
+      console.error('[getDocumentComments] fallback also failed:', err);
+      return [];
+    }
   }
+
+  if (Array.isArray(primary)) return primary;
+  if (primary && typeof primary === 'object' && 'data' in primary && Array.isArray((primary as any).data)) {
+    return (primary as any).data;
+  }
+  // Single object returned — wrap in array
+  if (primary && typeof primary === 'object' && 'id' in (primary as any)) {
+    return [primary as GenericComment];
+  }
+  return [];
 }
 
 // ============================================================================

@@ -24,6 +24,7 @@ import { MiniFileStack } from '@/components/ui/mini-document-illustration';
 import type { ClientInfo } from '@/contexts/strategist-contexts/client-management/ClientDetailStore';
 import { Chat } from '@/components/chat';
 import type { ApiClient } from '@/lib/api/strategist.api';
+import { CommentsSection } from '@/components/compliance/strategy-review-sheet';
 
 // ============================================================================
 // TYPES
@@ -46,6 +47,8 @@ interface StrategySheetProps {
   complianceUserId?: string | null;
   /** List of all compliance team members for dropdown selection */
   complianceUsers?: (ApiClient & { complianceUserId?: string })[];
+  /** Strategy document ID — used to load compliance comments in the Comments tab */
+  documentId?: string | null;
 }
 
 export interface StrategySendData {
@@ -434,6 +437,7 @@ interface TiptapEditorProps {
 function TiptapEditor({ content, onChange, onOverflow }: TiptapEditorProps) {
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
+  const isInternalUpdate = useRef(false);
 
   const editor = useEditor({
     extensions: [
@@ -454,12 +458,17 @@ function TiptapEditor({ content, onChange, onOverflow }: TiptapEditorProps) {
       },
     },
     onUpdate: ({ editor }) => {
+      isInternalUpdate.current = true;
       onChange(editor.getHTML());
     },
   });
 
-  // Update editor content when prop changes
+  // Update editor content when prop changes (skip if the change came from the editor itself)
   useEffect(() => {
+    if (isInternalUpdate.current) {
+      isInternalUpdate.current = false;
+      return;
+    }
     if (editor && content && editor.getHTML() !== content) {
       editor.commands.setContent(content);
     }
@@ -874,6 +883,7 @@ export function StrategySheet({
   rejectedPdfUrl,
   complianceUserId,
   complianceUsers,
+  documentId,
 }: StrategySheetProps) {
   const strategistName = 'Ariex Tax Strategist';
   const clientName = client.user.name || 'Client';
@@ -893,8 +903,8 @@ export function StrategySheet({
   const [pages, setPages] = useState<Page[]>([createEmptyPage()]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
 
-  // Tab state for right panel (AI Assistant vs Compliance Chat)
-  const [activeTab, setActiveTab] = useState<'ai' | 'compliance'>('ai');
+  // Tab state for right panel (AI Assistant | Comments | Chat)
+  const [activeTab, setActiveTab] = useState<'ai' | 'comments' | 'chat'>('ai');
 
   // Selected compliance user for chat
   const [selectedComplianceUserId, setSelectedComplianceUserId] = useState<string | null>(
@@ -1415,15 +1425,26 @@ export function StrategySheet({
                   AI Assistant
                 </button>
                 <button
-                  onClick={() => setActiveTab('compliance')}
+                  onClick={() => setActiveTab('comments')}
                   className={cn(
                     'flex-1 border-b-2 py-3 text-sm font-semibold transition-colors',
-                    activeTab === 'compliance'
+                    activeTab === 'comments'
                       ? 'border-emerald-500 text-emerald-600'
                       : 'border-transparent text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700'
                   )}
                 >
-                  Compliance Chat
+                  Comments
+                </button>
+                <button
+                  onClick={() => setActiveTab('chat')}
+                  className={cn(
+                    'flex-1 border-b-2 py-3 text-sm font-semibold transition-colors',
+                    activeTab === 'chat'
+                      ? 'border-emerald-500 text-emerald-600'
+                      : 'border-transparent text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700'
+                  )}
+                >
+                  Chat
                 </button>
               </div>
             )}
@@ -1443,6 +1464,12 @@ export function StrategySheet({
                     onDeletePage={deletePage}
                   />
                 </div>
+              ) : activeTab === 'comments' ? (
+                <CommentsSection
+                  documentId={documentId ?? null}
+                  strategistUserId={null}
+                  readOnly={true}
+                />
               ) : (
                 <div className="flex h-full flex-col px-4">
                   {complianceUsers && complianceUsers.length > 1 && (

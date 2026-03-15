@@ -17,7 +17,6 @@ import { Clock } from '@phosphor-icons/react/dist/ssr';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { DocumentPreviewModal } from '@/components/ui/document-preview-modal';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -159,13 +158,7 @@ export function ActivityTimeline({
   const [deletingTodoId, setDeletingTodoId] = useState<string | null>(null);
   const [isAdvancingToStrategy, setIsAdvancingToStrategy] = useState(false);
   const [isDownloadingAgreement, setIsDownloadingAgreement] = useState(false);
-  // Preview state
-  const [previewDoc, setPreviewDoc] = useState<{
-    name: string;
-    url: string | null;
-    loading: boolean;
-  } | null>(null);
-
+  const [openingDocId, setOpeningDocId] = useState<string | null>(null);
   // ─── On-demand signed agreement download ────────────────────────
   const handleDownloadSignedAgreement = async () => {
     // If we already have the cached URL, open it directly
@@ -199,16 +192,6 @@ export function ActivityTimeline({
       alert('Failed to fetch the signed agreement. Please try again.');
     } finally {
       setIsDownloadingAgreement(false);
-    }
-  };
-
-  const handlePreviewDoc = async (docId: string, fileName: string) => {
-    setPreviewDoc({ name: fileName, url: null, loading: true });
-    try {
-      const url = await getDownloadUrl(docId);
-      setPreviewDoc(prev => (prev ? { ...prev, url: url || null, loading: false } : null));
-    } catch {
-      setPreviewDoc(prev => (prev ? { ...prev, loading: false } : null));
     }
   };
 
@@ -688,19 +671,27 @@ export function ActivityTimeline({
                               )}
                             </button>
                           )}
-                          {/* Preview button for uploaded docs */}
+                          {/* Open button for uploaded docs */}
                           {isUploaded && documentId && (
                             <button
-                              onClick={() =>
-                                handlePreviewDoc(
-                                  documentId,
-                                  uploadedFile?.originalName || todo.title
-                                )
-                              }
-                              className="rounded p-1 text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-200 hover:text-zinc-600"
-                              title="Preview document"
+                              onClick={async () => {
+                                setOpeningDocId(documentId);
+                                try {
+                                  const url = await getDownloadUrl(documentId);
+                                  if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                                } finally {
+                                  setOpeningDocId(null);
+                                }
+                              }}
+                              disabled={openingDocId === documentId}
+                              className="rounded p-1 text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-200 hover:text-zinc-600 disabled:opacity-50"
+                              title="Open document"
                             >
-                              <Eye weight="bold" className="h-3.5 w-3.5" />
+                              {openingDocId === documentId ? (
+                                <SpinnerGap className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Eye weight="bold" className="h-3.5 w-3.5" />
+                              )}
                             </button>
                           )}
                           {/* Delete button - only show if not uploaded */}
@@ -996,14 +987,7 @@ export function ActivityTimeline({
           </div>
         </div>
       </div>
-      {/* Preview Modal */}
-      <DocumentPreviewModal
-        isOpen={!!previewDoc}
-        onClose={() => setPreviewDoc(null)}
-        url={previewDoc?.url || null}
-        fileName={previewDoc?.name || ''}
-        isLoading={previewDoc?.loading}
-      />
+
     </div>
   );
 }

@@ -21,6 +21,7 @@ import {
   getDocumentDownloadUrl,
   getSignedDocumentDownloadUrl,
   syncAgreementSignatureStatus,
+  reconcileAgreementStatus,
   updateAgreementStatus,
   type ClientDashboardData,
   type ClientAgreement,
@@ -33,6 +34,8 @@ import {
   logAgreements,
   logAgreementStatus,
 } from '@/types/agreement';
+import { useClientAgreementStore } from '@/contexts/client/ClientAgreementStore';
+import { AgreementSelector } from '@/contexts/strategist-contexts/client-management/components/detail/agreement-selector';
 
 // ============================================================================
 // ONBOARDING STEPS
@@ -676,6 +679,8 @@ interface PaymentStepProps extends StepProps {
   pendingAgreement: ClientAgreement | null;
   autoVerify?: boolean; // Trigger auto-verification on mount
   setShouldAutoVerify?: (value: boolean) => void;
+  /** Called after the DB is reverted to PENDING_SIGNATURE — should refresh data then go back */
+  onRevertedToSignature?: () => Promise<void>;
 }
 
 function PaymentStep({
@@ -686,6 +691,7 @@ function PaymentStep({
   dashboardData,
   autoVerify = false,
   setShouldAutoVerify,
+  onRevertedToSignature,
 }: PaymentStepProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
@@ -695,6 +701,47 @@ function PaymentStep({
   const [error, setError] = useState<string | null>(null);
   const hasFetchedRef = useRef(false);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ── Signature reconciliation ─────────────────────────────────────────────
+  // Guard against corrupted state: if the DB says PENDING_PAYMENT but the
+  // client hasn't actually signed yet, revert to PENDING_SIGNATURE and go back.
+  useEffect(() => {
+    if (
+      !pendingAgreement?.id ||
+      pendingAgreement.status !== AgreementStatus.PENDING_PAYMENT
+    ) return;
+
+    let cancelled = false;
+    (async () => {
+      // If there's no envelope ID we can't verify — but the state is still
+      // potentially corrupted, so treat it as "needs revert" conservatively.
+      let shouldRevert = !pendingAgreement.signatureEnvelopeId;
+
+      if (!shouldRevert) {
+        const result = await reconcileAgreementStatus(pendingAgreement.id);
+        shouldRevert = result.shouldRevertToSignature;
+      }
+
+      if (cancelled) return;
+      if (shouldRevert) {
+        console.warn(
+          '[PaymentStep] Reverting status to PENDING_SIGNATURE — client has not signed yet'
+        );
+        await updateAgreementStatus(pendingAgreement.id, AgreementStatus.PENDING_SIGNATURE).catch(
+          () => {}
+        );
+        if (onRevertedToSignature) {
+          await onRevertedToSignature();
+        } else {
+          onBack();
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAgreement?.id]);
+  // ─────────────────────────────────────────────────────────────────────────
   
   // Auto-verification state
   const [isAutoVerifying, setIsAutoVerifying] = useState(autoVerify);
@@ -1296,6 +1343,12 @@ function OnboardingContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [shouldAutoVerify, setShouldAutoVerify] = useState(false);
 
+  const {
+    selectedAgreementId,
+    setAgreements: setStoreAgreements,
+    setSelectedAgreementId,
+  } = useClientAgreementStore();
+
   // Track if we came from signing or payment to prevent race conditions
   const cameFromSigning = useRef(false);
   const cameFromPayment = useRef(false);
@@ -1315,11 +1368,21 @@ function OnboardingContent() {
       // This ensures document, todo, and agreement are updated
       (async () => {
         try {
-          // Get agreements to find the one that was just signed
+          // Get agreements to find the one that was just signed.
+          // The agreement will be in PENDING_SIGNATURE at this point (not DRAFT),
+          // since it was already sent to the client for signing.
           const data = await getClientDashboardData();
-          const pendingAgreement = data?.agreements?.find(
-            a => a.status === AgreementStatus.DRAFT && a.signatureCeremonyUrl
-          );
+          const pendingAgreement =
+            data?.agreements?.find(
+              a => a.status === AgreementStatus.PENDING_SIGNATURE && a.signatureCeremonyUrl
+            ) ??
+            // Fallback: any agreement with a ceremony URL that isn't fully complete yet
+            data?.agreements?.find(
+              a =>
+                a.signatureCeremonyUrl &&
+                a.status !== AgreementStatus.COMPLETED &&
+                a.status !== AgreementStatus.CANCELLED
+            );
 
           if (pendingAgreement) {
             console.log('[Onboarding] Syncing signature for agreement:', pendingAgreement.id);
@@ -1378,6 +1441,9 @@ function OnboardingContent() {
         const data = await getClientDashboardData();
         setDashboardData(data);
 
+        // Populate shared store so the switcher can read/set the selected agreement
+        if (data?.agreements) setStoreAgreements(data.agreements);
+
         // 🟣 Debug: Log agreements for client
         if (data?.agreements) {
           logAgreements(
@@ -1419,18 +1485,37 @@ function OnboardingContent() {
     }
   }, [user]);
 
-  // Find the most relevant agreement for onboarding:
-  // 1. First, look for agreement awaiting payment (PENDING_PAYMENT)
-  // 2. Then, look for agreement awaiting signature (PENDING_SIGNATURE)
-  // 3. Finally, fallback to any signed agreement
+  // Find the most relevant agreement for onboarding.
+  // If the client has explicitly selected one via the switcher, honour that choice.
+  // Otherwise fall back to status-based priority.
   const pendingAgreement =
+    // Explicit selection from the switcher
+    (selectedAgreementId
+      ? (dashboardData?.agreements.find(a => a.id === selectedAgreementId) ?? null)
+      : null) ??
     // Priority 1: Agreement awaiting payment
-    dashboardData?.agreements.find(a => a.status === AgreementStatus.PENDING_PAYMENT) ||
+    dashboardData?.agreements.find(a => a.status === AgreementStatus.PENDING_PAYMENT) ??
     // Priority 2: Agreement awaiting signature
-    dashboardData?.agreements.find(a => a.status === AgreementStatus.PENDING_SIGNATURE) ||
+    dashboardData?.agreements.find(a => a.status === AgreementStatus.PENDING_SIGNATURE) ??
     // Priority 3: Any agreement that's been signed (beyond PENDING_SIGNATURE)
-    dashboardData?.agreements.find(a => isAgreementSigned(a.status)) ||
+    dashboardData?.agreements.find(a => isAgreementSigned(a.status)) ??
     null;
+
+  // Recalculate the correct step whenever the active agreement changes via the switcher
+  useEffect(() => {
+    if (!pendingAgreement || isLoading) return;
+    setShouldAutoVerify(false);
+    if (isAgreementPaid(pendingAgreement.status)) {
+      setCurrentStep(3); // complete
+    } else if (isAgreementSigned(pendingAgreement.status)) {
+      setCurrentStep(2); // payment
+    } else if (pendingAgreement.status === AgreementStatus.PENDING_SIGNATURE) {
+      setCurrentStep(1); // agreement
+    } else {
+      setCurrentStep(0); // profile
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAgreement?.id]);
 
   const handleNext = () => {
     if (currentStep < STEPS.length - 1) {
@@ -1460,11 +1545,21 @@ function OnboardingContent() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-sm font-medium text-zinc-500 uppercase">ARIEX AI</span>
+      {/* Header — fixed so the agreement switcher is always visible */}
+      <header className="fixed inset-x-0 top-0 z-50 flex items-center justify-between border-b border-zinc-100 bg-white/95 px-6 py-3 backdrop-blur-sm">
+        {/* Agreement switcher replaces the logo */}
+        <div className="flex items-center">
+          {(dashboardData?.agreements?.length ?? 0) > 1 ? (
+            <AgreementSelector
+              agreements={dashboardData!.agreements}
+              selectedAgreementId={pendingAgreement?.id ?? null}
+              onSelect={setSelectedAgreementId}
+            />
+          ) : (
+            <span className="font-mono text-sm font-medium text-zinc-500 uppercase">ARIEX AI</span>
+          )}
         </div>
+
         <div className="flex items-center gap-4">
           <span className="text-sm text-zinc-500">{user?.email}</span>
           <button
@@ -1475,6 +1570,9 @@ function OnboardingContent() {
           </button>
         </div>
       </header>
+
+      {/* Push content below fixed header */}
+      <div className="h-14" />
 
       {/* Progress dots */}
       <StepIndicator currentStep={currentStep} steps={STEPS} />
@@ -1491,6 +1589,7 @@ function OnboardingContent() {
           {/* Step Content */}
           {currentStepData.id === 'profile' && (
             <ProfileStep
+              key={pendingAgreement?.id ?? 'none'}
               onContinue={handleNext}
               onBack={handleBack}
               dashboardData={dashboardData}
@@ -1501,6 +1600,7 @@ function OnboardingContent() {
           )}
           {currentStepData.id === 'agreement' && (
             <AgreementStep
+              key={pendingAgreement?.id ?? 'none'}
               onContinue={handleNext}
               onBack={handleBack}
               dashboardData={dashboardData}
@@ -1520,6 +1620,7 @@ function OnboardingContent() {
           )}
           {currentStepData.id === 'payment' && (
             <PaymentStep
+              key={pendingAgreement?.id ?? 'none'}
               onContinue={handleNext}
               onBack={handleBack}
               dashboardData={dashboardData}
@@ -1528,9 +1629,43 @@ function OnboardingContent() {
               pendingAgreement={pendingAgreement}
               autoVerify={shouldAutoVerify}
               setShouldAutoVerify={setShouldAutoVerify}
+              onRevertedToSignature={async () => {
+                // Refresh dashboard data so Agreement step sees PENDING_SIGNATURE, not PENDING_PAYMENT.
+                // If the backend revert failed, force-patch local state directly so the
+                // Agreement step never shows a false "Agreement Signed" screen.
+                try {
+                  const data = await getClientDashboardData();
+                  if (data?.agreements) setStoreAgreements(data.agreements);
+
+                  // Force PENDING_SIGNATURE in local state regardless of what the API returned
+                  const patched = {
+                    ...data,
+                    agreements: (data?.agreements ?? []).map(a =>
+                      a.id === pendingAgreement?.id
+                        ? { ...a, status: AgreementStatus.PENDING_SIGNATURE, signedAt: undefined }
+                        : a
+                    ),
+                  };
+                  setDashboardData(patched as typeof data);
+                } catch (err) {
+                  console.error('[Onboarding] Failed to refresh after revert:', err);
+                  // Still force-patch in case of fetch error
+                  setDashboardData(prev => ({
+                    ...prev!,
+                    agreements: (prev?.agreements ?? []).map(a =>
+                      a.id === pendingAgreement?.id
+                        ? { ...a, status: AgreementStatus.PENDING_SIGNATURE, signedAt: undefined }
+                        : a
+                    ),
+                  }));
+                }
+                handleBack();
+              }}
             />
           )}
-          {currentStepData.id === 'complete' && <CompleteStep dashboardData={dashboardData} />}
+          {currentStepData.id === 'complete' && (
+            <CompleteStep key={pendingAgreement?.id ?? 'none'} dashboardData={dashboardData} />
+          )}
         </div>
       </main>
 

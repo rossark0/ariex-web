@@ -605,13 +605,21 @@ export async function syncAgreementSignatureStatus(
       return { success: false, error: 'Could not get envelope details from SignatureAPI' };
     }
 
-    // Only advance to PENDING_PAYMENT when the envelope is fully completed
-    // (all signers have signed). With dual signing (client + strategist), the
-    // envelope stays in_progress until both finish. Individual recipient status
-    // of "completed" is NOT enough — we need ALL parties to have signed.
+    // Advance to PENDING_PAYMENT when:
+    //  1. The envelope is fully completed (all parties signed), OR
+    //  2. The client recipient has completed their signing even if the envelope
+    //     is still "in_progress" (awaiting strategist co-sign). The client has
+    //     done their part — we should unblock the payment step immediately.
     const isEnvelopeCompleted = envelopeDetails.status === 'completed';
+    const clientRecipient = envelopeDetails.recipients?.find(
+      (r: any) => r.key === 'client' || r.role === 'client' || r.type === 'signer'
+    );
+    const isClientSigned =
+      isEnvelopeCompleted ||
+      clientRecipient?.status === 'completed' ||
+      clientRecipient?.signedAt != null;
 
-    if (isEnvelopeCompleted) {
+    if (isClientSigned) {
       let documentSignSuccess = false;
       let agreementUpdateSuccess = false;
 
@@ -669,6 +677,42 @@ export async function syncAgreementSignatureStatus(
     return { success: true, status: envelopeDetails.status };
   } catch {
     return { success: false, error: 'Failed to sync status' };
+  }
+}
+
+/**
+ * Reconcile agreement status against the real envelope state.
+ * Use this when the DB says PENDING_PAYMENT but you need to verify the client
+ * has actually signed. Returns `shouldRevertToSignature: true` when the DB is
+ * ahead of reality and the agreement should be rolled back to PENDING_SIGNATURE.
+ */
+export async function reconcileAgreementStatus(
+  agreementId: string
+): Promise<{ shouldRevertToSignature: boolean; envelopeStatus?: string }> {
+  try {
+    const agreements = await getClientAgreements();
+    const agreement = agreements.find(a => a.id === agreementId);
+    if (!agreement?.signatureEnvelopeId) return { shouldRevertToSignature: false };
+
+    const envelopeDetails = await getEnvelopeDetails(agreement.signatureEnvelopeId);
+    if (!envelopeDetails) return { shouldRevertToSignature: false };
+
+    const clientRecipient = envelopeDetails.recipients?.find(
+      (r: any) => r.key === 'client' || r.role === 'client' || r.type === 'signer'
+    );
+
+    const clientHasSigned =
+      envelopeDetails.status === 'completed' ||
+      clientRecipient?.status === 'completed' ||
+      clientRecipient?.signedAt != null;
+
+    return {
+      shouldRevertToSignature: !clientHasSigned,
+      envelopeStatus: envelopeDetails.status,
+    };
+  } catch {
+    // If we can't reach SignatureAPI, don't revert — fail safe
+    return { shouldRevertToSignature: false };
   }
 }
 

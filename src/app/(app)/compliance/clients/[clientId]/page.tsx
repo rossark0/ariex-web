@@ -347,6 +347,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
     strategyDocument,
     strategyMetadata,
     strategyPdfUrl,
+    resolvedStrategyDocId,
     timeline,
     statusKey,
     statusConfig,
@@ -633,11 +634,6 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                   </div>
                 )}
 
-                {/* Add to Folder Button */}
-                <button className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
-                  <span>Add to folder</span>
-                  <ChevronDown className="h-4 w-4" />
-                </button>
               </div>
 
               {/* Strategy button — same position as strategist's client-header.tsx */}
@@ -1212,6 +1208,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
           }}
           pdfUrl={strategyPdfUrl}
           documentTitle={strategyDocument?.name?.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan'}
+          documentId={resolvedStrategyDocId ?? strategyDocument?.id ?? null}
           otherUserId={strategistId}
           onApprove={
             isComplianceReview

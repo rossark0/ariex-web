@@ -73,6 +73,7 @@ import {
   selectStep5State,
   selectStrategyMetadata,
   selectStrategyDoc,
+  selectStrategyApiDoc,
   selectTodoTitles,
   selectHasPaymentReceived,
 } from '@/contexts/strategist-contexts/client-management/ClientDetailStore';
@@ -192,6 +193,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
   const step5State = useClientDetailStore(selectStep5State);
   const strategyMetadata = useClientDetailStore(selectStrategyMetadata);
   const strategyDoc = useClientDetailStore(selectStrategyDoc);
+  const strategyApiDoc = useClientDetailStore(selectStrategyApiDoc);
   const todoTitles = useClientDetailStore(selectTodoTitles);
 
   // ─── Store Actions ──────────────────────────────────────────
@@ -397,7 +399,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
       </div>
 
       {/* Strategy Sheet (edit mode) */}
-      {signedAgreement && (
+      {signedAgreement && isStrategySheetOpen && (
         <StrategySheet
           client={clientInfo}
           agreementId={signedAgreement.id}
@@ -407,23 +409,23 @@ export default function StrategistClientDetailPage({ params }: Props) {
           rejectedPdfUrl={strategyReviewPdfUrl}
           complianceUserId={complianceUserId}
           complianceUsers={complianceUsers}
+          documentId={strategyApiDoc?.id ?? null}
         />
       )}
 
-      {/* Strategy Review Sheet (edit + chat with compliance) */}
-      {signedAgreement && clientInfo && (
+      {/* Strategy Review Sheet — read-only PDF viewer of the sent strategy */}
+      {isStrategyReviewOpen && (
         <StrategyReviewSheet
-          role="strategist"
+          role="compliance"
           isOpen={isStrategyReviewOpen}
           onClose={() => setIsStrategyReviewOpen(false)}
-          client={clientInfo}
-          agreementId={signedAgreement.id}
+          pdfUrl={strategyReviewPdfUrl ?? ''}
+          readOnly={true}
           documentTitle={
-            strategyDoc?.originalName?.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan'
+            strategyApiDoc?.originalName?.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan'
           }
+          documentId={strategyApiDoc?.id ?? null}
           otherUserId={complianceUserId}
-          complianceUsers={complianceUsers}
-          onSend={sendRevisedStrategy}
         />
       )}
 
