@@ -13,7 +13,7 @@ const navItems = [
   { href: '/client/home', label: 'Home', icon: House },
   // { href: '/client/documents', label: 'Documents', icon: Upload },
   // { href: '/client/agreements', label: 'Agreements', icon: FileText },
-  { href: '/client/payments', label: 'Payments', icon: CreditCard },
+  { href: '/client/billing', label: 'Billing', icon: CreditCard },
 ];
 
 export default function ClientAppLayout({ children }: { children: React.ReactNode }) {

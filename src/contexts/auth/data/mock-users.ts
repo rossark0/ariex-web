@@ -1,6 +1,7 @@
 import { User, Role } from '@/types/user';
 import { getStrategistById } from '@/lib/mocks/strategist-full';
 import { getFullClientById } from '@/lib/mocks/client-full';
+import { getClientProfile } from '@/lib/api/client.api';
 
 export interface MockUserWithPassword {
   user: User;
@@ -105,17 +106,21 @@ export function authenticateUser(
 
 /**
  * Get full profile data for a user based on their role
+ * For CLIENT role, fetches profile from API. For other roles, returns mock data.
  */
-export function getFullUserProfile(user: User) {
+export async function getFullUserProfile(user: User) {
   switch (user.role) {
     case 'STRATEGIST':
       return getStrategistById('strategist-001'); // Maps to Alex Morgan
     case 'CLIENT':
-      // Map user IDs to client IDs - using Robert Wilson for the single client login
-      if (user.id === 'user-client-001') {
-        return getFullClientById('client-005'); // Robert Wilson (onboarding client)
+      // Fetch client profile from API
+      try {
+        const profile = await getClientProfile();
+        return profile;
+      } catch (error) {
+        console.error('[MockUsers] Failed to fetch client profile:', error);
+        return null;
       }
-      return null;
     case 'COMPLIANCE':
       // Return compliance profile when we have it
       return { user };
