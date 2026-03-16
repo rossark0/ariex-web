@@ -235,10 +235,10 @@ export const DocumentsList = memo(function DocumentsList({
                             rel="noopener noreferrer"
                             onClick={e => e.stopPropagation()}
                             className="flex h-8 shrink-0 items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
-                            title="View signed copy"
+                            title="Download signed copy"
                           >
                             <SealIcon weight="fill" className="h-3.5 w-3.5" />
-                            View signed copy
+                            Download signed copy
                           </a>
                         )}
                         <button

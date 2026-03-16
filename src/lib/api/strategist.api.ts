@@ -1365,6 +1365,7 @@ export async function getAllCharges(): Promise<Charge[]> {
 import {
   getEnvelopeDetails,
   createCeremonyForRecipient,
+  getRecipientDetails,
   getSignedDocumentUrl,
   findEnvelopeByClientId,
 } from '@/lib/signature/signatureapi';
@@ -1541,8 +1542,18 @@ export async function getStrategistSigningInfo(
           recipientId: strategistRecipientId,
         });
         strategistCeremonyUrl = ceremony.ceremonyUrl;
-      } catch {
-        // Keep the original URL — it may still work
+      } catch (err) {
+        console.warn('[SigningInfo] createCeremonyForRecipient failed, fetching existing ceremony URL:', err);
+        // A 409 means a ceremony already exists — fetch the current URL from the recipient
+        try {
+          const recipientDetails = await getRecipientDetails(strategistRecipientId);
+          if (recipientDetails?.ceremonyUrl) {
+            strategistCeremonyUrl = recipientDetails.ceremonyUrl;
+            console.log('[SigningInfo] Got existing ceremony URL from recipient details');
+          }
+        } catch {
+          // Keep whatever URL we have as last resort
+        }
       }
     }
 
