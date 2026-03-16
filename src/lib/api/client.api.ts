@@ -960,11 +960,8 @@ export async function generatePaymentLink(
   }
 ): Promise<string | null> {
   try {
-    // Build the base URL - use window.location.origin on client, fallback for SSR
-    const baseUrl =
-      typeof window !== 'undefined'
-        ? window.location.origin
-        : process.env.NEXT_PUBLIC_APP_URL || 'https://ariex-web-nine.vercel.app';
+    // Build the base URL
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ariex-web-nine.vercel.app';
 
     const body: Record<string, string> = {
       url: baseUrl,

@@ -1412,7 +1412,7 @@ function OnboardingContent() {
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
     if (paymentStatus === 'success') {
-      console.log('[Onboarding] Payment success redirect - staying on payment step for auto-verification');
+      console.log('[Onboarding] Payment success redirect - advancing agreement status immediately');
       
       cameFromPayment.current = true;
       setShouldAutoVerify(true); // Trigger auto-verification in PaymentStep
@@ -1420,6 +1420,39 @@ function OnboardingContent() {
       setIsLoading(false);
       // Remove the query param from URL
       window.history.replaceState({}, '', '/client/onboarding');
+
+      // ?payment=success is Stripe's success_url redirect — payment is confirmed.
+      // Advance the agreement status immediately without waiting for the charge webhook.
+      (async () => {
+        try {
+          const data = await getClientDashboardData();
+          const toPay = data?.agreements.find(
+            a => a.status === AgreementStatus.PENDING_PAYMENT
+          );
+          if (toPay) {
+            const advanced = await updateAgreementStatus(
+              toPay.id,
+              AgreementStatus.PENDING_TODOS_COMPLETION
+            );
+            if (advanced) {
+              console.log('[Onboarding] ✅ Agreement advanced to PENDING_TODOS_COMPLETION after Stripe success');
+              // Optimistically patch local state and skip the auto-verify waiting screen
+              setDashboardData(prev => ({
+                ...prev!,
+                agreements: (prev?.agreements ?? []).map(a =>
+                  a.id === toPay.id
+                    ? { ...a, status: AgreementStatus.PENDING_TODOS_COMPLETION }
+                    : a
+                ),
+              }));
+              setShouldAutoVerify(false);
+              setCurrentStep(3); // advance straight to "complete" step
+            }
+          }
+        } catch (e) {
+          console.warn('[Onboarding] Could not advance agreement status from payment success:', e);
+        }
+      })();
     } else if (paymentStatus === 'cancel') {
       console.log('[Onboarding] Payment cancelled, staying on payment step');
       cameFromPayment.current = true;

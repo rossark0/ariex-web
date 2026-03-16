@@ -1284,10 +1284,7 @@ export async function generatePaymentLink(
 ): Promise<string | null> {
   try {
     // Build the base URL
-    const baseUrl =
-      typeof window !== 'undefined'
-        ? window.location.origin
-        : process.env.NEXT_PUBLIC_APP_URL || 'https://ariex-web-nine.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ariex-web-nine.vercel.app';
 
     const body: Record<string, string> = {
       url: baseUrl,
@@ -1430,7 +1427,8 @@ export interface StrategistSigningInfo {
  * URL if it has expired, and fetches the signed PDF URL when available.
  */
 export async function getStrategistSigningInfo(
-  agreementId: string
+  agreementId: string,
+  opts?: { skipCeremonyRefresh?: boolean }
 ): Promise<StrategistSigningInfo> {
   const fallback: StrategistSigningInfo = {
     strategistCeremonyUrl: null,
@@ -1536,7 +1534,9 @@ export async function getStrategistSigningInfo(
 
     // If strategist hasn't signed and envelope isn't done, try to ensure we
     // have a valid ceremony URL (they expire). Create a fresh one if needed.
-    if (!strategistHasSigned && !envelopeCompleted && strategistRecipientId) {
+    // Skip ceremony refresh if the caller signals a signing session is in progress —
+    // creating a new ceremony revokes the one the strategist currently has open.
+    if (!strategistHasSigned && !envelopeCompleted && strategistRecipientId && !opts?.skipCeremonyRefresh) {
       try {
         const ceremony = await createCeremonyForRecipient({
           recipientId: strategistRecipientId,
