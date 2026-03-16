@@ -334,65 +334,26 @@ export default function ClientDashboardPage() {
         // }
 
         // ============================================================================
-        // ACCESS CONTROL: Client must have signed agreement AND paid to access /home
+        // ACCESS CONTROL: Client must have at least ONE signed+paid agreement to
+        // access /home. A new unsigned/unpaid agreement must NOT kick them out.
         // ============================================================================
-        const serviceAgreement =
-          data.agreements.length > 0
-            ? data.agreements.find(
-                a => isAgreementSigned(a.status) || syncedStatuses[a.id] === 'completed'
-              ) || data.agreements[0]
-            : null;
+        // An agreement qualifies if:
+        //   (a) its status has moved past PENDING_PAYMENT (normal webhook path), OR
+        //   (b) the backend marked paymentStatus = 'paid' (webhook updated the field
+        //       but not the status yet — race condition safety net)
+        const hasSignedAndPaidAgreement = data.agreements.some(
+          a =>
+            isAgreementSigned(a.status) &&
+            (isAgreementPaid(a.status) || a.paymentStatus === 'paid')
+        );
 
-        // Check if agreement is signed (using helper)
-        const envelopeIsCompleted =
-          serviceAgreement && syncedStatuses[serviceAgreement.id] === 'completed';
-        const backendSaysSignedOrComplete =
-          serviceAgreement && isAgreementSigned(serviceAgreement.status);
-        const agreementSigned =
-          envelopeIsCompleted || backendSaysSignedOrComplete || !!serviceAgreement?.signedAt;
-
-        // Check if payment is completed (using helper)
-        const paymentCompleted = serviceAgreement && isAgreementPaid(serviceAgreement.status);
-
-        // Redirect to onboarding if agreement not signed OR payment not completed
-        if (!agreementSigned || !paymentCompleted) {
-          console.log(
-            '[ClientDashboard] Access denied - Agreement signed:',
-            agreementSigned,
-            'Payment completed:',
-            paymentCompleted
-          );
-          console.log('[ClientDashboard] Redirecting to onboarding');
+        if (!hasSignedAndPaidAgreement) {
+          console.log('[ClientDashboard] No signed+paid agreement found, redirecting to onboarding');
           router.replace('/client/onboarding');
           return;
         }
 
-        console.log('[ClientDashboard] Access granted - Agreement signed and payment completed');
-
-        // Fetch real charge amount and signed document URL for the signed agreement
-        if (serviceAgreement) {
-          try {
-            const charges = await getChargesForAgreement(serviceAgreement.id);
-            const charge = charges.find(c => c.status === 'paid') || charges[0];
-            if (charge?.amount && charge.amount > 0) {
-              setChargeAmount(charge.amount);
-            }
-          } catch (e) {
-            console.error('[ClientDashboard] Failed to fetch charges:', e);
-          }
-
-          if (agreementSigned) {
-            try {
-              const url = await getSignedDocumentDownloadUrl(
-                serviceAgreement.signedDocumentFileId,
-                serviceAgreement.signatureEnvelopeId
-              );
-              if (url) setSignedAgreementUrl(url);
-            } catch (e) {
-              console.error('[ClientDashboard] Failed to fetch signed doc URL:', e);
-            }
-          }
-        }
+        console.log('[ClientDashboard] Access granted');
 
         setError(null);
       } catch (err) {
@@ -425,6 +386,70 @@ export default function ClientDashboardPage() {
       console.error('[ClientDashboard] Failed to refresh:', err);
     }
   }, []);
+
+  // Re-fetch charge amount and signed document URL whenever the active agreement changes.
+  // This must be a separate effect so switching agreements always reflects the correct data.
+  useEffect(() => {
+    if (!dashboardData?.agreements) return;
+
+    const STATUS_PRIORITY_LOCAL: Record<string, number> = {
+      [AgreementStatus.COMPLETED]: 7,
+      [AgreementStatus.PENDING_STRATEGY_REVIEW]: 6,
+      [AgreementStatus.PENDING_STRATEGY]: 5,
+      [AgreementStatus.PENDING_TODOS_COMPLETION]: 4,
+      [AgreementStatus.PENDING_PAYMENT]: 3,
+      [AgreementStatus.PENDING_SIGNATURE]: 2,
+      [AgreementStatus.DRAFT]: 1,
+      [AgreementStatus.CANCELLED]: 0,
+    };
+
+    const sorted = [...dashboardData.agreements].sort((a, b) => {
+      const pa = STATUS_PRIORITY_LOCAL[a.status] ?? 0;
+      const pb = STATUS_PRIORITY_LOCAL[b.status] ?? 0;
+      if (pb !== pa) return pb - pa;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    const active =
+      (selectedAgreementId
+        ? dashboardData.agreements.find(a => a.id === selectedAgreementId)
+        : null) ??
+      sorted[0] ??
+      null;
+
+    if (!active) return;
+
+    let cancelled = false;
+
+    // Reset stale values immediately so old data isn't shown during fetch
+    setChargeAmount(null);
+    setSignedAgreementUrl(null);
+
+    (async () => {
+      try {
+        const charges = await getChargesForAgreement(active.id);
+        if (cancelled) return;
+        const charge = charges.find(c => c.status === 'paid') || charges[0];
+        if (charge?.amount && charge.amount > 0) setChargeAmount(charge.amount);
+      } catch (e) {
+        console.error('[ClientDashboard] Failed to fetch charges:', e);
+      }
+
+      if (isAgreementSigned(active.status) || !!active.signedAt) {
+        try {
+          const url = await getSignedDocumentDownloadUrl(
+            active.signedDocumentFileId,
+            active.signatureEnvelopeId
+          );
+          if (!cancelled && url) setSignedAgreementUrl(url);
+        } catch (e) {
+          console.error('[ClientDashboard] Failed to fetch signed doc URL:', e);
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [dashboardData, selectedAgreementId]);
 
   // Loading state
   if (isLoading) {

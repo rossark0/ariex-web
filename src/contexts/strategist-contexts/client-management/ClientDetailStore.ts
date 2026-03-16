@@ -290,6 +290,7 @@ const initialState = {
   clientHasSigned: false,
   signedAgreementDocUrl: null as string | null,
   envelopeStatuses: {} as Record<string, string>,
+  _signingWindowOpen: false,
 
   isStrategySheetOpen: false,
   isCompletingAgreement: false,
@@ -884,6 +885,7 @@ export const useClientDetailStore = create<ClientDetailState>((set, get) => ({
   strategistSign: () => {
     const { strategistCeremonyUrl } = get();
     if (strategistCeremonyUrl) {
+      set({ _signingWindowOpen: true });
       window.open(strategistCeremonyUrl, '_blank');
     }
   },
@@ -903,7 +905,8 @@ export const useClientDetailStore = create<ClientDetailState>((set, get) => ({
       return;
     }
     try {
-      const info = await getStrategistSigningInfo(active.id);
+      const signingWindowOpen = get()._signingWindowOpen;
+      const info = await getStrategistSigningInfo(active.id, { skipCeremonyRefresh: signingWindowOpen });
       // Only update if we're still on the same agreement
       if (get().selectedAgreementId !== selectedAgreementId) return;
       const changed =
@@ -913,8 +916,15 @@ export const useClientDetailStore = create<ClientDetailState>((set, get) => ({
         strategistHasSigned: info.strategistHasSigned,
         clientHasSigned: info.clientHasSigned,
       });
-      if (info.strategistCeremonyUrl) {
+      // Only update the ceremony URL if the signing window is NOT open.
+      // Updating it while the strategist is mid-signing would revoke the
+      // URL they currently have open, causing "link revoked" errors.
+      if (info.strategistCeremonyUrl && !get()._signingWindowOpen) {
         set({ strategistCeremonyUrl: info.strategistCeremonyUrl });
+      }
+      // Once the strategist has signed, clear the signing-window guard
+      if (info.strategistHasSigned) {
+        set({ _signingWindowOpen: false });
       }
       if (info.signedDocumentUrl) {
         set({ signedAgreementDocUrl: info.signedDocumentUrl });
