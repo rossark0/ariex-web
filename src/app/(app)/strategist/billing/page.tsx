@@ -104,8 +104,8 @@ export default function StrategistBillingPage() {
           </div>
         </div>
 
-        <div className="bg-zinc-50 px-6 py-8">
-          <div className="mx-auto w-full max-w-[1200px]">
+        <div className="bg-zinc-50 py-8">
+          <div className="mx-auto w-full max-w-[1200px] px-6">
             {chargesError && <ErrorMessage message={chargesError} />}
 
             {generatedLink && (
