@@ -697,7 +697,7 @@ export async function confirmPasswordReset(
   try {
     const result = await apiRequest<{ message: string }>('/auth/confirm-password-reset', {
       method: 'POST',
-      body: JSON.stringify({ email, code, newPassword }),
+      body: JSON.stringify({ email, confirmationCode: code, newPassword }),
     });
 
     return {
