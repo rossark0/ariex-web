@@ -659,7 +659,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                 }`}
               >
                 <StarFourIcon weight="fill" className="h-4 w-4" />
-                <span>Strategy</span>
+                <span>Review Strategy</span>
               </button>
             </div>
 
@@ -682,7 +682,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                   Review the tax strategy document and approve or reject it before it&apos;s sent to
                   the client.
                 </p>
-                <div className="flex gap-2">
+                {/* <div className="flex gap-2">
                   <Button
                     onClick={() => setIsApproveModalOpen(true)}
                     disabled={isApproving || isRejecting}
@@ -709,7 +709,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                     <XCircle className="mr-1.5 h-4 w-4" weight="fill" />
                     Reject
                   </Button>
-                </div>
+                </div> */}
               </div>
             )}
 
