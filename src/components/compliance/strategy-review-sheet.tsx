@@ -193,6 +193,15 @@ export function CommentsSection({
   const [newComment, setNewComment] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustHeight = () => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    }
+  };
 
   const loadComments = (id: string) => {
     setIsLoading(true);
@@ -234,6 +243,7 @@ export function CommentsSection({
       const genericComment = await addDocumentComment(documentId!, newComment.trim());
       setComments(prev => [genericComment, ...prev]);
       setNewComment('');
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
     } catch (err) {
       console.error('[CommentsSection] submit error:', err);
     } finally {
@@ -280,14 +290,24 @@ export function CommentsSection({
           {!documentId && (
             <p className="mb-2 text-xs text-amber-500">Strategy document not linked — can’t post comments.</p>
           )}
-          <div className="flex gap-2">
-            <input
+          <div className="flex items-end gap-2">
+            <textarea
+              ref={textareaRef}
               value={newComment}
-              onChange={e => setNewComment(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
+              onChange={e => {
+                setNewComment(e.target.value);
+                adjustHeight();
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
               placeholder="Add a comment…"
+              rows={1}
               disabled={isSending || !documentId || !strategistUserId}
-              className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none disabled:opacity-50"
+              className="flex-1 resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none disabled:opacity-50"
             />
             <button
               onClick={handleSubmit}

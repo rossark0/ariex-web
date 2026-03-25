@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -249,12 +249,24 @@ function CommentsPanel({
 }) {
   const [newComment, setNewComment] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustHeight = () => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    }
+  };
 
   const handleSubmit = async () => {
     if (!newComment.trim()) return;
     setIsSending(true);
     const success = await onAddComment(newComment.trim());
-    if (success) setNewComment('');
+    if (success) {
+      setNewComment('');
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    }
     setIsSending(false);
   };
 
@@ -286,13 +298,23 @@ function CommentsPanel({
       )}
 
       {/* Add comment */}
-      <div className="flex gap-2">
-        <input
+      <div className="flex items-end gap-2">
+        <textarea
+          ref={textareaRef}
           value={newComment}
-          onChange={e => setNewComment(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
+          onChange={e => {
+            setNewComment(e.target.value);
+            adjustHeight();
+          }}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit();
+            }
+          }}
           placeholder="Add a comment…"
-          className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none"
+          rows={1}
+          className="flex-1 resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none"
           disabled={isSending}
         />
         <Button size="sm" onClick={handleSubmit} disabled={!newComment.trim() || isSending}>
