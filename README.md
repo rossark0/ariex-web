@@ -21,7 +21,7 @@ pnpm dev
 App will be available at http://localhost:3000.
 
 ## Architecture (why this scales)
-
+ 
 This boilerplate uses a feature-context architecture powered by vanilla Zustand stores. Each context is a vertical slice (data, models, services, UI) that owns its state and API access. This keeps concerns close together, prevents cross-feature coupling, and lets teams iterate independently.
 
 - State with vanilla Zustand: stores live outside React, enabling light subscriptions via `useSyncExternalStore`, zero Provider nesting, and easy unit testing.
