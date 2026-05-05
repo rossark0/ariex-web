@@ -86,12 +86,12 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
   // Show mobile message
   if (isMobile) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-zinc-50 to-zinc-100 p-6">
+      <div className="flex h-screen w-full items-center justify-center bg-graphite p-6">
         <div className="flex max-w-md flex-col items-center gap-6 text-center">
-          <DesktopIcon className="h-10 w-10 text-zinc-400" weight="duotone" />
+          <DesktopIcon className="h-10 w-10 text-steel-gray" weight="duotone" />
           <div className="flex flex-col gap-2">
-            <h1 className="text-lg font-semibold text-zinc-900">Use it on desktop only</h1>
-            <p className="text-sm leading-relaxed text-balance text-zinc-600">
+            <h1 className="text-lg font-semibold text-soft-white">Use it on desktop only</h1>
+            <p className="text-sm leading-relaxed text-balance text-steel-gray">
               This application is optimized for desktop use. Please access it from a device with a
               larger screen for the best experience.
             </p>
@@ -102,7 +102,7 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen overscroll-none bg-white">
+    <div className="flex h-screen overscroll-none bg-graphite">
       <aside
         className={cn(
           'hidden flex-col gap-4 p-4 px-2 pt-6 md:flex',
@@ -113,7 +113,7 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
         <Sidebar items={navItems} />
       </aside>
       <main className="relative max-h-screen flex-1 p-4 pb-2 pl-0">
-        <div className="relative flex h-full w-full flex-1 flex-col overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <div className="relative flex h-full w-full flex-1 flex-col overflow-y-auto rounded-lg border border-white/8 bg-deep-navy shadow-sm">
           {/* Sidebar Close Button */}
           <div
             className={cn(

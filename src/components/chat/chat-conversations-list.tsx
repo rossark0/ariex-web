@@ -36,12 +36,12 @@ export function ChatConversationsList({
   return (
     <div className={cn('flex h-full w-full flex-col', className)}>
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-zinc-100 py-3">
-        <h2 className="text-base font-semibold text-zinc-900">{title}</h2>
+      <div className="flex items-center justify-between border-b border-white/8 py-3">
+        <h2 className="text-base font-semibold text-soft-white">{title}</h2>
         {onNewConversation && (
           <button
             onClick={onNewConversation}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
             aria-label="New conversation"
           >
             <Plus className="h-5 w-5" weight="bold" />
@@ -52,14 +52,14 @@ export function ChatConversationsList({
       {/* Search */}
       {showSearch && (
         <div className="py-2">
-          <div className="flex items-center gap-2 rounded-lg bg-zinc-100 px-3 py-2">
-            <MagnifyingGlass className="h-4 w-4 text-zinc-400" />
+          <div className="flex items-center gap-2 rounded-lg bg-white/6 px-3 py-2">
+            <MagnifyingGlass className="h-4 w-4 text-steel-gray" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search conversations..."
-              className="flex-1 bg-transparent text-sm text-zinc-800 outline-none placeholder:text-zinc-400"
+              className="flex-1 bg-transparent text-sm text-soft-white outline-none placeholder:text-steel-gray"
             />
           </div>
         </div>
@@ -72,17 +72,17 @@ export function ChatConversationsList({
             <EmptyMessagesIllustration />
             {searchQuery ? (
               <>
-                <p className="text-sm font-medium text-zinc-700">No results found</p>
-                <p className="mt-1 text-xs text-zinc-500">Try searching with different keywords</p>
+                <p className="text-sm font-medium text-soft-white">No results found</p>
+                <p className="mt-1 text-xs text-steel-gray">Try searching with different keywords</p>
               </>
             ) : (
               <>
-                <p className="text-sm font-medium text-zinc-700">No conversations yet</p>
-                <p className="mt-1 text-xs text-zinc-500">Start a new conversation to get help</p>
+                <p className="text-sm font-medium text-soft-white">No conversations yet</p>
+                <p className="mt-1 text-xs text-steel-gray">Start a new conversation to get help</p>
                 {onNewConversation && (
                   <button
                     onClick={onNewConversation}
-                    className="mt-4 rounded-full bg-teal-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-600"
+                    className="mt-4 rounded-full bg-electric-blue px-4 py-2 text-sm font-medium text-soft-white duration-150 ease-linear transition-colors hover:bg-electric-blue/80"
                   >
                     Start a conversation
                   </button>

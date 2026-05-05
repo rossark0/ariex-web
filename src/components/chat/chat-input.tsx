@@ -62,7 +62,7 @@ export function ChatInput({
 
   return (
     <div className={cn('relative -translate-y-4 p-0', className)}>
-      <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 hover:bg-white focus-within:ring-2 focus-within:ring-zinc-300">
+      <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-deep-navy shadow-2xl duration-200 ease-linear transition-all focus-within:ring-2 focus-within:ring-electric-blue/30">
         {/* Textarea */}
         <textarea
           ref={textareaRef}
@@ -72,7 +72,7 @@ export function ChatInput({
           placeholder={placeholder}
           disabled={disabled || isLoading}
           rows={1}
-          className="flex-1 min-h-[56px] resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-normal text-black placeholder:text-zinc-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1 min-h-[56px] resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-normal text-soft-white placeholder:text-steel-gray focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
         />
 
         {/* Attachment Button */}
@@ -80,7 +80,7 @@ export function ChatInput({
           type="button"
           onClick={onAttachment}
           disabled={disabled || isLoading}
-          className="flex h-9 cursor-pointer w-9 items-center justify-center rounded-full text-zinc-500 transition-all hover:bg-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex h-9 cursor-pointer w-9 items-center justify-center rounded-full text-steel-gray duration-150 ease-linear transition-all hover:bg-white/8 hover:text-soft-white disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Attach file"
         >
           <Paperclip size={20} weight="bold" />
@@ -91,7 +91,7 @@ export function ChatInput({
           type="button"
           onClick={handleSubmit}
           disabled={!message.trim() || disabled || isLoading}
-          className="mr-3 flex cursor-pointer h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white transition-all hover:bg-emerald-700 disabled:bg-zinc-300 disabled:cursor-not-allowed"
+          className="mr-3 flex cursor-pointer h-9 w-9 items-center justify-center rounded-full bg-electric-blue text-soft-white duration-150 ease-linear transition-all hover:bg-electric-blue/80 disabled:bg-white/10 disabled:text-steel-gray disabled:cursor-not-allowed"
           aria-label="Send message"
         >
           <ArrowUp size={20} weight="bold" />

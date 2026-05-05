@@ -98,20 +98,20 @@ export function DocumentPreviewModal({
       {/* Modal */}
       <div
         className={cn(
-          'relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl transition-all duration-200',
+          'relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-deep-navy shadow-2xl transition-all duration-200',
           isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
           <div className="flex items-center gap-3 overflow-hidden">
-            <h3 className="truncate text-sm font-semibold text-zinc-900">{fileName}</h3>
+            <h3 className="truncate text-sm font-semibold text-soft-white">{fileName}</h3>
             {url && (
               <a
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+                className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
               >
                 <ArrowSquareOut weight="bold" className="h-3.5 w-3.5" />
                 Open
@@ -120,34 +120,34 @@ export function DocumentPreviewModal({
           </div>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
           >
             <X weight="bold" className="h-4 w-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex flex-1 items-center justify-center overflow-auto bg-zinc-50 p-4">
+        <div className="flex flex-1 items-center justify-center overflow-auto bg-graphite p-4">
           {isLoading ? (
             <div className="flex flex-col items-center gap-3 py-16">
-              <SpinnerGap className="h-8 w-8 animate-spin text-emerald-500" />
-              <p className="text-sm text-zinc-500">Loading document…</p>
+              <SpinnerGap className="h-8 w-8 animate-spin text-electric-blue" />
+              <p className="text-sm text-steel-gray">Loading document…</p>
             </div>
           ) : !url ? (
             <div className="flex flex-col items-center gap-2 py-16">
-              <p className="text-sm font-medium text-zinc-600">Unable to load document</p>
-              <p className="text-xs text-zinc-400">The download URL could not be retrieved.</p>
+              <p className="text-sm font-medium text-soft-white">Unable to load document</p>
+              <p className="text-xs text-steel-gray">The download URL could not be retrieved.</p>
             </div>
           ) : !canPreview ? (
             <div className="flex flex-col items-center gap-4 py-16">
-              <p className="text-sm font-medium text-zinc-600">
+              <p className="text-sm font-medium text-soft-white">
                 Preview not available for .{ext} files
               </p>
               <a
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                className="rounded-lg bg-electric-blue px-4 py-2 text-sm font-semibold text-soft-white duration-150 ease-linear transition-colors hover:bg-electric-blue/80"
               >
                 Download file
               </a>
@@ -163,7 +163,7 @@ export function DocumentPreviewModal({
             <iframe
               src={url}
               title={fileName}
-              className="h-[75vh] w-full rounded-lg border border-zinc-200 bg-white"
+              className="h-[75vh] w-full rounded-lg border border-white/10 bg-deep-navy"
             />
           )}
         </div>

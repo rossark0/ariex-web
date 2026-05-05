@@ -24,16 +24,16 @@ export function SidebarToggle({ className }: SidebarToggleProps) {
     <button
       onClick={toggleSidebar}
       className={cn(
-        'flex cursor-pointer items-center justify-center rounded-lg bg-zinc-50 text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900',
+        'flex cursor-pointer items-center justify-center rounded-lg text-steel-gray duration-150 ease-linear transition-colors hover:text-soft-white',
         className
       )}
       aria-label={isSidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
     >
       {' '}
-      <div className="h-4 w-4 rounded-sm border-2 border-zinc-400 bg-white">
+      <div className="h-4 w-4 rounded-sm border-2 border-steel-gray bg-transparent">
         <div
           className={cn(
-            'h-full bg-zinc-400 transition-all duration-300 ease-in-out',
+            'h-full bg-steel-gray transition-all duration-200 ease-linear',
             isSidebarCollapsed ? 'w-0.5' : 'w-2'
           )}
         />

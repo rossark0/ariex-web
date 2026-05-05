@@ -123,11 +123,11 @@ function PageNavigation({
   onDeletePage,
 }: PageNavigationProps) {
   return (
-    <div className="flex items-center justify-center gap-2 border-t border-zinc-100 bg-white py-3">
+    <div className="flex items-center justify-center gap-2 border-t border-white/8 bg-deep-navy py-3">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 0}
-        className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
+        className="flex h-8 w-8 items-center justify-center rounded-md text-steel-gray hover:bg-white/8 disabled:cursor-not-allowed disabled:opacity-30"
       >
         <CaretLeft weight="bold" className="h-3 w-3" />
       </button>
@@ -139,8 +139,8 @@ function PageNavigation({
             className={cn(
               'h-6 w-6 rounded-lg text-sm font-medium transition-colors',
               currentPage === index
-                ? 'bg-emerald-500 text-white'
-                : 'text-zinc-500 hover:bg-zinc-100'
+                ? 'bg-electric-blue text-soft-white'
+                : 'text-steel-gray hover:bg-white/8'
             )}
           >
             {index + 1}
@@ -150,14 +150,14 @@ function PageNavigation({
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages - 1}
-        className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
+        className="flex h-8 w-8 items-center justify-center rounded-md text-steel-gray hover:bg-white/8 disabled:cursor-not-allowed disabled:opacity-30"
       >
         <CaretRight weight="bold" className="h-3 w-3" />
       </button>
-      <div className="mx-2 h-4 w-px bg-zinc-200" />
+      <div className="mx-2 h-4 w-px bg-white/10" />
       <button
         onClick={onAddPage}
-        className="flex cursor-pointer items-center gap-1 rounded-md bg-zinc-100 px-2 py-1.5 text-xs font-semibold text-zinc-600 transition-colors hover:bg-zinc-200"
+        className="flex cursor-pointer items-center gap-1 rounded-md bg-white/8 px-2 py-1.5 text-xs font-semibold text-steel-gray transition-colors hover:bg-white/12"
       >
         <Plus weight="bold" className="h-3.5 w-3.5" />
         Add Page
@@ -165,7 +165,7 @@ function PageNavigation({
       {totalPages > 1 && (
         <button
           onClick={onDeletePage}
-          className="flex items-center gap-1 rounded-md bg-white px-2 py-1.5 text-xs font-semibold text-red-500 transition-colors hover:bg-red-600 hover:text-white"
+          className="flex items-center gap-1 rounded-md bg-transparent px-2 py-1.5 text-xs font-semibold text-red-400 transition-colors hover:bg-red-500/15 hover:text-red-300"
         >
           <Trash weight="bold" className="h-3.5 w-3.5" />
           Delete page
@@ -255,7 +255,7 @@ export function CommentsSection({
     <div className="flex flex-1 flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {isLoading ? (
-          <div className="flex items-center gap-2 py-4 text-sm text-zinc-400">
+          <div className="flex items-center gap-2 py-4 text-sm text-steel-gray">
             <SpinnerGap className="h-4 w-4 animate-spin" />
             Loading comments…
           </div>
@@ -264,29 +264,29 @@ export function CommentsSection({
             <p className="text-sm text-red-500 break-all">{fetchError}</p>
             <button
               onClick={() => documentId && loadComments(documentId)}
-              className="mt-2 text-xs text-zinc-500 underline hover:text-zinc-700"
+              className="mt-2 text-xs text-steel-gray underline hover:text-soft-white"
             >Retry</button>
           </div>
         ) : !documentId ? (
-          <p className="py-4 text-sm text-zinc-400">Document not linked — comments unavailable.</p>
+          <p className="py-4 text-sm text-steel-gray">Document not linked — comments unavailable.</p>
         ) : comments.length === 0 ? (
-          <p className="py-4 text-sm text-zinc-400">No comments yet</p>
+          <p className="py-4 text-sm text-steel-gray">No comments yet</p>
         ) : (
           <div className="flex flex-col gap-3">
             {comments.map(c => (
-              <div key={c.id} className="rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3">
+              <div key={c.id} className="rounded-lg border border-white/8 bg-white/4 px-4 py-3">
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="text-sm font-medium text-zinc-700">Compliance</span>
-                  <span className="text-xs text-zinc-400">{formatRelativeTime(c.createdAt)}</span>
+                  <span className="text-sm font-medium text-soft-white">Compliance</span>
+                  <span className="text-xs text-steel-gray">{formatRelativeTime(c.createdAt)}</span>
                 </div>
-                <p className="text-sm leading-relaxed text-zinc-600">{c.body}</p>
+                <p className="text-sm leading-relaxed text-steel-gray">{c.body}</p>
               </div>
             ))}
           </div>
         )}
       </div>
       {!readOnly && (
-        <div className="border-t border-zinc-100 p-4">
+        <div className="border-t border-white/8 p-4">
           {!documentId && (
             <p className="mb-2 text-xs text-amber-500">Strategy document not linked — can’t post comments.</p>
           )}
@@ -307,12 +307,12 @@ export function CommentsSection({
               placeholder="Add a comment…"
               rows={1}
               disabled={isSending || !documentId || !strategistUserId}
-              className="flex-1 resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none disabled:opacity-50"
+              className="flex-1 resize-none rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none disabled:opacity-50"
             />
             <button
               onClick={handleSubmit}
               disabled={!canSubmit || isSending}
-              className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40"
+              className="flex h-9 w-9 items-center justify-center rounded-lg bg-electric-blue text-soft-white hover:bg-electric-blue/80 disabled:opacity-40"
             >
               {isSending ? (
                 <SpinnerGap className="h-4 w-4 animate-spin" />
@@ -351,7 +351,7 @@ function TiptapEditor({ content, onChange }: TiptapEditorProps) {
     editorProps: {
       attributes: {
         class:
-          'prose prose-zinc max-w-none min-h-[500px] outline-none focus:outline-none prose-headings:font-semibold prose-headings:text-zinc-900 prose-p:text-zinc-700 prose-p:leading-relaxed',
+          'prose prose-invert max-w-none min-h-[500px] outline-none focus:outline-none prose-headings:font-semibold prose-headings:text-soft-white prose-p:text-steel-gray prose-p:leading-relaxed',
       },
     },
     onUpdate({ editor: e }) {
@@ -624,23 +624,23 @@ export function StrategyReviewSheet({
       {/* Sheet container */}
       <div
         className={cn(
-          'relative flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 ease-out',
+          'relative flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-graphite shadow-2xl transition-transform duration-200 ease-linear',
           isVisible && !isClosing ? 'translate-y-0' : 'translate-y-full'
         )}
       >
         {/* Close button */}
         <div className="absolute top-4 left-4 z-50 flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center gap-2 rounded-md hover:bg-zinc-100">
-            <XIcon onClick={handleClose} className="h-4 w-4 cursor-pointer text-zinc-500" />
+          <div className="flex h-6 w-6 items-center justify-center gap-2 rounded-md hover:bg-white/8">
+            <XIcon onClick={handleClose} className="h-4 w-4 cursor-pointer text-steel-gray" />
           </div>
-          <kbd className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500">
+          <kbd className="rounded-md bg-white/8 px-2 py-1 text-xs font-semibold text-steel-gray">
             ESC
           </kbd>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="absolute top-16 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">
+          <div className="absolute top-16 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-red-500/15 px-4 py-2 text-sm text-red-400">
             {error}
           </div>
         )}
@@ -657,7 +657,7 @@ export function StrategyReviewSheet({
                     <Button
                       onClick={() => setShowApproveDialog(true)}
                       disabled={internalApproving || internalRejecting}
-                      className="bg-emerald-600 text-white hover:bg-emerald-700"
+                      className="bg-electric-blue text-soft-white hover:bg-electric-blue/80"
                       size="sm"
                     >
                       {internalApproving ? (
@@ -686,7 +686,7 @@ export function StrategyReviewSheet({
                 <button
                   onClick={handleSendStrategy}
                   disabled={isSending || !pages.some(p => p.content.trim())}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-500 bg-emerald-500 px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-emerald-600 disabled:opacity-50"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-electric-blue bg-electric-blue px-2 py-1 text-sm font-medium text-soft-white duration-150 ease-linear transition-colors hover:bg-electric-blue/80 disabled:opacity-50"
                 >
                   {isSending ? (
                     <>
@@ -703,10 +703,10 @@ export function StrategyReviewSheet({
             {/* Content area */}
             {role === 'compliance' ? (
               <div className="flex flex-1 flex-col items-center overflow-auto px-8 pt-16 pb-8">
-                <h2 className="mb-4 text-lg font-semibold text-zinc-900">
+                <h2 className="mb-4 text-lg font-semibold text-soft-white">
                   {documentTitle || 'Tax Strategy Plan'}
                 </h2>
-                <div className="w-full max-w-4xl flex-1 overflow-hidden rounded-xl border border-zinc-200">
+                <div className="w-full max-w-4xl flex-1 overflow-hidden rounded-xl border border-white/10">
                   <iframe
                     src={props.pdfUrl}
                     title="Strategy Document"
@@ -723,10 +723,10 @@ export function StrategyReviewSheet({
                       type="text"
                       value={title}
                       onChange={e => setTitle(e.target.value)}
-                      className="w-full border-none bg-transparent text-2xl font-semibold outline-none placeholder:text-zinc-400 focus:outline-none"
+                      className="w-full border-none bg-transparent text-2xl font-semibold text-soft-white outline-none placeholder:text-steel-gray focus:outline-none"
                       placeholder="Enter document title..."
                     />
-                    <p className="mt-1 text-xs font-semibold text-zinc-400 uppercase">
+                    <p className="mt-1 text-xs font-semibold text-steel-gray uppercase">
                       Page {currentPageIndex + 1} of {pages.length}
                     </p>
                     <div className="flex-1">
@@ -750,10 +750,10 @@ export function StrategyReviewSheet({
           </div>
 
           {/* RIGHT COLUMN — Comments / Chat */}
-          <div className="flex w-[380px] shrink-0 flex-col border-l border-zinc-200 bg-white">
-            <div className="border-b border-zinc-200 px-6 py-4">
-              <h3 className="font-semibold text-zinc-900">Comments</h3>
-              <p className="text-sm text-zinc-500">
+          <div className="flex w-[380px] shrink-0 flex-col border-l border-white/8 bg-deep-navy">
+            <div className="border-b border-white/8 px-6 py-4">
+              <h3 className="font-semibold text-soft-white">Comments</h3>
+              <p className="text-sm text-steel-gray">
                 {readOnly
                   ? 'Compliance comments on this strategy.'
                   : role === 'compliance'
@@ -774,7 +774,7 @@ export function StrategyReviewSheet({
                   <div className="mt-2 mb-4">
                     <label
                       htmlFor="compliance-select"
-                      className="mb-1 block text-xs font-medium text-zinc-500"
+                      className="mb-1 block text-xs font-medium text-steel-gray"
                     >
                       Select Compliance Team Member
                     </label>
@@ -782,7 +782,7 @@ export function StrategyReviewSheet({
                       id="compliance-select"
                       value={selectedUserId || ''}
                       onChange={e => setSelectedUserId(e.target.value)}
-                      className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm ring-emerald-500 outline-none focus:border-emerald-500 focus:ring-1"
+                      className="w-full rounded-md border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white shadow-sm ring-electric-blue outline-none focus:border-electric-blue/50 focus:ring-1"
                     >
                       {complianceUsers.map((user: ApiClient & { complianceUserId?: string }) => (
                         <option
@@ -805,7 +805,7 @@ export function StrategyReviewSheet({
                     showHeader={false}
                   />
                 ) : (
-                  <div className="flex h-full flex-col items-center justify-center p-8 text-center text-zinc-500">
+                  <div className="flex h-full flex-col items-center justify-center p-8 text-center text-steel-gray">
                     <p>Connecting to chat...</p>
                   </div>
                 )}
@@ -818,9 +818,9 @@ export function StrategyReviewSheet({
       {/* Approve confirmation dialog — renders inside the sheet's z-context */}
       {showApproveDialog && role === 'compliance' && (props as ComplianceReviewProps).onApprove && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="mb-2 text-lg font-bold text-zinc-900">Approve Strategy</h3>
-            <p className="mb-6 text-zinc-600">
+          <div className="w-full max-w-md rounded-xl bg-deep-navy p-6 shadow-xl">
+            <h3 className="mb-2 text-lg font-bold text-soft-white">Approve Strategy</h3>
+            <p className="mb-6 text-steel-gray">
               Are you sure you want to approve this strategy? It will be marked as complete and sent
               back to the strategist.
             </p>
@@ -833,7 +833,7 @@ export function StrategyReviewSheet({
                 Cancel
               </Button>
               <Button
-                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                className="bg-electric-blue text-soft-white hover:bg-electric-blue/80"
                 onClick={async () => {
                   setInternalApproving(true);
                   try {
@@ -863,9 +863,9 @@ export function StrategyReviewSheet({
       {/* Reject confirmation dialog — renders inside the sheet's z-context */}
       {showRejectDialog && role === 'compliance' && props.onReject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="mb-1 text-lg font-semibold text-zinc-900">Reject Strategy</h3>
-            <p className="mb-4 text-sm text-zinc-500">
+          <div className="w-full max-w-md rounded-xl bg-deep-navy p-6 shadow-xl">
+            <h3 className="mb-1 text-lg font-semibold text-soft-white">Reject Strategy</h3>
+            <p className="mb-4 text-sm text-steel-gray">
               Provide a reason for the rejection. The strategist will be notified.
             </p>
             <textarea
@@ -873,7 +873,7 @@ export function StrategyReviewSheet({
               onChange={e => setRejectReason(e.target.value)}
               placeholder="Enter rejection reason…"
               rows={4}
-              className="mb-4 w-full resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none"
+              className="mb-4 w-full resize-none rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none"
             />
             <div className="flex justify-end gap-2">
               <Button

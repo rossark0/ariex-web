@@ -4,8 +4,8 @@ interface ErrorMessageProps {
 
 export function ErrorMessage({ message }: ErrorMessageProps) {
   return (
-    <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
-      <p className="text-sm text-red-700">{message}</p>
+    <div className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+      <p className="text-sm text-red-400">{message}</p>
     </div>
   );
 }

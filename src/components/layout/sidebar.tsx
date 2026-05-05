@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { Buildings, CaretDown, Command, Icon, SignOut, User } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { Wordmark } from '@/components/layout/wordmark';
 
 export interface SidebarItem {
   href: string;
@@ -44,7 +45,7 @@ export default function Sidebar({ items, className }: SidebarProps) {
     <div className={cn('flex h-full flex-col', className)}>
       {/* Header */}
       <div className="mb-8 flex items-center gap-2 pl-2">
-        <span className="font-mono text-sm font-medium text-zinc-500 uppercase">ARIEX AI</span>
+        <Wordmark height={14} className="text-soft-white" />
       </div>
 
       {/* Navigation Items */}
@@ -58,13 +59,19 @@ export default function Sidebar({ items, className }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-2 py-1 text-sm font-medium transition-colors',
+                'flex items-center gap-3 rounded-lg px-2 py-1 text-sm font-medium duration-150 ease-linear transition-colors',
                 isActive
-                  ? 'bg-zinc-100 text-zinc-900'
-                  : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'
+                  ? 'bg-electric-blue/12 text-electric-blue'
+                  : 'text-steel-gray hover:bg-white/5 hover:text-soft-white'
               )}
             >
-              <Icon weight="fill" className={cn('h-4 w-4 text-zinc-500')} />
+              <Icon
+                weight="fill"
+                className={cn(
+                  'h-4 w-4',
+                  isActive ? 'text-electric-blue' : 'text-steel-gray'
+                )}
+              />
               {item.label}
             </Link>
           );
@@ -76,13 +83,13 @@ export default function Sidebar({ items, className }: SidebarProps) {
         {/* Icon Buttons */}
         {!isClientRole && (
           <div className="flex items-center gap-2">
-            <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200">
+            <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-soft-white duration-150 ease-linear transition-colors hover:bg-white/12">
               <Command weight="bold" className="h-4 w-4" />
             </button>
-            <button className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-600">
+            <button className="flex h-8 w-8 items-center justify-center rounded-lg text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white">
               <User weight="fill" className="h-4 w-4" />
             </button>
-            <button className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-600">
+            <button className="flex h-8 w-8 items-center justify-center rounded-lg text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white">
               <Buildings weight="fill" className="h-4 w-4" />
             </button>
           </div>
@@ -90,7 +97,7 @@ export default function Sidebar({ items, className }: SidebarProps) {
 
         {/* Free Trial Badge */}
         {!isClientRole && (
-          <button className="w-full rounded-md border border-zinc-200 py-0.5 text-xs font-medium tracking-wide text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700">
+          <button className="w-full rounded-md border border-white/10 py-0.5 text-xs font-medium tracking-wide text-steel-gray duration-150 ease-linear transition-colors hover:border-white/20 hover:text-soft-white">
             {isStrategistRole ? 'TAX STRATEGIST' : isComplianceRole ? 'COMPLIANCE' : 'ADMIN'}
           </button>
         )}
@@ -108,32 +115,32 @@ export default function Sidebar({ items, className }: SidebarProps) {
         {/* User Profile */}
         <Popover>
           <PopoverTrigger asChild>
-            <button className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-1 transition-colors hover:bg-zinc-50">
-              <div className="relative h-8 w-8 overflow-hidden rounded-md bg-zinc-200">
-                <div className="flex h-full w-full items-center justify-center text-xs font-medium text-zinc-600">
+            <button className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-1 duration-150 ease-linear transition-colors hover:bg-white/5">
+              <div className="relative h-8 w-8 overflow-hidden rounded-md bg-white/10">
+                <div className="flex h-full w-full items-center justify-center text-xs font-medium text-soft-white">
                   {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
                 </div>
               </div>
-              <span className="flex-1 truncate text-left text-sm font-medium text-zinc-900">
+              <span className="flex-1 truncate text-left text-sm font-medium text-soft-white">
                 {user?.name || user?.email?.split('@')[0] || 'User'}
               </span>
-              <CaretDown weight="bold" className="h-3 w-3 text-zinc-400" />
+              <CaretDown weight="bold" className="h-3 w-3 text-steel-gray" />
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-56 p-0.5" align="start" side="top">
             <div className="flex flex-col">
               {/* User Info */}
               <div className="flex items-center gap-3 rounded-md px-2 py-2">
-                <div className="relative h-8 w-8 overflow-hidden rounded-md bg-zinc-200">
-                  <div className="flex h-full w-full items-center justify-center text-xs font-medium text-zinc-600">
+                <div className="relative h-8 w-8 overflow-hidden rounded-md bg-white/10">
+                  <div className="flex h-full w-full items-center justify-center text-xs font-medium text-soft-white">
                     {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-zinc-900">
+                  <p className="text-sm font-medium text-soft-white">
                     {user?.name || user?.email?.split('@')[0] || 'User'}
                   </p>
-                  <p className="text-xs text-zinc-500">{user?.email || ''}</p>
+                  <p className="text-xs text-steel-gray">{user?.email || ''}</p>
                 </div>
               </div>
 
@@ -141,21 +148,21 @@ export default function Sidebar({ items, className }: SidebarProps) {
                 {/* Sign Out */}
                 <button
                   onClick={handleLogout}
-                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-zinc-100 py-1.5 text-xs font-semibold text-zinc-500 transition-colors"
+                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-white/8 py-1.5 text-xs font-semibold text-steel-gray duration-150 ease-linear transition-colors hover:text-soft-white"
                 >
-                  <SignOut weight="bold" className="h-3.5 w-3.5 text-zinc-500" />
+                  <SignOut weight="bold" className="h-3.5 w-3.5" />
                   Sign out
                 </button>
               </div>
 
-              <div className="mx-2 h-px bg-zinc-200" />
+              <div className="mx-2 h-px bg-white/10" />
 
-              <button className="mt-2 flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-100">
+              <button className="mt-2 flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm text-soft-white duration-150 ease-linear transition-colors hover:bg-white/8">
                 <div className="flex items-center gap-2">
-                  <Command weight="bold" className="h-4 w-4 text-zinc-400" />
+                  <Command weight="bold" className="h-4 w-4 text-steel-gray" />
                   Settings
                 </div>
-                <span className="text-xs text-zinc-400">⌘,</span>
+                <span className="text-xs text-steel-gray">⌘,</span>
               </button>
             </div>
           </PopoverContent>

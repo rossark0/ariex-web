@@ -155,22 +155,22 @@ export function RequestDocumentsModal({
       {/* Modal Container */}
       <div
         className={cn(
-          'relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl transition-all duration-200',
+          'relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-deep-navy p-6 shadow-2xl transition-all duration-200',
           !isClosing ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
         )}
       >
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900">Request Documents</h2>
-            <p className="mt-0.5 text-sm text-zinc-500">
+            <h2 className="text-lg font-semibold text-soft-white">Request Documents</h2>
+            <p className="mt-0.5 text-sm text-steel-gray">
               Request documents from {clientName}
             </p>
           </div>
           <button
             onClick={handleClose}
             disabled={isLoading}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 disabled:opacity-50"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white disabled:opacity-50"
           >
             <X weight="bold" className="h-4 w-4" />
           </button>
@@ -180,7 +180,7 @@ export function RequestDocumentsModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Document Input */}
           <div>
-            <label htmlFor="document" className="mb-1.5 block text-sm font-medium text-zinc-700">
+            <label htmlFor="document" className="mb-1.5 block text-sm font-medium text-soft-white">
               Document Name
             </label>
             <div className="flex gap-2">
@@ -190,7 +190,7 @@ export function RequestDocumentsModal({
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                className="flex-1 rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
                 placeholder="Type document name and press Enter..."
                 disabled={isLoading}
                 autoFocus
@@ -211,7 +211,7 @@ export function RequestDocumentsModal({
           {/* Suggestions */}
           {availableSuggestions.length > 0 && (
             <div>
-              <p className="mb-2 text-xs font-medium text-zinc-500 uppercase tracking-wide">
+              <p className="mb-2 text-xs font-medium text-steel-gray uppercase tracking-wide">
                 Quick add
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -221,7 +221,7 @@ export function RequestDocumentsModal({
                     type="button"
                     onClick={() => handleAddSuggestion(suggestion)}
                     disabled={isLoading}
-                    className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs text-zinc-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50"
+                    className="rounded-full border border-white/10 bg-white/4 px-2.5 py-1 text-xs text-steel-gray duration-150 ease-linear transition-colors hover:border-electric-blue/30 hover:bg-electric-blue/10 hover:text-electric-blue disabled:opacity-50"
                   >
                     + {suggestion}
                   </button>
@@ -233,24 +233,24 @@ export function RequestDocumentsModal({
           {/* Document List */}
           {documentNames.length > 0 && (
             <div>
-              <p className="mb-2 text-xs font-medium text-zinc-500 uppercase tracking-wide">
+              <p className="mb-2 text-xs font-medium text-steel-gray uppercase tracking-wide">
                 Documents to request ({documentNames.length})
               </p>
-              <div className="space-y-1.5 rounded-lg border border-zinc-200 bg-zinc-50 p-2">
+              <div className="space-y-1.5 rounded-lg border border-white/10 bg-white/4 p-2">
                 {documentNames.map((name, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between rounded-md bg-white px-3 py-2 shadow-sm"
+                    className="flex items-center justify-between rounded-md bg-deep-navy px-3 py-2 shadow-sm"
                   >
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                      <span className="text-sm text-zinc-700">{name}</span>
+                      <div className="h-2 w-2 rounded-full bg-electric-blue" />
+                      <span className="text-sm text-soft-white">{name}</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveDocument(index)}
                       disabled={isLoading}
-                      className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-red-500 disabled:opacity-50"
+                      className="flex h-6 w-6 items-center justify-center rounded text-steel-gray duration-150 ease-linear transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
                     >
                       <Trash weight="bold" className="h-3.5 w-3.5" />
                     </button>
@@ -262,8 +262,8 @@ export function RequestDocumentsModal({
 
           {/* Empty State */}
           {documentNames.length === 0 && (
-            <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center">
-              <p className="text-sm text-zinc-500">
+            <div className="rounded-lg border border-dashed border-white/15 bg-white/4 p-6 text-center">
+              <p className="text-sm text-steel-gray">
                 Add documents above to create your request list
               </p>
             </div>

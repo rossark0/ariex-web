@@ -212,16 +212,16 @@ export function CreatePaymentLinkModal({
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl">
+      <div className="w-full max-w-2xl rounded-xl bg-deep-navy shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-200 p-6">
+        <div className="flex items-center justify-between border-b border-white/8 p-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50">
-              <CreditCard className="h-5 w-5 text-emerald-600" weight="duotone" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-electric-blue/15">
+              <CreditCard className="h-5 w-5 text-electric-blue" weight="duotone" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900">Create Payment Link</h2>
-              <p className="text-sm text-zinc-500">
+              <h2 className="text-lg font-semibold text-soft-white">Create Payment Link</h2>
+              <p className="text-sm text-steel-gray">
                 {step === 'client' && 'Select a client'}
                 {step === 'agreement' && 'Select an agreement'}
                 {step === 'details' && 'Enter payment details'}
@@ -230,7 +230,7 @@ export function CreatePaymentLinkModal({
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+            className="rounded-lg p-1 text-steel-gray hover:bg-white/8 hover:text-soft-white"
           >
             <XIcon className="h-5 w-5" />
           </button>
@@ -239,8 +239,8 @@ export function CreatePaymentLinkModal({
         {/* Content */}
         <div className="max-h-[600px] overflow-y-auto p-6">
           {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+              <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
 
@@ -248,36 +248,36 @@ export function CreatePaymentLinkModal({
           {step === 'client' && (
             <div className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700">
+                <label className="mb-2 block text-sm font-medium text-soft-white">
                   Search by Client
                 </label>
                 <div className="relative">
                   <MagnifyingGlassIcon
                     weight="bold"
-                    className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-zinc-400"
+                    className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-steel-gray"
                   />
                   <input
                     type="text"
                     placeholder="Search by name or email..."
                     value={clientSearch}
                     onChange={e => setClientSearch(e.target.value)}
-                    className="w-full rounded-lg border border-zinc-300 py-2 pl-10 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full rounded-lg border border-white/10 bg-graphite py-2 pl-10 pr-3 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:outline-none focus:ring-1 focus:ring-electric-blue/30"
                   />
                 </div>
               </div>
 
               <div className="max-h-[300px] space-y-2 overflow-y-auto">
                 {filteredClients.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-zinc-500">No clients found</p>
+                  <p className="py-8 text-center text-sm text-steel-gray">No clients found</p>
                 ) : (
                   filteredClients.map(client => (
                     <button
                       key={client.id}
                       onClick={() => handleClientSelect(client)}
-                      className="w-full rounded-lg border border-zinc-200 bg-white p-4 text-left transition-colors hover:border-emerald-300 hover:bg-emerald-50"
+                      className="w-full rounded-lg border border-white/10 bg-deep-navy p-4 text-left transition-colors hover:border-electric-blue/30 hover:bg-electric-blue/5"
                     >
-                      <p className="font-medium text-zinc-900">{client.name || 'Unnamed Client'}</p>
-                      <p className="text-sm text-zinc-500">{client.email}</p>
+                      <p className="font-medium text-soft-white">{client.name || 'Unnamed Client'}</p>
+                      <p className="text-sm text-steel-gray">{client.email}</p>
                     </button>
                   ))
                 )}
@@ -285,16 +285,16 @@ export function CreatePaymentLinkModal({
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-zinc-200" />
+                  <div className="w-full border-t border-white/10" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="bg-white px-2 text-zinc-500">or</span>
+                  <span className="bg-deep-navy px-2 text-steel-gray">or</span>
                 </div>
               </div>
 
               <button
                 onClick={handleSearchDirectly}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+                className="w-full rounded-lg border border-white/10 bg-transparent px-4 py-2 text-sm font-medium text-soft-white duration-150 ease-linear transition-colors hover:bg-white/8"
               >
                 Search agreements directly
               </button>
@@ -305,8 +305,8 @@ export function CreatePaymentLinkModal({
           {step === 'agreement' && (
             <div className="space-y-4">
               {selectedClient && (
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                  <p className="text-sm text-emerald-700">
+                <div className="rounded-lg border border-electric-blue/30 bg-electric-blue/10 p-3">
+                  <p className="text-sm text-electric-blue">
                     <span className="font-medium">Selected client:</span> {selectedClient.name} (
                     {selectedClient.email})
                   </p>
@@ -314,45 +314,45 @@ export function CreatePaymentLinkModal({
               )}
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700">
+                <label className="mb-2 block text-sm font-medium text-soft-white">
                   Search Agreement
                 </label>
                 <div className="relative">
                   <MagnifyingGlassIcon
                     weight="bold"
-                    className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-zinc-400"
+                    className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-steel-gray"
                   />
                   <input
                     type="text"
                     placeholder="Search by name or ID..."
                     value={agreementSearch}
                     onChange={e => setAgreementSearch(e.target.value)}
-                    className="w-full rounded-lg border border-zinc-300 py-2 pl-10 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full rounded-lg border border-white/10 bg-graphite py-2 pl-10 pr-3 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:outline-none focus:ring-1 focus:ring-electric-blue/30"
                   />
                 </div>
               </div>
 
               <div className="max-h-[300px] space-y-2 overflow-y-auto">
                 {filteredAgreements.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-zinc-500">No agreements found</p>
+                  <p className="py-8 text-center text-sm text-steel-gray">No agreements found</p>
                 ) : (
                   filteredAgreements.map(agreement => (
                     <button
                       key={agreement.id}
                       onClick={() => handleAgreementSelect(agreement)}
-                      className="w-full rounded-lg border border-zinc-200 bg-white p-4 text-left transition-colors hover:border-emerald-300 hover:bg-emerald-50"
+                      className="w-full rounded-lg border border-white/10 bg-deep-navy p-4 text-left transition-colors hover:border-electric-blue/30 hover:bg-electric-blue/5"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <p className="font-medium text-zinc-900">{agreement.name}</p>
+                          <p className="font-medium text-soft-white">{agreement.name}</p>
                           {agreement.description && (
-                            <p className="mt-1 text-sm text-zinc-500 line-clamp-2">
+                            <p className="mt-1 text-sm text-steel-gray line-clamp-2">
                               {agreement.description}
                             </p>
                           )}
                         </div>
                         {agreement.price && (
-                          <p className="ml-4 font-medium text-emerald-600">
+                          <p className="ml-4 font-medium text-electric-blue">
                             ${typeof agreement.price === 'string' 
                               ? agreement.price 
                               : agreement.price.toFixed(2)}
@@ -370,12 +370,12 @@ export function CreatePaymentLinkModal({
           {step === 'details' && (
             <div className="space-y-4">
               {selectedAgreement && (
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                  <p className="text-sm text-emerald-700">
+                <div className="rounded-lg border border-electric-blue/30 bg-electric-blue/10 p-3">
+                  <p className="text-sm text-electric-blue">
                     <span className="font-medium">Agreement:</span> {selectedAgreement.name}
                   </p>
                   {selectedClient && (
-                    <p className="mt-1 text-sm text-emerald-700">
+                    <p className="mt-1 text-sm text-electric-blue">
                       <span className="font-medium">Client:</span> {selectedClient.name} (
                       {selectedClient.email})
                     </p>
@@ -384,8 +384,8 @@ export function CreatePaymentLinkModal({
               )}
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700">
-                  Amount (USD) <span className="text-red-500">*</span>
+                <label className="mb-2 block text-sm font-medium text-soft-white">
+                  Amount (USD) <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="number"
@@ -394,12 +394,12 @@ export function CreatePaymentLinkModal({
                   placeholder="499.00"
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:outline-none focus:ring-1 focus:ring-electric-blue/30"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700">
+                <label className="mb-2 block text-sm font-medium text-soft-white">
                   Description
                 </label>
                 <textarea
@@ -407,7 +407,7 @@ export function CreatePaymentLinkModal({
                   placeholder="Payment for services..."
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:outline-none focus:ring-1 focus:ring-electric-blue/30"
                 />
               </div>
             </div>
@@ -415,10 +415,10 @@ export function CreatePaymentLinkModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t border-zinc-200 p-6">
+        <div className="flex items-center justify-between border-t border-white/8 p-6">
           <button
             onClick={step === 'client' ? onClose : handleBack}
-            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            className="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-soft-white duration-150 ease-linear transition-colors hover:bg-white/8"
           >
             {step === 'client' ? 'Cancel' : 'Back'}
           </button>
@@ -427,7 +427,7 @@ export function CreatePaymentLinkModal({
             <button
               onClick={handleCreatePaymentLink}
               disabled={isLoading || !amount}
-              className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg bg-electric-blue px-4 py-2 text-sm font-medium text-soft-white duration-150 ease-linear transition-colors hover:bg-electric-blue/80 disabled:opacity-50"
             >
               {isLoading ? (
                 <>

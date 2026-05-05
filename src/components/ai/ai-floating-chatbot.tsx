@@ -163,7 +163,7 @@ export function AiFloatingChatbot({
       ref={wrapperRef}
       className={cn(
         'relative sticky -bottom-1 z-50 mx-auto flex w-full max-w-2xl flex-col bg-transparent',
-        showSelectionBar ? 'bg-transparent' : 'bg-white'
+        showSelectionBar ? 'bg-transparent' : 'bg-transparent'
       )}
     >
       {/* Selection bar - appears above when documents are selected */}
@@ -171,11 +171,11 @@ export function AiFloatingChatbot({
         <div className="mb-6 flex justify-center transition-all duration-200 ease-out">
           <div className="flex items-center gap-2 rounded-full px-1 py-1">
             {/* Selected count with clear button */}
-            <div className="flex items-center gap-2 rounded-full border border-zinc-200 bg-white py-1.5 pr-1 pl-3 shadow-lg">
-              <span className="text-sm font-medium text-zinc-700">{selectedCount} selected</span>
+            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-deep-navy py-1.5 pr-1 pl-3 shadow-lg">
+              <span className="text-sm font-medium text-soft-white">{selectedCount} selected</span>
               <button
                 onClick={onClearSelection}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-700"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
               >
                 <X weight="bold" className="h-3.5 w-3.5" />
               </button>
@@ -184,7 +184,7 @@ export function AiFloatingChatbot({
             {/* Ask Ariex button */}
             <button
               onClick={handleAskAriex}
-              className="flex cursor-pointer items-center gap-1.5 rounded-full border border-zinc-200 bg-white py-1.5 pr-3 pl-3 text-sm font-medium text-teal-600 shadow-lg transition-colors hover:bg-teal-50"
+              className="flex cursor-pointer items-center gap-1.5 rounded-full border border-electric-blue/30 bg-electric-blue/10 py-1.5 pr-3 pl-3 text-sm font-medium text-electric-blue shadow-lg duration-150 ease-linear transition-colors hover:bg-electric-blue/20"
             >
               <span>Analyze with AI</span>
             </button>
@@ -194,7 +194,7 @@ export function AiFloatingChatbot({
               <button
                 onClick={onDownload}
                 disabled={isDownloading}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-zinc-200 bg-white py-1.5 pr-3 pl-2 text-sm font-medium text-zinc-700 shadow-lg transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-deep-navy py-1.5 pr-3 pl-2 text-sm font-medium text-soft-white shadow-lg duration-150 ease-linear transition-colors hover:bg-white/8 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isDownloading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -210,7 +210,7 @@ export function AiFloatingChatbot({
               <button
                 onClick={onDelete}
                 disabled={isDeleting}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-red-200 bg-white py-1.5 pr-3 pl-2 text-sm font-medium text-red-600 shadow-lg transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 py-1.5 pr-3 pl-2 text-sm font-medium text-red-400 shadow-lg duration-150 ease-linear transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isDeleting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -230,18 +230,18 @@ export function AiFloatingChatbot({
           className="absolute bottom-0 mb-2 w-full transition-all duration-300"
           aria-label="AI Chat Panel"
         >
-          <div className="z-50 flex flex-col gap-3 rounded-[36px] border border-zinc-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-4">
+          <div className="z-50 flex flex-col gap-3 rounded-[36px] border border-white/10 bg-deep-navy shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/8 px-4 py-4">
               <div className="flex flex-col pl-2">
-                <span className="text-sm font-medium text-zinc-900">
+                <span className="text-sm font-medium text-soft-white">
                   {isClient ? 'Tax Assistant' : 'Tax Strategy Assistant'}
                 </span>
                 {pageContext ? (
-                  <span className="mt-0.5 text-xs text-emerald-600">
+                  <span className="mt-0.5 text-xs text-electric-blue">
                     ● {pageContext.pageTitle}
                   </span>
                 ) : (
-                  <span className="mt-0.5 text-xs text-zinc-400">
+                  <span className="mt-0.5 text-xs text-steel-gray">
                     {isClient
                       ? 'Ask questions, track progress & understand your taxes'
                       : 'Analyze docs, suggest deductions & build strategies'}
@@ -252,14 +252,14 @@ export function AiFloatingChatbot({
                 {aiMessages.length > 0 && (
                   <button
                     onClick={clearAiMessages}
-                    className="rounded-full px-3 py-1 text-xs font-medium text-zinc-500 hover:bg-zinc-100"
+                    className="rounded-full px-3 py-1 text-xs font-medium text-steel-gray duration-150 ease-linear hover:bg-white/8 hover:text-soft-white"
                   >
                     Clear
                   </button>
                 )}
                 <button
                   onClick={() => setAiChatOpen(false)}
-                  className="rounded-full px-3 py-1 text-xs font-medium text-zinc-500 hover:bg-zinc-100"
+                  className="rounded-full px-3 py-1 text-xs font-medium text-steel-gray duration-150 ease-linear hover:bg-white/8 hover:text-soft-white"
                 >
                   <MinusIcon className="h-4 w-4" />
                 </button>
@@ -270,10 +270,10 @@ export function AiFloatingChatbot({
               {aiMessages.length === 0 ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3">
                   <div className="text-center">
-                    <p className="text-sm font-medium text-zinc-700">
+                    <p className="text-sm font-medium text-soft-white">
                       {isClient ? 'Your Tax Assistant' : 'Your Tax Strategy Assistant'}
                     </p>
-                    <p className="mt-1 max-w-xs text-xs text-zinc-500">
+                    <p className="mt-1 max-w-xs text-xs text-steel-gray">
                       {isClient
                         ? 'I can help you understand your tax situation, track your progress, and answer questions about documents, deadlines, and next steps.'
                         : 'I can analyze client documents, suggest deductions & credits, identify missing filings, and help you build tax strategies.'}
@@ -287,7 +287,7 @@ export function AiFloatingChatbot({
                           const name = pageContext.client?.name || 'this client';
                           sendAiMessage(`Based on ${name}'s profile, uploaded documents, and filing status, suggest personalized tax-saving strategies with estimated savings.`);
                         }}
-                        className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                        className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
                       >
                         Suggest strategies
                       </button>
@@ -296,7 +296,7 @@ export function AiFloatingChatbot({
                           const name = pageContext.client?.name || 'this client';
                           sendAiMessage(`Summarize ${name}'s current status in the Ariex lifecycle (agreement, payment, documents, strategy) and tell me the next steps I should take.`);
                         }}
-                        className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                        className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
                       >
                         Status & next steps
                       </button>
@@ -305,7 +305,7 @@ export function AiFloatingChatbot({
                           onClick={() => {
                             sendAiMessage('Review the uploaded documents: list what we have, identify any missing standard documents (W-2, 1099s, prior returns), and flag anything that needs attention before I create a strategy.');
                           }}
-                          className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                          className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
                         >
                           Audit documents
                         </button>
@@ -316,7 +316,7 @@ export function AiFloatingChatbot({
                             const name = pageContext.client?.name || 'this client';
                             sendAiMessage(`Given ${name}'s estimated income, filing status, and business type, what are the top deductions and credits they should maximize this tax year?`);
                           }}
-                          className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                          className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
                         >
                           Deductions & credits
                         </button>
@@ -330,7 +330,7 @@ export function AiFloatingChatbot({
                         onClick={() => {
                           sendAiMessage("What is my current status? Walk me through where I am in the process and what I need to do next.");
                         }}
-                        className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                        className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
                       >
                         My progress
                       </button>
@@ -338,7 +338,7 @@ export function AiFloatingChatbot({
                         onClick={() => {
                           sendAiMessage('What documents do I still need to upload, and why are they important for my tax strategy?');
                         }}
-                        className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                        className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
                       >
                         What to upload
                       </button>
@@ -346,7 +346,7 @@ export function AiFloatingChatbot({
                         onClick={() => {
                           sendAiMessage('Are there any important tax deadlines coming up that I should be aware of?');
                         }}
-                        className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                        className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
                       >
                         Upcoming deadlines
                       </button>
@@ -355,7 +355,7 @@ export function AiFloatingChatbot({
                           onClick={() => {
                             sendAiMessage('Can you explain what each of my uploaded documents is and how they help with my taxes?');
                           }}
-                          className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                          className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
                         >
                           Explain my docs
                         </button>
@@ -368,7 +368,7 @@ export function AiFloatingChatbot({
                         onClick={() => {
                           sendAiMessage('Give me an overview of what I see on this page and suggest the most important actions I should take next.');
                         }}
-                        className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                        className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
                       >
                         Page overview
                       </button>
@@ -398,8 +398,8 @@ export function AiFloatingChatbot({
                               )}
                             </div>
                           )}
-                          <div className="max-w-[80%] rounded-2xl bg-zinc-100 px-4 py-2.5">
-                            <p className="text-base break-words text-zinc-900">{message.content}</p>
+                          <div className="max-w-[80%] rounded-2xl bg-white/6 px-4 py-2.5">
+                            <p className="text-base wrap-break-word text-soft-white">{message.content}</p>
                           </div>
                         </div>
                       ) : (
@@ -407,14 +407,14 @@ export function AiFloatingChatbot({
                           {message.content ? (
                             <MarkdownContent content={message.content} />
                           ) : (
-                            <div className="flex items-center gap-2 text-sm text-zinc-400">
+                            <div className="flex items-center gap-2 text-sm text-steel-gray">
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                               <span>Analyzing…</span>
                             </div>
                           )}
                           {/* Show streaming cursor for the last assistant message while loading */}
                           {isAiLoading && message.id === aiMessages[aiMessages.length - 1]?.id && message.content ? (
-                            <span className="inline-block h-4 w-1.5 animate-pulse rounded-sm bg-emerald-500" />
+                            <span className="inline-block h-4 w-1.5 animate-pulse rounded-sm bg-electric-blue" />
                           ) : null}
                           {!isAiLoading && message.content && (
                             <button
@@ -425,7 +425,7 @@ export function AiFloatingChatbot({
                                     : 'Expand on that — include specific IRS rules, estimated dollar savings, and any deadlines I should be aware of.'
                                 );
                               }}
-                              className="rounded-full border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+                              className="rounded-full border border-white/10 px-3 py-1.5 text-sm font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
                             >
                               {isClient ? 'Tell me more' : 'Go deeper'}
                             </button>
@@ -445,7 +445,7 @@ export function AiFloatingChatbot({
       {/* Input anchored at bottom, grows upward */}
       {isAiChatOpen ? (
         <div className="z-40 -translate-y-4 scale-[97%] transition-all duration-300">
-          <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 focus-within:ring-2 focus-within:ring-emerald-100 hover:bg-white focus:border-emerald-100!">
+          <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-graphite shadow-2xl duration-200 ease-linear transition-all focus-within:ring-2 focus-within:ring-electric-blue/30">
             {/* Textarea */}
             <textarea
               ref={textareaRef}
@@ -465,13 +465,13 @@ export function AiFloatingChatbot({
                   requestAnimationFrame(() => autoResize());
                 }
               }}
-              className="min-h-[56px] flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-normal text-black placeholder:text-zinc-500 focus:outline-none"
+              className="min-h-[56px] flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-normal text-soft-white placeholder:text-steel-gray focus:outline-none"
             />
 
             {/* Attachment Button */}
             <button
               type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 transition-all hover:bg-zinc-100"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-steel-gray duration-150 ease-linear transition-all hover:bg-white/8 hover:text-soft-white"
               aria-label="Attach file"
             >
               <Paperclip size={20} weight="bold" />
@@ -482,7 +482,7 @@ export function AiFloatingChatbot({
               <button
                 type="button"
                 onClick={stopAiGeneration}
-                className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white transition-all hover:bg-red-600"
+                className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-soft-white duration-150 ease-linear transition-all hover:bg-red-600"
                 aria-label="Stop generation"
               >
                 <Stop size={20} weight="fill" />
@@ -492,7 +492,7 @@ export function AiFloatingChatbot({
                 type="button"
                 disabled={!input.trim()}
                 onClick={handleSendMessage}
-                className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+                className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-electric-blue text-soft-white duration-150 ease-linear transition-all hover:bg-electric-blue/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-steel-gray"
                 aria-label="Send message"
               >
                 <ArrowUp size={20} weight="bold" />
@@ -502,7 +502,7 @@ export function AiFloatingChatbot({
         </div>
       ) : (
         <div className="z-40 -translate-y-4 scale-[97%] transition-all duration-300">
-          <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 focus-within:ring-2 focus-within:ring-zinc-300 hover:bg-white">
+          <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-graphite shadow-2xl duration-200 ease-linear transition-all focus-within:ring-2 focus-within:ring-electric-blue/30">
             {/* Textarea */}
             <textarea
               ref={textareaRef}
@@ -520,7 +520,7 @@ export function AiFloatingChatbot({
                   requestAnimationFrame(() => autoResize());
                 }
               }}
-              className="min-h-[56px] flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-normal text-black placeholder:text-zinc-500 focus:outline-none"
+              className="min-h-[56px] flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-normal text-soft-white placeholder:text-steel-gray focus:outline-none"
             />
 
             {/* Floating Button - Right Side */}
@@ -532,12 +532,12 @@ export function AiFloatingChatbot({
                     textareaRef.current?.focus();
                   }, 0);
                 }}
-                className="mr-3 flex cursor-pointer items-center gap-2 rounded-full border border-zinc-200 bg-white px-2 py-2 transition-all hover:shadow-xl"
+                className="mr-3 flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-deep-navy px-2 py-2 duration-150 ease-linear transition-all hover:bg-white/8"
               >
-                <div className="flex h-5 w-8 items-center justify-center rounded-md bg-emerald-100">
-                  <kbd className="text-xs font-extrabold text-emerald-600">TAB</kbd>
+                <div className="flex h-5 w-8 items-center justify-center rounded-md bg-electric-blue/15">
+                  <kbd className="text-xs font-extrabold text-electric-blue">TAB</kbd>
                 </div>
-                <span className="text-sm font-medium text-zinc-700">Tax Assistant</span>
+                <span className="text-sm font-medium text-soft-white">Tax Assistant</span>
               </button>
             )}
           </div>

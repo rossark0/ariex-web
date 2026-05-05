@@ -21,14 +21,14 @@ export default function Header() {
       
       <div className="flex items-center gap-4">
         <div className="text-right">
-          <div className="text-sm font-medium text-zinc-900">{user.name}</div>
-          <div className="text-xs text-zinc-500">{user.role}</div>
+          <div className="text-sm font-medium text-soft-white">{user.name}</div>
+          <div className="text-xs text-steel-gray">{user.role}</div>
         </div>
         <Button
           onClick={handleLogout}
           variant="outline"
           size="sm"
-          className="border-zinc-300 text-zinc-700 hover:bg-zinc-100"
+          className="border-white/10 text-steel-gray hover:bg-white/8 hover:text-soft-white"
         >
           Logout
         </Button>

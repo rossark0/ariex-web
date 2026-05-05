@@ -20,15 +20,15 @@ function normalizeChargeStatus(status: unknown): ChargeStatus {
 function getStatusBadgeColor(status: ChargeStatus): string {
   switch (status) {
     case 'paid':
-      return 'bg-emerald-100 text-emerald-800';
+      return 'bg-emerald-500/15 text-emerald-400';
     case 'pending':
-      return 'bg-amber-100 text-amber-800';
+      return 'bg-amber-500/15 text-amber-400';
     case 'failed':
-      return 'bg-red-100 text-red-800';
+      return 'bg-red-500/15 text-red-400';
     case 'cancelled':
-      return 'bg-zinc-100 text-zinc-800';
+      return 'bg-white/8 text-steel-gray';
     default:
-      return 'bg-zinc-100 text-zinc-800';
+      return 'bg-white/8 text-steel-gray';
   }
 }
 
@@ -51,49 +51,49 @@ function formatDate(dateString: string): string {
 export function ChargesTable({ charges, onVerifyCharge, onGeneratePaymentLink, loadingChargeId }: ChargesTableProps) {
   if (charges.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border border-zinc-200 bg-white py-12 text-center">
-        <CreditCard weight="fill" className="mb-3 h-8 w-8 text-zinc-300" />
-        <p className="text-sm font-medium text-zinc-600">No charges found</p>
-        <p className="text-xs text-zinc-400">Try adjusting your filters or search</p>
+      <div className="flex flex-col items-center justify-center rounded-lg border border-white/10 bg-deep-navy py-12 text-center">
+        <CreditCard weight="fill" className="mb-3 h-8 w-8 text-steel-gray" />
+        <p className="text-sm font-medium text-soft-white">No charges found</p>
+        <p className="text-xs text-steel-gray">Try adjusting your filters or search</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+    <div className="overflow-hidden rounded-lg border border-white/10 bg-deep-navy">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-zinc-100 bg-zinc-50">
-              <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-600">Agreement</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-600">Client</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-600">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-600">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-600">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-600">Actions</th>
+            <tr className="border-b border-white/8 bg-white/4">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-steel-gray">Agreement</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-steel-gray">Client</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-steel-gray">Amount</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-steel-gray">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-steel-gray">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-steel-gray">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100">
+          <tbody className="divide-y divide-white/6">
             {charges.map(charge => {
               const normalizedStatus = normalizeChargeStatus(charge.status);
 
               return (
-              <tr key={charge.id} className="hover:bg-zinc-50">
+              <tr key={charge.id} className="hover:bg-white/4">
                 <td className="px-6 py-4">
-                  <p className="text-sm font-medium text-zinc-900">{charge.agreement?.name || '—'}</p>
+                  <p className="text-sm font-medium text-soft-white">{charge.agreement?.name || '—'}</p>
                 </td>
                 <td className="px-6 py-4">
-                  <p className="text-sm text-zinc-600">{charge.agreement?.client?.email || '—'}</p>
+                  <p className="text-sm text-steel-gray">{charge.agreement?.client?.email || '—'}</p>
                 </td>
                 <td className="px-6 py-4">
-                  <p className="font-medium text-zinc-900">{formatCurrency(charge.amount, charge.currency)}</p>
+                  <p className="font-medium text-soft-white">{formatCurrency(charge.amount, charge.currency)}</p>
                 </td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getStatusBadgeColor(normalizedStatus)}`}>
                     {normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1)}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-sm text-zinc-600">
+                <td className="px-6 py-4 text-sm text-steel-gray">
                   {formatDate(charge.createdAt)}
                 </td>
                 <td className="px-6 py-4">
@@ -103,7 +103,7 @@ export function ChargesTable({ charges, onVerifyCharge, onGeneratePaymentLink, l
                       <button
                         onClick={() => onVerifyCharge(charge.id)}
                         disabled={loadingChargeId === charge.id}
-                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50"
                         title="Check if payment was successful"
                       >
                         <CheckCircle weight="bold" className="h-3.5 w-3.5" />
@@ -116,7 +116,7 @@ export function ChargesTable({ charges, onVerifyCharge, onGeneratePaymentLink, l
                       <button
                         onClick={() => onGeneratePaymentLink(charge.id)}
                         disabled={loadingChargeId === charge.id}
-                        className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-lg bg-electric-blue/10 px-2 py-1 text-xs font-medium text-electric-blue hover:bg-electric-blue/20 disabled:opacity-50"
                         title="Generate payment link"
                       >
                         <LinkSimple weight="bold" className="h-3.5 w-3.5" />

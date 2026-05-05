@@ -130,7 +130,7 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
   return (
     <div
       ref={chatRef}
-      className={`fixed right-10 bottom-4 z-40 flex w-80 flex-col overflow-hidden border border-zinc-200 bg-white transition-[height,border-radius,box-shadow] duration-300 ease-out ${
+      className={`fixed right-10 bottom-4 z-40 flex w-80 flex-col overflow-hidden border border-white/10 bg-deep-navy transition-[height,border-radius,box-shadow] duration-200 ease-linear ${
         isExpanded
           ? 'h-[500px] rounded-2xl shadow-2xl'
           : 'h-auto rounded-lg shadow-lg hover:shadow-xl'
@@ -139,15 +139,15 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
       {/* Header */}
       <div
         onClick={() => setIsExpanded(!isExpanded)}
-        className={`flex shrink-0 cursor-pointer items-center gap-3 transition-colors ${
-          isExpanded ? 'border-b border-zinc-100 px-4 py-3 hover:bg-zinc-50' : 'px-2 py-1'
+        className={`flex shrink-0 cursor-pointer items-center gap-3 duration-150 ease-linear transition-colors ${
+          isExpanded ? 'border-b border-white/8 px-4 py-3 hover:bg-white/4' : 'px-2 py-1'
         }`}
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-xs font-medium text-white">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-medium text-soft-white">
           {getInitials(client.user.name)}
         </div>
         <div className="flex-1">
-          <p className="text-sm font-medium text-zinc-900">{client.user.name}</p>
+          <p className="text-sm font-medium text-soft-white">{client.user.name}</p>
           <div className="flex items-center gap-1">
             <div className="relative flex h-2 w-2">
               {!isExpanded && (
@@ -155,12 +155,12 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
               )}
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </div>
-            <span className="text-xs text-zinc-500">Online</span>
+            <span className="text-xs text-steel-gray">Online</span>
           </div>
         </div>
         <CaretUp
           weight="bold"
-          className={`h-4 w-4 text-zinc-400 transition-transform duration-300 ease-out ${
+          className={`h-4 w-4 text-steel-gray transition-transform duration-200 ease-linear ${
             isExpanded ? 'rotate-180' : 'rotate-0'
           }`}
         />
@@ -171,14 +171,14 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
         <div className="flex-1 overflow-y-auto p-4">
           {isLoadingMessages || !hasLoadedOnce ? (
             <div className="flex h-full items-center justify-center">
-              <SpinnerGap className="h-6 w-6 animate-spin text-zinc-400" />
+              <SpinnerGap className="h-6 w-6 animate-spin text-steel-gray" />
             </div>
           ) : (
             <div className="space-y-4">
               {messages.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center py-8 text-center">
-                  <p className="text-sm text-zinc-500">No messages yet</p>
-                  <p className="text-xs text-zinc-400">
+                  <p className="text-sm text-steel-gray">No messages yet</p>
+                  <p className="text-xs text-steel-gray/60">
                     Start the conversation with {client.user.name?.split(' ')[0]}
                   </p>
                 </div>
@@ -189,10 +189,10 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
                       /* Strategist message - right side */
                       <div className="flex justify-end">
                         <div className="max-w-[85%]">
-                          <div className="rounded-2xl rounded-br-sm bg-teal-500 px-4 py-2">
-                            <p className="text-sm text-white">{message.content}</p>
+                          <div className="rounded-2xl rounded-br-sm bg-electric-blue px-4 py-2">
+                            <p className="text-sm text-soft-white">{message.content}</p>
                           </div>
-                          <p className="mt-1 text-right text-[10px] text-zinc-400">
+                          <p className="mt-1 text-right text-[10px] text-steel-gray">
                             {formatTime(message.createdAt)}
                           </p>
                         </div>
@@ -200,20 +200,20 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
                     ) : (
                       /* Client message - left side */
                       <div className="flex gap-2">
-                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-[10px] font-medium text-zinc-600">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-medium text-soft-white">
                           {getInitials(client.user.name)}
                         </div>
                         <div className="max-w-[85%]">
                           <div
-                            className={`rounded-2xl rounded-bl-sm bg-zinc-100 px-4 py-2 ${message.isError ? 'bg-red-50' : ''}`}
+                            className={`rounded-2xl rounded-bl-sm bg-white/6 px-4 py-2 ${message.isError ? 'bg-red-500/10' : ''}`}
                           >
                             <p
-                              className={`text-sm text-zinc-900 ${message.isError ? 'text-red-600' : ''}`}
+                              className={`text-sm text-soft-white ${message.isError ? 'text-red-400' : ''}`}
                             >
                               {message.content}
                             </p>
                           </div>
-                          <p className="mt-1 text-[10px] text-zinc-400">
+                          <p className="mt-1 text-[10px] text-steel-gray">
                             {formatTime(message.createdAt)}
                           </p>
                         </div>
@@ -230,7 +230,7 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
 
       {/* Input */}
       {isExpanded && (
-        <div className="shrink-0 border-t border-zinc-100 p-3">
+        <div className="shrink-0 border-t border-white/8 p-3">
           <div className="flex items-end gap-2">
             <textarea
               ref={inputRef}
@@ -240,7 +240,7 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
               placeholder={`Message ${client.user.name?.split(' ')[0]}...`}
               rows={1}
               disabled={isSending}
-              className="min-h-[44px] flex-1 resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 transition-all placeholder:text-zinc-400 focus:ring-2 focus:ring-zinc-200 focus:outline-none disabled:opacity-50"
+              className="min-h-[44px] flex-1 resize-none rounded-2xl border border-white/10 bg-graphite px-4 py-3 text-sm text-soft-white duration-200 ease-linear transition-all placeholder:text-steel-gray focus:ring-2 focus:ring-electric-blue/30 focus:outline-none disabled:opacity-50"
             />
           </div>
         </div>

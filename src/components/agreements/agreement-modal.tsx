@@ -118,22 +118,22 @@ export function AgreementModal({
       {/* Modal Container */}
       <div
         className={cn(
-          'relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl transition-all duration-200',
+          'relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-deep-navy p-6 shadow-2xl transition-all duration-200',
           !isClosing ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
         )}
       >
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900">Send Agreement</h2>
-            <p className="mt-0.5 text-sm text-zinc-500">
+            <h2 className="text-lg font-semibold text-soft-white">Send Agreement</h2>
+            <p className="mt-0.5 text-sm text-steel-gray">
               Create a service agreement for {clientName}
             </p>
           </div>
           <button
             onClick={handleClose}
             disabled={isLoading}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 disabled:opacity-50"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white disabled:opacity-50"
           >
             <X weight="bold" className="h-4 w-4" />
           </button>
@@ -143,7 +143,7 @@ export function AgreementModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Title */}
           <div>
-            <label htmlFor="title" className="mb-1.5 block text-sm font-medium text-zinc-700">
+            <label htmlFor="title" className="mb-1.5 block text-sm font-medium text-soft-white">
               Agreement Title
             </label>
             <input
@@ -151,7 +151,7 @@ export function AgreementModal({
               type="text"
               value={formData.title}
               onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+              className="w-full rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
               placeholder="Enter agreement title"
               required
               disabled={isLoading}
@@ -160,7 +160,7 @@ export function AgreementModal({
 
           {/* Description */}
           <div>
-            <label htmlFor="description" className="mb-1.5 block text-sm font-medium text-zinc-700">
+            <label htmlFor="description" className="mb-1.5 block text-sm font-medium text-soft-white">
               Description
             </label>
             <textarea
@@ -168,7 +168,7 @@ export function AgreementModal({
               value={formData.description}
               onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
               rows={3}
-              className="w-full resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+              className="w-full resize-none rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
               placeholder="Describe the services included..."
               disabled={isLoading}
             />
@@ -176,11 +176,11 @@ export function AgreementModal({
 
           {/* Price */}
           <div>
-            <label htmlFor="price" className="mb-1.5 block text-sm font-medium text-zinc-700">
+            <label htmlFor="price" className="mb-1.5 block text-sm font-medium text-soft-white">
               Service Fee
             </label>
             <div className="relative">
-              <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm text-zinc-500">
+              <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm text-steel-gray">
                 $
               </span>
               <input
@@ -190,7 +190,7 @@ export function AgreementModal({
                 step="1"
                 value={formData.price}
                 onChange={e => setFormData(prev => ({ ...prev, price: Number(e.target.value) }))}
-                className="w-full rounded-lg border border-zinc-200 py-2 pr-3 pl-7 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                className="w-full rounded-lg border border-white/10 bg-graphite py-2 pr-3 pl-7 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
                 placeholder="499"
                 required
                 disabled={isLoading}
@@ -200,15 +200,15 @@ export function AgreementModal({
 
           {/* Todos Section */}
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+            <label className="mb-1.5 block text-sm font-medium text-soft-white">
               Tasks for Client
             </label>
 
             {/* Auto-generated todo - always shown */}
-            <div className="mb-2 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              <div className="h-2 w-2 rounded-full bg-emerald-500" />
+            <div className="mb-2 flex items-center gap-2 rounded-lg bg-electric-blue/10 px-3 py-2 text-sm text-electric-blue">
+              <div className="h-2 w-2 rounded-full bg-electric-blue" />
               <span>Sign service agreement</span>
-              <span className="ml-auto text-xs text-emerald-500">Auto-created</span>
+              <span className="ml-auto text-xs text-electric-blue/70">Auto-created</span>
             </div>
 
             {/* Custom todos list */}
@@ -217,15 +217,15 @@ export function AgreementModal({
                 {formData.todos.map((todo, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2"
+                    className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2"
                   >
-                    <div className="h-2 w-2 rounded-full bg-zinc-400" />
-                    <span className="flex-1 text-sm text-zinc-700">{todo.title}</span>
+                    <div className="h-2 w-2 rounded-full bg-steel-gray" />
+                    <span className="flex-1 text-sm text-soft-white">{todo.title}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveTodo(index)}
                       disabled={isLoading}
-                      className="text-zinc-400 hover:text-red-500 disabled:opacity-50"
+                      className="text-steel-gray hover:text-red-400 disabled:opacity-50"
                     >
                       <Trash className="h-4 w-4" />
                     </button>
@@ -241,7 +241,7 @@ export function AgreementModal({
                 value={newTodoTitle}
                 onChange={e => setNewTodoTitle(e.target.value)}
                 onKeyDown={handleTodoKeyDown}
-                className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                className="flex-1 rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
                 placeholder="Add a task for the client..."
                 disabled={isLoading}
               />
@@ -249,7 +249,7 @@ export function AgreementModal({
                 type="button"
                 onClick={handleAddTodo}
                 disabled={isLoading || !newTodoTitle.trim()}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-700 disabled:opacity-50"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-steel-gray transition-colors hover:bg-white/8 hover:text-soft-white disabled:opacity-50"
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -258,7 +258,7 @@ export function AgreementModal({
 
           {/* Error Message */}
           {error && (
-            <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
+            <div className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</div>
           )}
 
           {/* Actions */}
@@ -269,7 +269,7 @@ export function AgreementModal({
             <Button
               type="submit"
               disabled={isLoading || !formData.title}
-              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              className="bg-electric-blue text-soft-white hover:bg-electric-blue/80"
             >
               {isLoading ? (
                 <>

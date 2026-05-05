@@ -35,14 +35,14 @@ export function ChatHeader({
   return (
     <header
       className={cn(
-        'flex shrink-0 items-center gap-3 border-b border-zinc-100 px-0 py-3',
+        'flex shrink-0 items-center gap-3 border-b border-white/8 px-0 py-3',
         className
       )}
     >
       {showBackButton && (
         <button
           onClick={onBack}
-          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-700"
+          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
           aria-label="Go back"
         >
           <ArrowLeft className="h-4 w-4" weight="bold" />
@@ -59,14 +59,14 @@ export function ChatHeader({
           className="h-8 w-8 rounded-lg object-cover"
         />
       ) : (
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-800 text-xs font-medium text-white">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-xs font-medium text-soft-white">
           {title.includes(' ') ? getInitials(title) : <Robot weight="fill" className="h-4 w-4" />}
         </div>
       )}
 
       {/* Title and status */}
       <div className="flex-1">
-        <p className="text-base font-medium text-zinc-900">{title}</p>
+        <p className="text-base font-medium text-soft-white">{title}</p>
         <div className="flex items-center gap-1">
           <div className="relative flex h-1.5 w-1.5">
             {isOnline && (
@@ -75,11 +75,11 @@ export function ChatHeader({
             <span
               className={cn(
                 'relative inline-flex h-1.5 w-1.5 rounded-full',
-                isOnline ? 'bg-emerald-500' : 'bg-zinc-300'
+                isOnline ? 'bg-emerald-500' : 'bg-steel-gray'
               )}
             />
           </div>
-          <span className="text-xs text-zinc-500">{isOnline ? 'Online' : 'Offline'}</span>
+          <span className="text-xs text-steel-gray">{isOnline ? 'Online' : 'Offline'}</span>
         </div>
       </div>
     </header>

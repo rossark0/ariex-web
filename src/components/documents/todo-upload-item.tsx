@@ -154,11 +154,11 @@ export function TodoUploadItem({ todo, agreementId, strategistId, onUploadComple
     <div
       className={cn(
         'flex items-center gap-3 rounded-lg border p-3 transition-all',
-        isRejected && 'border-red-200 bg-red-50',
-        isAccepted && 'border-emerald-200 bg-emerald-50',
-        isCompleted && !isRejected && !isAccepted && 'border-zinc-200 bg-zinc-50',
-        !isCompleted && !isRejected && 'border-zinc-200 bg-white hover:border-zinc-300',
-        dragActive && 'border-emerald-400 bg-emerald-50'
+        isRejected && 'border-red-500/30 bg-red-500/10',
+        isAccepted && 'border-emerald-500/30 bg-emerald-500/10',
+        isCompleted && !isRejected && !isAccepted && 'border-white/10 bg-white/4',
+        !isCompleted && !isRejected && 'border-white/10 bg-deep-navy hover:border-white/20',
+        dragActive && 'border-electric-blue bg-electric-blue/10'
       )}
       onDragEnter={handleDrag}
       onDragLeave={handleDrag}
@@ -168,22 +168,22 @@ export function TodoUploadItem({ todo, agreementId, strategistId, onUploadComple
       {/* Status Icon */}
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
         {isUploading ? (
-          <SpinnerGap className="h-5 w-5 animate-spin text-emerald-500" />
+          <SpinnerGap className="h-5 w-5 animate-spin text-electric-blue" />
         ) : isRejected ? (
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/15">
             <X weight="bold" className="h-4 w-4 text-red-500" />
           </div>
         ) : isAccepted ? (
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
-            <Check weight="bold" className="h-4 w-4 text-emerald-600" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15">
+            <Check weight="bold" className="h-4 w-4 text-emerald-400" />
           </div>
         ) : isCompleted ? (
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100">
-            <Check weight="bold" className="h-4 w-4 text-amber-600" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/15">
+            <Check weight="bold" className="h-4 w-4 text-amber-400" />
           </div>
         ) : (
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-dashed border-zinc-300">
-            <FileArrowUp className="h-4 w-4 text-zinc-400" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-dashed border-white/20">
+            <FileArrowUp className="h-4 w-4 text-steel-gray" />
           </div>
         )}
       </div>
@@ -193,10 +193,10 @@ export function TodoUploadItem({ todo, agreementId, strategistId, onUploadComple
         <span
           className={cn(
             'text-sm font-medium',
-            isRejected && 'text-red-700',
-            isAccepted && 'text-emerald-700',
-            isCompleted && !isRejected && !isAccepted && 'text-zinc-600',
-            !isCompleted && 'text-zinc-900'
+            isRejected && 'text-red-400',
+            isAccepted && 'text-emerald-400',
+            isCompleted && !isRejected && !isAccepted && 'text-steel-gray',
+            !isCompleted && 'text-soft-white'
           )}
         >
           {todo.title}
@@ -204,23 +204,23 @@ export function TodoUploadItem({ todo, agreementId, strategistId, onUploadComple
         
         {/* Status text */}
         {isRejected && (
-          <span className="text-xs text-red-600 flex items-center gap-1 mt-0.5">
+          <span className="text-xs text-red-400 flex items-center gap-1 mt-0.5">
             <Warning weight="fill" className="h-3 w-3" />
             Declined - Please re-upload
           </span>
         )}
         {isAccepted && (
-          <span className="text-xs text-emerald-600 mt-0.5">
+          <span className="text-xs text-emerald-400 mt-0.5">
             Accepted by strategist
           </span>
         )}
         {isCompleted && !isRejected && !isAccepted && uploadedFile && (
-          <span className="text-xs text-zinc-500 truncate mt-0.5">
+          <span className="text-xs text-steel-gray truncate mt-0.5">
             {uploadedFile.originalName}
           </span>
         )}
         {isCompleted && !isRejected && !isAccepted && !uploadedFile && (
-          <span className="text-xs text-amber-600 mt-0.5">
+          <span className="text-xs text-amber-400 mt-0.5">
             Awaiting review
           </span>
         )}
@@ -229,7 +229,7 @@ export function TodoUploadItem({ todo, agreementId, strategistId, onUploadComple
       {/* Action Button */}
       <div className="shrink-0">
         {isUploading ? (
-          <span className="text-xs text-zinc-500">Uploading...</span>
+          <span className="text-xs text-steel-gray">Uploading...</span>
         ) : isRejected || !isCompleted ? (
           <>
             <input
@@ -245,8 +245,8 @@ export function TodoUploadItem({ todo, agreementId, strategistId, onUploadComple
               className={cn(
                 'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
                 isRejected
-                  ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  ? 'bg-red-500 text-soft-white hover:bg-red-600'
+                  : 'bg-electric-blue text-soft-white hover:bg-electric-blue/80'
               )}
             >
               <UploadSimple weight="bold" className="h-3.5 w-3.5" />
@@ -254,9 +254,9 @@ export function TodoUploadItem({ todo, agreementId, strategistId, onUploadComple
             </button>
           </>
         ) : isAccepted ? (
-          <span className="text-xs font-medium text-emerald-600">✓ Accepted</span>
+          <span className="text-xs font-medium text-emerald-400">✓ Accepted</span>
         ) : (
-          <span className="text-xs font-medium text-amber-600">Pending review</span>
+          <span className="text-xs font-medium text-amber-400">Pending review</span>
         )}
       </div>
     </div>

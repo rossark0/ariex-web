@@ -150,7 +150,7 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
   }
 
   return (
-    <div className={cn('text-base text-zinc-900', className)}>
+    <div className={cn('text-base text-soft-white', className)}>
       {elements}
     </div>
   );

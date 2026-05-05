@@ -184,17 +184,17 @@ interface SignatureFieldItemProps {
 
 function SignatureFieldItem({ field, onRemove }: SignatureFieldItemProps) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-4 py-3">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white">
-        <PenNib className="h-5 w-5 text-zinc-400" weight="duotone" />
+    <div className="flex items-center gap-3 rounded-lg border border-dashed border-white/15 bg-white/4 px-4 py-3">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-deep-navy">
+        <PenNib className="h-5 w-5 text-steel-gray" weight="duotone" />
       </div>
       <div className="flex-1">
-        <p className="text-sm font-medium text-zinc-700">{field.label}</p>
-        <p className="text-xs text-zinc-400">Click to sign</p>
+        <p className="text-sm font-medium text-soft-white">{field.label}</p>
+        <p className="text-xs text-steel-gray">Click to sign</p>
       </div>
       <button
         onClick={onRemove}
-        className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-200 hover:text-zinc-600"
+        className="flex h-6 w-6 items-center justify-center rounded-md text-steel-gray transition-colors hover:bg-white/8 hover:text-soft-white"
       >
         <Trash className="h-4 w-4" />
       </button>
@@ -216,15 +216,15 @@ function SignatureArea({ signatureFields, onAddField, onRemoveField }: Signature
   const [isAddingField, setIsAddingField] = useState(false);
 
   return (
-    <div className="border-t-2 border-dashed border-zinc-300 bg-zinc-50/50 px-6 py-4">
+    <div className="border-t-2 border-dashed border-white/15 bg-white/4 px-6 py-4">
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
+        <p className="text-xs font-semibold tracking-wider text-steel-gray uppercase">
           Signature Area
         </p>
         <div className="relative">
           <button
             onClick={() => setIsAddingField(!isAddingField)}
-            className="flex items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+            className="flex items-center gap-1.5 rounded-md border border-white/10 bg-deep-navy px-2 py-1 text-xs font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8"
           >
             <Plus className="h-3.5 w-3.5" />
             Add Signature
@@ -232,7 +232,7 @@ function SignatureArea({ signatureFields, onAddField, onRemoveField }: Signature
 
           {/* Dropdown for role selection */}
           {isAddingField && (
-            <div className="absolute top-full right-0 z-10 mt-1 w-48 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg">
+            <div className="absolute top-full right-0 z-10 mt-1 w-48 rounded-lg border border-white/10 bg-deep-navy py-1 shadow-lg">
               {SIGNATURE_ROLES.map(role => (
                 <button
                   key={role}
@@ -240,7 +240,7 @@ function SignatureArea({ signatureFields, onAddField, onRemoveField }: Signature
                     onAddField(role);
                     setIsAddingField(false);
                   }}
-                  className="w-full px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50"
+                  className="w-full px-3 py-2 text-left text-sm text-soft-white hover:bg-white/8"
                 >
                   {role}
                 </button>
@@ -251,7 +251,7 @@ function SignatureArea({ signatureFields, onAddField, onRemoveField }: Signature
       </div>
 
       {signatureFields.length === 0 ? (
-        <p className="py-4 text-center text-xs text-zinc-400">
+        <p className="py-4 text-center text-xs text-steel-gray">
           No signatures on this page. Click &quot;Add Signature&quot; to add signature fields.
         </p>
       ) : (
@@ -289,11 +289,11 @@ function PageNavigation({
   onDeletePage,
 }: PageNavigationProps) {
   return (
-    <div className="flex items-center justify-center gap-2 border-t border-zinc-100 bg-white py-3">
+    <div className="flex items-center justify-center gap-2 border-t border-white/8 bg-deep-navy py-3">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 0}
-        className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
+        className="flex h-8 w-8 items-center justify-center rounded-md text-steel-gray hover:bg-white/8 disabled:cursor-not-allowed disabled:opacity-30"
       >
         <CaretLeft weight="bold" className="h-3 w-3" />
       </button>
@@ -306,8 +306,8 @@ function PageNavigation({
             className={cn(
               'h-6 w-6 rounded-lg text-sm font-medium transition-colors',
               currentPage === index
-                ? 'bg-emerald-500 text-white'
-                : 'text-zinc-500 hover:bg-zinc-100'
+                ? 'bg-electric-blue text-soft-white'
+                : 'text-steel-gray hover:bg-white/8'
             )}
           >
             {index + 1}
@@ -318,16 +318,16 @@ function PageNavigation({
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages - 1}
-        className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
+        className="flex h-8 w-8 items-center justify-center rounded-md text-steel-gray hover:bg-white/8 disabled:cursor-not-allowed disabled:opacity-30"
       >
         <CaretRight weight="bold" className="h-3 w-3" />
       </button>
 
-      <div className="mx-2 h-4 w-px bg-zinc-200" />
+      <div className="mx-2 h-4 w-px bg-white/10" />
 
       <button
         onClick={onAddPage}
-        className="flex cursor-pointer items-center gap-1 rounded-md bg-zinc-100 px-2 py-1.5 text-xs font-semibold text-zinc-600 transition-colors hover:bg-zinc-200"
+        className="flex cursor-pointer items-center gap-1 rounded-md bg-white/8 px-2 py-1.5 text-xs font-semibold text-steel-gray transition-colors hover:bg-white/12"
       >
         <Plus weight="bold" className="h-3.5 w-3.5" />
         Add Page
@@ -336,7 +336,7 @@ function PageNavigation({
       {totalPages > 1 && (
         <button
           onClick={onDeletePage}
-          className="flex items-center gap-1 rounded-md bg-white px-2 py-1.5 text-xs font-semibold text-red-500 transition-colors hover:bg-red-600 hover:text-white"
+          className="flex items-center gap-1 rounded-md bg-transparent px-2 py-1.5 text-xs font-semibold text-red-400 transition-colors hover:bg-red-500/15 hover:text-red-300"
         >
           <Trash weight="bold" className="h-3.5 w-3.5" />
           Delete page
@@ -395,27 +395,27 @@ function UploadCard({ onFileSelect, onSkipUpload, isProcessing }: UploadCardProp
         className={cn(
           'flex w-full max-w-md cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-12 transition-all',
           isDragging
-            ? 'border-emerald-500 bg-emerald-50'
-            : 'border-zinc-300 bg-zinc-50 hover:border-zinc-400 hover:bg-zinc-100'
+            ? 'border-electric-blue bg-electric-blue/10'
+            : 'border-white/15 bg-white/4 hover:border-white/25 hover:bg-white/8'
         )}
       >
         {isProcessing ? (
           <>
-            <SpinnerGap className="h-12 w-12 animate-spin text-emerald-500" />
-            <p className="mt-4 text-sm font-medium text-zinc-700">Processing PDF with AI...</p>
-            <p className="mt-1 text-xs text-zinc-500">Using OCR to extract and format content</p>
-            <p className="mt-2 text-[10px] text-zinc-400">
+            <SpinnerGap className="h-12 w-12 animate-spin text-electric-blue" />
+            <p className="mt-4 text-sm font-medium text-soft-white">Processing PDF with AI...</p>
+            <p className="mt-1 text-xs text-steel-gray">Using OCR to extract and format content</p>
+            <p className="mt-2 text-[10px] text-steel-gray">
               This may take a moment for multi-page documents
             </p>
           </>
         ) : (
           <>
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-              <CloudArrowUp className="h-8 w-8 text-emerald-600" weight="duotone" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-electric-blue/15">
+              <CloudArrowUp className="h-8 w-8 text-electric-blue" weight="duotone" />
             </div>
-            <p className="mt-4 text-base font-semibold text-zinc-800">Upload your agreement PDF</p>
-            <p className="mt-1 text-sm text-zinc-500">Drag and drop or click to browse</p>
-            <p className="mt-3 text-xs text-zinc-400">PDF files only, max 10MB</p>
+            <p className="mt-4 text-base font-semibold text-soft-white">Upload your agreement PDF</p>
+            <p className="mt-1 text-sm text-steel-gray">Drag and drop or click to browse</p>
+            <p className="mt-3 text-xs text-steel-gray">PDF files only, max 10MB</p>
           </>
         )}
         <input
@@ -428,14 +428,14 @@ function UploadCard({ onFileSelect, onSkipUpload, isProcessing }: UploadCardProp
       </div>
 
       <div className="mt-6 flex items-center gap-3">
-        <div className="h-px w-16 bg-zinc-200" />
-        <span className="text-xs font-medium text-zinc-400">OR</span>
-        <div className="h-px w-16 bg-zinc-200" />
+        <div className="h-px w-16 bg-white/10" />
+        <span className="text-xs font-medium text-steel-gray">OR</span>
+        <div className="h-px w-16 bg-white/10" />
       </div>
 
       <button
         onClick={onSkipUpload}
-        className="mt-4 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+        className="mt-4 rounded-lg border border-white/10 bg-deep-navy px-4 py-2 text-sm font-medium text-soft-white duration-150 ease-linear transition-colors hover:bg-white/8"
       >
         Start from template
       </button>
@@ -511,7 +511,7 @@ function MarkdownEditor({ content, onChange, onOverflow }: MarkdownEditorProps) 
   }, [content, onOverflow]);
 
   return (
-    <div className="flex h-full flex-col bg-white">
+    <div className="flex h-full flex-col bg-deep-navy">
       <div
         ref={editorContainerRef}
         className="relative flex-1 overflow-auto"
@@ -520,8 +520,8 @@ function MarkdownEditor({ content, onChange, onOverflow }: MarkdownEditorProps) 
         <EditorContent editor={editor} className="h-full" />
       </div>
       {isOverflowing && (
-        <div className="flex items-center justify-center gap-2 border-t border-amber-200 bg-amber-50 px-4 py-2">
-          <span className="text-xs font-medium text-amber-700">
+        <div className="flex items-center justify-center gap-2 border-t border-amber-500/30 bg-amber-500/10 px-4 py-2">
+          <span className="text-xs font-medium text-amber-400">
             Content exceeds one page. Consider adding a new page to keep PDF layout clean.
           </span>
         </div>
@@ -762,10 +762,10 @@ function AiAssistant({
   };
 
   return (
-    <div className="relative flex h-full flex-col rounded-xl bg-white">
+    <div className="relative flex h-full flex-col rounded-xl bg-deep-navy">
       {/* Floating page indicator - top right */}
-      <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-500">
-        <Sparkle weight="fill" className="h-4 w-4 text-emerald-500" /> Editing{' '}
+      <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 rounded-lg border border-white/10 bg-deep-navy px-2 py-1 text-sm font-medium text-steel-gray">
+        <Sparkle weight="fill" className="h-4 w-4 text-electric-blue" /> Editing{' '}
         <span>
           page {currentPageIndex + 1} of {totalPages}
         </span>
@@ -783,20 +783,20 @@ function AiAssistant({
                     {message.context && (
                       <div className="flex items-center gap-2">
                         <MiniFileStack count={message.context.count} />
-                        <span className="text-sm text-zinc-500">{message.context.fileName}</span>
+                        <span className="text-sm text-steel-gray">{message.context.fileName}</span>
                       </div>
                     )}
-                    <div className="max-w-[80%] rounded-2xl bg-zinc-100 px-4 py-2.5">
-                      <p className="text-sm font-medium text-zinc-900">{message.content}</p>
+                    <div className="max-w-[80%] rounded-2xl bg-white/8 px-4 py-2.5">
+                      <p className="text-sm font-medium text-soft-white">{message.content}</p>
                     </div>
                   </div>
                 ) : (
                   /* AI message - plain text, no bubble */
                   <div className="space-y-3">
-                    <p className="text-base leading-relaxed text-zinc-900">{message.content}</p>
+                    <p className="text-base leading-relaxed text-soft-white">{message.content}</p>
                     <button
                       onClick={() => onUpdateContent(message.content)}
-                      className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-all hover:bg-zinc-50"
+                      className="rounded-full border border-white/10 bg-transparent px-4 py-2 text-sm font-medium text-steel-gray transition-all hover:bg-white/8"
                     >
                       Say more
                     </button>
@@ -807,9 +807,9 @@ function AiAssistant({
 
             {isTyping && (
               <div className="flex gap-1 py-2">
-                <div className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.3s]" />
-                <div className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.15s]" />
-                <div className="h-2 w-2 animate-bounce rounded-full bg-zinc-400" />
+                <div className="h-2 w-2 animate-bounce rounded-full bg-steel-gray [animation-delay:-0.3s]" />
+                <div className="h-2 w-2 animate-bounce rounded-full bg-steel-gray [animation-delay:-0.15s]" />
+                <div className="h-2 w-2 animate-bounce rounded-full bg-steel-gray" />
               </div>
             )}
 
@@ -826,10 +826,10 @@ function AiAssistant({
               <button
                 key={i}
                 onClick={() => handleSuggestionClick(suggestion.label)}
-                className="flex cursor-pointer items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-all hover:bg-zinc-50"
+                className="flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-transparent px-4 py-2 text-sm font-medium text-steel-gray transition-all hover:bg-white/8"
               >
                 {/* Gradient icon */}
-                <span className="flex h-5 w-5 items-center justify-center rounded bg-linear-to-br from-cyan-400 to-emerald-500 text-[10px] font-bold text-white">
+                <span className="flex h-5 w-5 items-center justify-center rounded bg-linear-to-br from-cyan-400 to-electric-blue text-[10px] font-bold text-soft-white">
                   /
                 </span>
                 {suggestion.label}
@@ -838,9 +838,9 @@ function AiAssistant({
             {/* All recipes button */}
             <button
               onClick={() => handleSuggestionClick('Show all recipes')}
-              className="flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-all hover:bg-zinc-50"
+              className="flex items-center gap-2 rounded-full border border-white/10 bg-transparent px-4 py-2 text-sm font-medium text-steel-gray transition-all hover:bg-white/8"
             >
-              <SquaresFour weight="bold" className="h-5 w-5 text-zinc-700" />
+              <SquaresFour weight="bold" className="h-5 w-5 text-steel-gray" />
               All recipes
             </button>
           </div>
@@ -849,7 +849,7 @@ function AiAssistant({
 
       {/* Input - matching ai-floating-chatbot style */}
       <div className="p-3">
-        <div className="relative flex items-center gap-2 rounded-4xl border border-zinc-200 bg-white shadow-2xl transition-all duration-300 focus-within:ring-2 focus-within:ring-zinc-300 hover:bg-white">
+        <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-graphite shadow-2xl transition-all duration-200 focus-within:ring-2 focus-within:ring-electric-blue/30 hover:bg-graphite">
           {/* Textarea */}
           <textarea
             value={input}
@@ -857,7 +857,7 @@ function AiAssistant({
             onKeyDown={handleKeyDown}
             placeholder="Ask AI..."
             rows={1}
-            className="min-h-14 flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-zinc-700 placeholder:text-zinc-500 focus:outline-none"
+            className="min-h-14 flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-soft-white placeholder:text-steel-gray focus:outline-none"
           />
 
           {/* Hidden file input */}
@@ -874,7 +874,7 @@ function AiAssistant({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isProcessingFile || isTyping}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 transition-all hover:bg-zinc-100 disabled:opacity-50"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-steel-gray transition-all hover:bg-white/8 disabled:opacity-50"
             aria-label="Attach file"
           >
             {isProcessingFile ? (
@@ -889,7 +889,7 @@ function AiAssistant({
             type="button"
             disabled={!input.trim() || isTyping}
             onClick={() => handleSend(input)}
-            className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+            className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-electric-blue text-soft-white transition-all hover:bg-electric-blue/80 disabled:cursor-not-allowed disabled:bg-white/10"
             aria-label="Send message"
           >
             <ArrowUp size={20} weight="bold" />
@@ -1473,23 +1473,23 @@ export function AgreementSheet({
       {/* Bottom Sheet Container */}
       <div
         className={cn(
-          'relative flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 ease-out',
+          'relative flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-graphite shadow-2xl transition-transform duration-200 ease-linear',
           isVisible && !isClosing ? 'translate-y-0' : 'translate-y-full'
         )}
       >
         {/* Close button - top left */}
         <div className="absolute top-4 left-4 z-50 flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center gap-2 rounded-md hover:bg-zinc-100">
-            <XIcon onClick={handleClose} className="h-4 w-4 cursor-pointer text-zinc-500" />
+          <div className="flex h-6 w-6 items-center justify-center gap-2 rounded-md hover:bg-white/8">
+            <XIcon onClick={handleClose} className="h-4 w-4 cursor-pointer text-steel-gray" />
           </div>
-          <kbd className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500">
+          <kbd className="rounded-md bg-white/8 px-2 py-1 text-xs font-semibold text-steel-gray">
             ESC
           </kbd>
         </div>
 
         {/* Error message */}
         {error && (
-          <div className="absolute top-16 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">
+          <div className="absolute top-16 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-red-500/15 px-4 py-2 text-sm text-red-400">
             {error}
           </div>
         )}
@@ -1505,7 +1505,7 @@ export function AgreementSheet({
               <button
                 onClick={handleExportPdf}
                 disabled={isExporting || !pages.some(p => p.content.trim())}
-                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-100 disabled:opacity-50"
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-deep-navy px-2 py-1 text-sm font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 disabled:opacity-50"
               >
                 {isExporting ? (
                   <>
@@ -1522,7 +1522,7 @@ export function AgreementSheet({
               <button
                 onClick={handleSend}
                 disabled={isSending || !pages.some(p => p.content.trim())}
-                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-500 bg-emerald-500 px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-emerald-600 disabled:opacity-50"
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-electric-blue bg-electric-blue px-2 py-1 text-sm font-medium text-soft-white duration-150 ease-linear transition-colors hover:bg-electric-blue/80 disabled:opacity-50"
               >
                 {isSending ? (
                   <>
@@ -1542,26 +1542,26 @@ export function AgreementSheet({
                 {/* Agreement title & price fields */}
                 <div className="mb-4 flex items-end gap-4">
                   <div className="flex-1">
-                    <label className="mb-1 block text-xs font-medium text-zinc-400 uppercase tracking-wider">Agreement Title</label>
+                    <label className="mb-1 block text-xs font-medium text-steel-gray uppercase tracking-wider">Agreement Title</label>
                     <input
                       type="text"
                       value={title}
                       onChange={e => setTitle(e.target.value)}
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-lg font-semibold text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                      className="w-full rounded-lg border border-white/10 bg-deep-navy px-3 py-2 text-lg font-semibold text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none"
                       placeholder="Enter document title..."
                     />
                   </div>
                   <div className="w-36">
-                    <label className="mb-1 block text-xs font-medium text-zinc-400 uppercase tracking-wider">Service Fee</label>
+                    <label className="mb-1 block text-xs font-medium text-steel-gray uppercase tracking-wider">Service Fee</label>
                     <div className="relative">
-                      <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm font-medium text-zinc-400">$</span>
+                      <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm font-medium text-steel-gray">$</span>
                       <input
                         type="number"
                         min={0}
                         step={1}
                         value={price}
                         onChange={e => setPrice(Number(e.target.value) || 0)}
-                        className="w-full rounded-lg border border-zinc-200 bg-white py-2 pr-3 pl-7 text-lg font-semibold text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                        className="w-full rounded-lg border border-white/10 bg-deep-navy py-2 pr-3 pl-7 text-lg font-semibold text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none"
                         placeholder="499"
                       />
                     </div>
@@ -1569,7 +1569,7 @@ export function AgreementSheet({
                 </div>
 
                 {/* Page indicator */}
-                <p className="text-xs font-semibold text-zinc-400 uppercase">
+                <p className="text-xs font-semibold text-steel-gray uppercase">
                   Page {currentPageIndex + 1} of {pages.length}
                 </p>
 
@@ -1604,7 +1604,7 @@ export function AgreementSheet({
           </div>
 
           {/* Right Column - AI Assistant */}
-          <div className="w-[400px] shrink-0 border-l border-zinc-200 bg-white p-4">
+          <div className="w-[400px] shrink-0 border-l border-white/8 bg-deep-navy p-4">
             <AiAssistant
               clientName={clientName}
               documentContent={currentPage.content}

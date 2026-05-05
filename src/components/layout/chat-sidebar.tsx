@@ -60,7 +60,7 @@ export default function ChatSidebar() {
   return (
     <div
       className={cn(
-        'relative hidden h-full flex-col gap-4 transition-all duration-300 ease-in-out md:flex',
+        'relative hidden h-full flex-col gap-4 transition-all duration-200 ease-linear md:flex',
         isChatSidebarCollapsed ? 'w-0' : 'w-90'
       )}
     >

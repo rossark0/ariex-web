@@ -92,7 +92,7 @@ export function SideSheet({
       <div
         onClick={handleClose}
         className={cn(
-          'absolute inset-0 bg-white/30 transition-opacity duration-300',
+          'absolute inset-0 bg-black/50 transition-opacity duration-200',
           isVisible && !isClosing ? 'opacity-100' : 'opacity-0'
         )}
       />
@@ -100,24 +100,24 @@ export function SideSheet({
       {/* Side Sheet Container */}
       <div
         className={cn(
-          'relative ml-auto flex h-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-out',
+          'relative ml-auto flex h-full flex-col bg-deep-navy shadow-2xl transition-transform duration-200 ease-linear',
           widthClasses[width],
           isVisible && !isClosing ? 'translate-x-0' : 'translate-x-full'
         )}
       >
         {/* Header */}
         {(title || subtitle) && (
-          <div className="flex items-center border-b border-zinc-200 px-2 py-2">
+          <div className="flex items-center border-b border-white/8 px-2 py-2">
             <button
               onClick={handleClose}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"
             >
               <X weight="bold" className="h-4 w-4" />
             </button>
-            <div className="h-5 mr-2 w-px bg-zinc-200" />
+            <div className="h-5 mr-2 w-px bg-white/10" />
             <div className='flex gap-2 items-center'>
-              {title && <h2 className="font-semibold bg-zinc-100 px-2 py-1 rounded-sm text-sm text-zinc-500">{title}</h2>}
-              {subtitle && <p className="text-sm font-semibold text-zinc-500">{subtitle}</p>}
+              {title && <h2 className="font-semibold bg-white/8 px-2 py-1 rounded-sm text-sm text-steel-gray">{title}</h2>}
+              {subtitle && <p className="text-sm font-semibold text-steel-gray">{subtitle}</p>}
             </div>
           </div>
         )}

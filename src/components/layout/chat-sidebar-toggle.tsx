@@ -22,13 +22,13 @@ export function ChatSidebarToggle({ className }: ChatSidebarToggleProps) {
     <button
       onClick={toggleChatSidebar}
       className={cn(
-        'flex cursor-pointer items-center justify-center rounded-lg  bg-zinc-50 text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900',
+        'flex cursor-pointer items-center justify-center rounded-lg text-steel-gray duration-150 ease-linear transition-colors hover:text-soft-white',
         className
       )}
       aria-label={isChatSidebarCollapsed ? 'Open chat sidebar' : 'Close chat sidebar'}
     >
       {' '}
-      <ChatCircleIcon weight="fill" className="h-4.5 w-4.5 text-zinc-400" />
+      <ChatCircleIcon weight="fill" className="h-4.5 w-4.5" />
     </button>
   );
 }

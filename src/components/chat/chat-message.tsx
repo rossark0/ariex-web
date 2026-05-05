@@ -49,11 +49,11 @@ export function ChatMessage({
         /* My message (strategist) - right side, teal bubble */
         <div className="flex w-full justify-end">
           <div className="max-w-[85%]">
-            <div className="rounded-2xl rounded-br-sm bg-teal-500 px-4 py-2">
-              <p className="text-sm text-white">{message.content}</p>
+            <div className="rounded-2xl rounded-br-sm bg-electric-blue px-4 py-2">
+              <p className="text-sm text-soft-white">{message.content}</p>
             </div>
             {showTimestamp && (
-              <p className="mt-1 text-right text-[10px] text-zinc-400">
+              <p className="mt-1 text-right text-[10px] text-steel-gray">
                 {formatTime(message.createdAt)}
               </p>
             )}
@@ -62,24 +62,24 @@ export function ChatMessage({
       ) : (
         /* Client message - left side with avatar */
         <div className="flex gap-2">
-          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-[10px] font-medium text-zinc-600">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-medium text-soft-white">
             {getInitials(message.senderName)}
           </div>
           <div className="max-w-[85%]">
             <div
               className={cn(
-                'rounded-2xl rounded-bl-sm bg-zinc-100 px-4 py-2',
-                message.isError && 'bg-red-50'
+                'rounded-2xl rounded-bl-sm bg-white/6 px-4 py-2',
+                message.isError && 'bg-red-500/10'
               )}
             >
               <p
-                className={cn('text-sm text-zinc-900', message.isError && 'text-red-600')}
+                className={cn('text-sm text-soft-white', message.isError && 'text-red-400')}
               >
                 {message.content}
               </p>
             </div>
             {showTimestamp && (
-              <p className="mt-1 text-[10px] text-zinc-400">
+              <p className="mt-1 text-[10px] text-steel-gray">
                 {formatTime(message.createdAt)}
               </p>
             )}

@@ -59,7 +59,7 @@ export function ChatConversationItem({
       onClick={onClick}
       className={cn(
         'flex w-full items-center gap-3 rounded-lg px-2 py-3 text-left transition-colors',
-        isActive ? 'bg-zinc-100' : 'hover:bg-zinc-50',
+        isActive ? 'bg-white/8' : 'hover:bg-white/4',
         className
       )}
     >
@@ -73,7 +73,7 @@ export function ChatConversationItem({
             className="h-10 w-10 rounded-full object-cover"
           />
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800 text-xs font-medium text-white">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xs font-medium text-soft-white">
             {conversation.isAI ? (
               <Robot weight="fill" className="h-4 w-4" />
             ) : (
@@ -84,7 +84,7 @@ export function ChatConversationItem({
 
         {/* Unread indicator */}
         {conversation.unreadCount && conversation.unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-teal-500 px-1 text-[10px] font-semibold text-white">
+          <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-electric-blue px-1 text-[10px] font-semibold text-soft-white">
             {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
           </span>
         )}
@@ -96,12 +96,12 @@ export function ChatConversationItem({
           <span
             className={cn(
               'truncate text-sm',
-              conversation.unreadCount ? 'font-semibold text-zinc-900' : 'font-medium text-zinc-700'
+              conversation.unreadCount ? 'font-semibold text-soft-white' : 'font-medium text-soft-white/80'
             )}
           >
             {conversation.title}
           </span>
-          <span className="shrink-0 text-[10px] text-zinc-400">
+          <span className="shrink-0 text-[10px] text-steel-gray">
             {conversation.isLoading ? '' : `Last message ${formatTime(conversation.lastMessageAt)}`}
           </span>
         </div>
@@ -114,7 +114,7 @@ export function ChatConversationItem({
           <p
             className={cn(
               'truncate text-xs',
-              conversation.unreadCount ? 'font-medium text-zinc-600' : 'text-zinc-500'
+              conversation.unreadCount ? 'font-medium text-soft-white/60' : 'text-steel-gray'
             )}
           >
             {conversation.lastMessage}

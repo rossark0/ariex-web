@@ -214,7 +214,7 @@ export function Chat({
   // In multi mode, show conversations list if no conversation is selected
   if (mode === 'multi' && !activeChat) {
     return (
-      <div className={cn('flex h-full flex-col bg-white', className)}>
+      <div className={cn('flex h-full flex-col bg-graphite', className)}>
         <ChatConversationsList
           conversations={clients}
           onSelectConversation={handleSelectConversation}
