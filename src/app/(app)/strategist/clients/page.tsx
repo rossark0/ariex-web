@@ -11,9 +11,9 @@ import {
   User,
   X,
 } from '@phosphor-icons/react/dist/ssr';
-import { Check, ChevronDown, ChevronDownIcon } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   listClients,
   listAgreements,
@@ -26,6 +26,15 @@ import { useAuth } from '@/contexts/auth/AuthStore';
 import { CLIENT_STATUS_CONFIG, type ClientStatusKey } from '@/lib/client-status';
 import { computeClientStatus } from '@/contexts/strategist-contexts/client-management/utils/status-helpers';
 import { AgreementStatus } from '@/types/agreement';
+import { computeClientPriority } from '@/lib/client-priority';
+import { ClientMatrix } from './components/client-matrix';
+import {
+  ClientFilterBar,
+  EMPTY_FILTERS,
+  filtersAreEmpty,
+  type ClientFilters,
+} from './components/client-filter-bar';
+import { Table, SquaresFour } from '@phosphor-icons/react';
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -823,12 +832,14 @@ function groupClientsByWorkflow(
   return groups;
 }
 
+type ViewMode = 'cards' | 'matrix';
+const VIEW_MODE_STORAGE_KEY = 'ariex.clients.viewMode';
+
 export default function StrategistClientsPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<FilterOption>('all');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const filterRef = useRef<HTMLDivElement>(null);
+  const [filters, setFilters] = useState<ClientFilters>(EMPTY_FILTERS);
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
   const [isInviteComplianceModalOpen, setIsInviteComplianceModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -853,31 +864,64 @@ export default function StrategistClientsPage() {
     loadClients();
   }, []);
 
-  // Close filter dropdown when clicking outside
+  // Hydrate view mode preference from localStorage (after mount to avoid SSR mismatch)
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
-        setIsFilterOpen(false);
-      }
+    if (typeof window === 'undefined') return;
+    const saved = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+    if (saved === 'matrix' || saved === 'cards') {
+      setViewMode(saved);
     }
-    if (isFilterOpen) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isFilterOpen]);
+  }, []);
 
-  const filteredClients = clients.filter(client => {
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
-      !searchQuery ||
-      client.name?.toLowerCase().includes(q) ||
-      client.email?.toLowerCase().includes(q);
-    const matchesStatus =
-      statusFilter === 'all' ||
-      getWorkflowGroup(client, agreements) === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const handleViewModeChange = (next: ViewMode) => {
+    setViewMode(next);
+    try {
+      window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, next);
+    } catch {
+      // Quota errors are non-fatal
+    }
+  };
 
-  const groupedClients = groupClientsByWorkflow(filteredClients, agreements);
-  const activeFilterLabel = FILTER_OPTIONS.find(o => o.key === statusFilter);
+  // Apply compound filters + search to the full client list.
+  const filteredClients = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+
+    return clients.filter(client => {
+      // 1. Search
+      if (q) {
+        const haystack = `${client.name ?? ''} ${client.email}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+
+      // 2. Workflow status filter (any-of)
+      if (filters.workflows.length > 0) {
+        const group = getWorkflowGroup(client, agreements);
+        if (!filters.workflows.includes(group)) return false;
+      }
+
+      // 3. Risk band filter (any-of). Compute priority lazily — only when needed.
+      const needsPriority = filters.risks.length > 0 || filters.deadlineWindows.length > 0;
+      if (needsPriority) {
+        const priority = computeClientPriority(client, agreements);
+        if (filters.risks.length > 0 && !filters.risks.includes(priority.riskBand)) {
+          return false;
+        }
+        if (
+          filters.deadlineWindows.length > 0 &&
+          !filters.deadlineWindows.includes(priority.deadlineWindow)
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [clients, agreements, searchQuery, filters]);
+
+  const groupedClients = useMemo(
+    () => groupClientsByWorkflow(filteredClients, agreements),
+    [filteredClients, agreements]
+  );
 
   return (
     <div className="flex min-h-full flex-col">
@@ -910,47 +954,34 @@ export default function StrategistClientsPage() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                {/* <button className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-deep-navy px-2 py-1 text-sm font-medium text-steel-gray transition-colors hover:bg-white/3">
-                  <span>Folder</span>
-                  <ChevronDown className="h-4 w-4" />
-                </button> */}
-                <div ref={filterRef} className="relative">
+                {/* View toggle */}
+                <div
+                  role="tablist"
+                  aria-label="View mode"
+                  className="flex items-center rounded-md border border-white/10 bg-deep-navy p-0.5"
+                >
                   <button
-                    onClick={() => setIsFilterOpen(prev => !prev)}
-                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-1 text-sm font-medium transition-colors ${
-                      statusFilter !== 'all'
-                        ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/15'
-                        : 'border-white/10 bg-deep-navy text-steel-gray hover:bg-white/3'
+                    role="tab"
+                    aria-selected={viewMode === 'cards'}
+                    onClick={() => handleViewModeChange('cards')}
+                    title="Card view"
+                    className={`flex h-6 w-7 items-center justify-center rounded transition-colors duration-150 ease-linear ${
+                      viewMode === 'cards' ? 'bg-white/10 text-soft-white' : 'text-steel-gray hover:text-soft-white'
                     }`}
                   >
-                    {statusFilter !== 'all' && (
-                      <div className={`h-1.5 w-1.5 rounded-full ${activeFilterLabel?.color}`} />
-                    )}
-                    <span>{statusFilter === 'all' ? 'Filter' : activeFilterLabel?.label}</span>
-                    <ChevronDownIcon
-                      className={`h-4 w-4 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`}
-                    />
+                    <SquaresFour weight="bold" className="h-3.5 w-3.5" />
                   </button>
-                  {isFilterOpen && (
-                    <div className="absolute right-0 z-50 mt-1 w-48 overflow-hidden rounded-xl border border-white/10 bg-deep-navy py-1 shadow-lg">
-                      {FILTER_OPTIONS.map(option => (
-                        <button
-                          key={option.key}
-                          onClick={() => {
-                            setStatusFilter(option.key);
-                            setIsFilterOpen(false);
-                          }}
-                          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-soft-white transition-colors hover:bg-white/3"
-                        >
-                          <div className={`h-2 w-2 rounded-full ${option.color}`} />
-                          <span className="flex-1">{option.label}</span>
-                          {statusFilter === option.key && (
-                            <Check className="h-3.5 w-3.5 text-emerald-500" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <button
+                    role="tab"
+                    aria-selected={viewMode === 'matrix'}
+                    onClick={() => handleViewModeChange('matrix')}
+                    title="Matrix view"
+                    className={`flex h-6 w-7 items-center justify-center rounded transition-colors duration-150 ease-linear ${
+                      viewMode === 'matrix' ? 'bg-white/10 text-soft-white' : 'text-steel-gray hover:text-soft-white'
+                    }`}
+                  >
+                    <Table weight="bold" className="h-3.5 w-3.5" />
+                  </button>
                 </div>
                 <button
                   onClick={() => setIsInviteComplianceModalOpen(true)}
@@ -968,11 +999,27 @@ export default function StrategistClientsPage() {
                 </button>
               </div>
             </div>
+
+            {/* Compound filter bar + saved views */}
+            <div className="mt-4">
+              <ClientFilterBar
+                filters={filters}
+                onChange={setFilters}
+                searchQuery={searchQuery}
+                onSearchQueryChange={setSearchQuery}
+                viewMode={viewMode}
+                onViewModeChange={next => handleViewModeChange(next as ViewMode)}
+              />
+            </div>
           </div>
         </div>
 
         <div className="bg-deep-navy pb-42">
-          <div className="mx-auto w-full max-w-[642px] py-6">
+          <div
+            className={`mx-auto w-full py-6 ${
+              viewMode === 'matrix' ? 'max-w-[1100px] px-6' : 'max-w-[642px]'
+            }`}
+          >
             {isLoading ? (
               <LoadingState />
             ) : clients.length === 0 ? (
@@ -980,8 +1027,14 @@ export default function StrategistClientsPage() {
             ) : filteredClients.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <p className="mb-1 text-lg font-semibold text-soft-white">No clients found</p>
-                <p className="text-sm text-steel-gray/60">Try adjusting your search or filter</p>
+                <p className="text-sm text-steel-gray/60">
+                  {filtersAreEmpty(filters) && !searchQuery
+                    ? 'No clients to display'
+                    : 'Try adjusting your search or filters'}
+                </p>
               </div>
+            ) : viewMode === 'matrix' ? (
+              <ClientMatrix clients={filteredClients} agreements={agreements} />
             ) : (
               <div className="space-y-10">
                 {WORKFLOW_SECTIONS.map(section => {
