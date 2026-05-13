@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth/AuthStore';
 import {
@@ -36,6 +36,8 @@ import {
 } from '@/types/agreement';
 import { useClientAgreementStore } from '@/contexts/client/ClientAgreementStore';
 import { AgreementSelector } from '@/contexts/strategist-contexts/client-management/components/detail/agreement-selector';
+import { Reveal } from '@/components/ui/reveal';
+import { OnboardingOpportunityCard } from './components/onboarding-opportunity-card';
 
 // ============================================================================
 // ONBOARDING STEPS
@@ -90,6 +92,77 @@ const BUSINESS_TYPES = [
   { value: 'other', label: 'Other' },
 ];
 
+const FILING_STATUS_OPTIONS = [
+  { value: '', label: 'Select status' },
+  { value: 'single', label: 'Single' },
+  { value: 'married_filing_jointly', label: 'Married filing jointly' },
+  { value: 'married_filing_separately', label: 'Married filing separately' },
+  { value: 'head_of_household', label: 'Head of household' },
+  { value: 'qualifying_widow', label: 'Qualifying widow(er)' },
+];
+
+interface EntityCopy {
+  /** Label shown above the tax ID field for this entity. */
+  taxIdLabel: string;
+  /** Helper text under the tax ID field. */
+  taxIdHelper: string;
+  /** Pattern placeholder so the input visually hints what's expected. */
+  taxIdPlaceholder: string;
+  /** Short copy summarizing what this entity type means for tax planning. */
+  blurb: string;
+}
+
+const ENTITY_COPY: Record<string, EntityCopy> = {
+  sole_proprietorship: {
+    taxIdLabel: 'SSN (last 4 digits)',
+    taxIdHelper: 'Schedule C activity ties to your SSN. We only store the last 4 digits.',
+    taxIdPlaceholder: '••• ••• 1234',
+    blurb:
+      'Schedule C filer. Self-employment tax applies — your strategist will look at LLC or S-Corp election once revenue justifies the overhead.',
+  },
+  llc: {
+    taxIdLabel: 'EIN',
+    taxIdHelper: 'Employer Identification Number from the IRS — 9 digits.',
+    taxIdPlaceholder: '12-3456789',
+    blurb:
+      'Single- or multi-member LLC. By default the IRS taxes you as a sole prop / partnership; an S-Corp election can save self-employment tax above ~$60–80k of net profit.',
+  },
+  s_corp: {
+    taxIdLabel: 'EIN',
+    taxIdHelper: 'Employer Identification Number from the IRS — 9 digits.',
+    taxIdPlaceholder: '12-3456789',
+    blurb:
+      'S-Corp shareholder. We will check that you are paying yourself reasonable compensation and review your accountable plan, retirement, and health insurance setup.',
+  },
+  c_corp: {
+    taxIdLabel: 'EIN',
+    taxIdHelper: 'Employer Identification Number from the IRS — 9 digits.',
+    taxIdPlaceholder: '12-3456789',
+    blurb:
+      'C-Corp. Flat 21% federal rate but watch double taxation on dividends. Section 1202 QSBS exclusion may apply for qualifying stock held 5+ years.',
+  },
+  partnership: {
+    taxIdLabel: 'EIN',
+    taxIdHelper: 'Employer Identification Number for the partnership entity.',
+    taxIdPlaceholder: '12-3456789',
+    blurb:
+      'Partnership filing Form 1065. Income flows through on K-1s; basis tracking and guaranteed payments warrant review.',
+  },
+  non_profit: {
+    taxIdLabel: 'EIN',
+    taxIdHelper: '501(c) status will affect unrelated business income tax (UBIT) handling.',
+    taxIdPlaceholder: '12-3456789',
+    blurb:
+      'Non-profit. Even with exempt status, UBIT exposure, payroll, and donor acknowledgement compliance still matter.',
+  },
+  other: {
+    taxIdLabel: 'Tax ID',
+    taxIdHelper: 'EIN or other tax identifier for the entity.',
+    taxIdPlaceholder: '12-3456789',
+    blurb: 'Your strategist will dig into the specifics of this structure during your first call.',
+  },
+};
+
 function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpdate }: StepProps) {
   const profile = dashboardData?.profile;
   const user = dashboardData?.user;
@@ -98,12 +171,19 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form state - initialize with existing data (only fields the API supports)
+  // Form state — covers every field the profile API accepts, plus a UI-only
+  // "hasBusiness" toggle that gates the business section.
   const [formData, setFormData] = useState({
     phoneNumber: profile?.phoneNumber || profile?.phone || '',
     address: profile?.address || '',
+    filingStatus: profile?.filingStatus || '',
+    dependents: profile?.dependents != null ? String(profile.dependents) : '',
+    estimatedIncome:
+      profile?.estimatedIncome != null ? String(profile.estimatedIncome) : '',
+    hasBusiness: !!profile?.businessType,
     businessName: profile?.businessName || '',
     businessType: profile?.businessType || '',
+    taxId: profile?.taxId || '',
   });
 
   // Update form when profile data loads
@@ -112,14 +192,30 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
       setFormData({
         phoneNumber: profile.phoneNumber || profile.phone || '',
         address: profile.address || '',
+        filingStatus: profile.filingStatus || '',
+        dependents: profile.dependents != null ? String(profile.dependents) : '',
+        estimatedIncome:
+          profile.estimatedIncome != null ? String(profile.estimatedIncome) : '',
+        hasBusiness: !!profile.businessType,
         businessName: profile.businessName || '',
         businessType: profile.businessType || '',
+        taxId: profile.taxId || '',
       });
     }
   }, [profile]);
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (field: string, value: string | boolean) => {
+    setFormData(prev => {
+      const next = { ...prev, [field]: value as never };
+      // Turning off the business toggle clears business fields so we don't
+      // ship stale data to the API on save.
+      if (field === 'hasBusiness' && value === false) {
+        next.businessName = '';
+        next.businessType = '';
+        next.taxId = '';
+      }
+      return next;
+    });
     setError(null);
   };
 
@@ -128,20 +224,34 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
     setError(null);
 
     try {
-      // Build update payload - only include changed/filled fields
+      // Build update payload — only include filled fields
       const updateData: Record<string, unknown> = {};
 
       if (formData.phoneNumber) updateData.phoneNumber = formData.phoneNumber;
       if (formData.address) updateData.address = formData.address;
-      if (formData.businessName) updateData.businessName = formData.businessName;
-      if (formData.businessType) updateData.businessType = formData.businessType;
+      if (formData.filingStatus) updateData.filingStatus = formData.filingStatus;
+
+      const parsedDependents = parseInt(formData.dependents, 10);
+      if (!isNaN(parsedDependents) && parsedDependents >= 0) {
+        updateData.dependents = parsedDependents;
+      }
+
+      const parsedIncome = parseFloat(formData.estimatedIncome.replace(/[,$]/g, ''));
+      if (!isNaN(parsedIncome) && parsedIncome >= 0) {
+        updateData.estimatedIncome = parsedIncome;
+      }
+
+      if (formData.hasBusiness) {
+        if (formData.businessName) updateData.businessName = formData.businessName;
+        if (formData.businessType) updateData.businessType = formData.businessType;
+        if (formData.taxId) updateData.taxId = formData.taxId;
+      }
 
       // Only call API if there's data to update
       if (Object.keys(updateData).length > 0) {
         const updatedProfile = await updateClientProfile(updateData);
 
         if (updatedProfile && dashboardData && onProfileUpdate) {
-          // Update the dashboard data with new profile
           onProfileUpdate({
             ...dashboardData,
             profile: updatedProfile,
@@ -158,9 +268,70 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
     }
   };
 
+  // Derived: entity-specific copy for the currently selected business type.
+  const entityCopy = formData.businessType ? ENTITY_COPY[formData.businessType] : null;
+
+  // Form completion progress (used by the inline progress bar)
+  const totalFields = formData.hasBusiness ? 8 : 5;
+  const filledFields = [
+    !!formData.phoneNumber,
+    !!formData.address,
+    !!formData.filingStatus,
+    !!formData.estimatedIncome,
+    !!formData.dependents,
+    formData.hasBusiness && !!formData.businessName,
+    formData.hasBusiness && !!formData.businessType,
+    formData.hasBusiness && !!formData.taxId,
+  ].filter(Boolean).length;
+  const progress = Math.min(100, Math.round((filledFields / totalFields) * 100));
+
+  // AI panel is enabled once we have enough data to be useful.
+  const aiEnabled =
+    !!formData.filingStatus &&
+    !!formData.estimatedIncome &&
+    (!formData.hasBusiness || !!formData.businessType);
+
+  const aiSnapshot = useMemo(
+    () => ({
+      filingStatus: formData.filingStatus || undefined,
+      dependents: formData.dependents ? parseInt(formData.dependents, 10) : null,
+      estimatedIncome: formData.estimatedIncome
+        ? parseFloat(formData.estimatedIncome.replace(/[,$]/g, ''))
+        : null,
+      businessName: formData.hasBusiness ? formData.businessName || undefined : undefined,
+      businessType: formData.hasBusiness ? formData.businessType || undefined : undefined,
+      taxId: formData.hasBusiness && formData.taxId ? '<provided>' : undefined,
+    }),
+    [
+      formData.filingStatus,
+      formData.dependents,
+      formData.estimatedIncome,
+      formData.hasBusiness,
+      formData.businessName,
+      formData.businessType,
+      formData.taxId,
+    ]
+  );
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Account Info (Read-only) */}
+      {/* ─── Progress strip ─────────────────────────────────────────── */}
+      <div>
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[11px] font-medium tracking-wide text-steel-gray uppercase">
+            Profile completion
+          </span>
+          <span className="text-xs tabular-nums text-soft-white">{progress}%</span>
+        </div>
+        <div className="h-1 w-full overflow-hidden rounded-full bg-white/8">
+          <div
+            className="h-full rounded-full bg-electric-blue transition-[width] duration-200 ease-linear"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+
+      {/* ─── Account Info (Read-only) ────────────────────────────────── */}
       <div className="border-b border-white/10 pb-6">
         <h3 className="mb-4 text-xs font-medium text-steel-gray/60 uppercase">Account Information</h3>
 
@@ -186,8 +357,8 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
         </div>
       </div>
 
-      {/* Contact Information (Editable) */}
-      <div className="py-6">
+      {/* ─── Contact Information ──────────────────────────────────────── */}
+      <div className="border-b border-white/10 pb-6">
         <h3 className="mb-4 text-xs font-medium text-steel-gray/60 uppercase">Contact Information</h3>
 
         <div className="space-y-4">
@@ -215,38 +386,147 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
         </div>
       </div>
 
-      {/* Business Information (Editable) */}
-      <div className="pt-0">
-        <h3 className="mb-4 text-xs font-medium text-steel-gray/60 uppercase">Business Information</h3>
+      {/* ─── Personal Tax Info ────────────────────────────────────────── */}
+      <div className="border-b border-white/10 pb-6">
+        <h3 className="mb-4 text-xs font-medium text-steel-gray/60 uppercase">Personal Tax Info</h3>
 
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-steel-gray">Business Name</label>
-            <input
-              type="text"
-              placeholder="Your business name"
-              value={formData.businessName}
-              onChange={e => handleInputChange('businessName', e.target.value)}
-              className="w-full border-b border-white/10 bg-transparent py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-steel-gray">Business Type</label>
+            <label className="mb-1 block text-xs font-medium text-steel-gray">Filing Status</label>
             <select
-              value={formData.businessType}
-              onChange={e => handleInputChange('businessType', e.target.value)}
+              value={formData.filingStatus}
+              onChange={e => handleInputChange('filingStatus', e.target.value)}
               className="w-full border-b border-white/10 bg-transparent py-2 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
             >
-              {BUSINESS_TYPES.map(type => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
+              {FILING_STATUS_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
                 </option>
               ))}
             </select>
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-steel-gray">Dependents</label>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                placeholder="0"
+                value={formData.dependents}
+                onChange={e => handleInputChange('dependents', e.target.value)}
+                className="w-full border-b border-white/10 bg-transparent py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-steel-gray">
+                Estimated Annual Income
+              </label>
+              <div className="relative">
+                <span className="absolute top-2 left-0 text-sm text-steel-gray">$</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="120,000"
+                  value={formData.estimatedIncome}
+                  onChange={e => handleInputChange('estimatedIncome', e.target.value)}
+                  className="w-full border-b border-white/10 bg-transparent py-2 pl-4 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* ─── Business Information (gated by toggle) ───────────────────── */}
+      <div className="pt-0">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-xs font-medium text-steel-gray/60 uppercase">Business Information</h3>
+          <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-steel-gray">
+            <span>I own a business</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={formData.hasBusiness}
+              onClick={() => handleInputChange('hasBusiness', !formData.hasBusiness)}
+              className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors duration-150 ease-linear ${
+                formData.hasBusiness ? 'bg-electric-blue' : 'bg-white/15'
+              }`}
+            >
+              <span
+                className={`inline-block h-3 w-3 transform rounded-full bg-soft-white transition-transform duration-150 ease-linear ${
+                  formData.hasBusiness ? 'translate-x-3.5' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
+          </label>
+        </div>
+
+        {formData.hasBusiness && (
+          <Reveal>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-steel-gray">Business Name</label>
+                <input
+                  type="text"
+                  placeholder="Your business name"
+                  value={formData.businessName}
+                  onChange={e => handleInputChange('businessName', e.target.value)}
+                  className="w-full border-b border-white/10 bg-transparent py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-steel-gray">Business Type</label>
+                <select
+                  value={formData.businessType}
+                  onChange={e => handleInputChange('businessType', e.target.value)}
+                  className="w-full border-b border-white/10 bg-transparent py-2 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
+                >
+                  {BUSINESS_TYPES.map(type => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Entity-specific tax ID field + blurb — reveals once a type is chosen */}
+              {entityCopy && (
+                <Reveal>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-steel-gray">
+                        {entityCopy.taxIdLabel}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={entityCopy.taxIdPlaceholder}
+                        value={formData.taxId}
+                        onChange={e => handleInputChange('taxId', e.target.value)}
+                        autoComplete="off"
+                        className="w-full border-b border-white/10 bg-transparent py-2 text-sm tabular-nums text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
+                      />
+                      <p className="mt-1 text-[11px] leading-relaxed text-steel-gray/70">
+                        {entityCopy.taxIdHelper}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-white/8 bg-white/3 p-3">
+                      <p className="text-[11px] leading-relaxed text-soft-white/85">
+                        {entityCopy.blurb}
+                      </p>
+                    </div>
+                  </div>
+                </Reveal>
+              )}
+            </div>
+          </Reveal>
+        )}
+      </div>
+
+      {/* ─── AI planning opportunities (live) ─────────────────────────── */}
+      <OnboardingOpportunityCard form={aiSnapshot} enabled={aiEnabled} />
 
       {/* Error message */}
       {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
@@ -1306,15 +1586,39 @@ interface StepIndicatorProps {
 
 function StepIndicator({ currentStep, steps }: StepIndicatorProps) {
   return (
-    <div className="flex -translate-y-5 items-center justify-center gap-1.5">
-      {steps.map((step, index) => (
-        <div
-          key={step.id}
-          className={`h-1.5 w-1.5 rounded-full ${
-            index <= currentStep ? 'bg-emerald-500' : 'bg-white/12'
-          }`}
-        />
-      ))}
+    <div className="-translate-y-5">
+      <ol
+        aria-label="Onboarding steps"
+        className="mx-auto flex max-w-md items-center justify-center gap-2"
+      >
+        {steps.map((step, index) => {
+          const isComplete = index < currentStep;
+          const isCurrent = index === currentStep;
+          return (
+            <li key={step.id} className="flex flex-1 items-center gap-2">
+              <div
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold transition-colors duration-200 ease-linear ${
+                  isComplete
+                    ? 'bg-electric-blue text-soft-white'
+                    : isCurrent
+                      ? 'bg-electric-blue/20 text-electric-blue ring-1 ring-electric-blue/40'
+                      : 'bg-white/8 text-steel-gray'
+                }`}
+                aria-current={isCurrent ? 'step' : undefined}
+              >
+                {isComplete ? '✓' : index + 1}
+              </div>
+              {index < steps.length - 1 && (
+                <div
+                  className={`h-px flex-1 transition-colors duration-200 ease-linear ${
+                    isComplete ? 'bg-electric-blue/60' : 'bg-white/10'
+                  }`}
+                />
+              )}
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }
