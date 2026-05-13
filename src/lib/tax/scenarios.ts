@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   computeTax,
+  DEFAULT_TAX_YEAR,
   type FilingStatus,
   type ScenarioInputs,
   type TaxResult,
@@ -364,6 +365,7 @@ function defaultInputs(filingStatus: FilingStatus = 'single'): ScenarioInputs {
     wages: 0,
     selfEmploymentIncome: 120000,
     otherIncome: 0,
+    year: DEFAULT_TAX_YEAR,
   };
 }
 

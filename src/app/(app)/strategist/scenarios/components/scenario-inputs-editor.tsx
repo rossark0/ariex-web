@@ -1,7 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { FilingStatus, ScenarioInputs } from '@/lib/tax/calculator';
+import {
+  DEFAULT_TAX_YEAR,
+  SUPPORTED_TAX_YEARS,
+  TAX_YEAR_IS_PROJECTED,
+  type FilingStatus,
+  type ScenarioInputs,
+  type TaxYear,
+} from '@/lib/tax/calculator';
 
 interface ScenarioInputsEditorProps {
   inputs: ScenarioInputs;
@@ -22,8 +29,10 @@ const FILING_STATUS_OPTIONS: { value: FilingStatus; label: string }[] = [
 const DEBOUNCE_MS = 200;
 
 export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorProps) {
+  const resolvedYear: TaxYear = inputs.year ?? DEFAULT_TAX_YEAR;
   const [draft, setDraft] = useState({
     filingStatus: inputs.filingStatus,
+    year: resolvedYear,
     wages: String(inputs.wages || ''),
     selfEmploymentIncome: String(inputs.selfEmploymentIncome || ''),
     otherIncome: String(inputs.otherIncome || ''),
@@ -33,6 +42,7 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
   useEffect(() => {
     setDraft({
       filingStatus: inputs.filingStatus,
+      year: inputs.year ?? DEFAULT_TAX_YEAR,
       wages: String(inputs.wages || ''),
       selfEmploymentIncome: String(inputs.selfEmploymentIncome || ''),
       otherIncome: String(inputs.otherIncome || ''),
@@ -44,6 +54,7 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
     const handle = setTimeout(() => {
       const parsed: ScenarioInputs = {
         filingStatus: draft.filingStatus,
+        year: draft.year,
         wages: parseFloat(draft.wages.replace(/[,$]/g, '')) || 0,
         selfEmploymentIncome:
           parseFloat(draft.selfEmploymentIncome.replace(/[,$]/g, '')) || 0,
@@ -51,6 +62,7 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
       };
       if (
         parsed.filingStatus !== inputs.filingStatus ||
+        parsed.year !== (inputs.year ?? DEFAULT_TAX_YEAR) ||
         parsed.wages !== inputs.wages ||
         parsed.selfEmploymentIncome !== inputs.selfEmploymentIncome ||
         parsed.otherIncome !== inputs.otherIncome
@@ -66,43 +78,73 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
     setDraft(prev => ({ ...prev, [field]: value }));
   };
 
+  const projected = TAX_YEAR_IS_PROJECTED[draft.year];
+
   return (
-    <section className="grid grid-cols-2 gap-3 rounded-lg border border-white/8 bg-deep-navy p-4 lg:grid-cols-4">
-      <div>
-        <label className="mb-1 block text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
-          Filing status
-        </label>
-        <select
-          value={draft.filingStatus}
-          onChange={e => setField('filingStatus', e.target.value as FilingStatus)}
-          className="w-full rounded-md border border-white/10 bg-deep-navy px-2.5 py-1.5 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
-        >
-          {FILING_STATUS_OPTIONS.map(opt => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+    <section className="rounded-lg border border-white/8 bg-deep-navy p-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div>
+          <label className="mb-1 block text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
+            Tax year
+          </label>
+          <select
+            value={draft.year}
+            onChange={e => setField('year', Number(e.target.value) as TaxYear)}
+            className="w-full rounded-md border border-white/10 bg-deep-navy px-2.5 py-1.5 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
+          >
+            {SUPPORTED_TAX_YEARS.map(y => (
+              <option key={y} value={y}>
+                {y}
+                {TAX_YEAR_IS_PROJECTED[y] ? ' (proj.)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
+            Filing status
+          </label>
+          <select
+            value={draft.filingStatus}
+            onChange={e => setField('filingStatus', e.target.value as FilingStatus)}
+            className="w-full rounded-md border border-white/10 bg-deep-navy px-2.5 py-1.5 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
+          >
+            {FILING_STATUS_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <Field
+          label="W-2 wages"
+          value={draft.wages}
+          onChange={v => setField('wages', v)}
+          placeholder="0"
+        />
+        <Field
+          label="SE / Pass-through"
+          value={draft.selfEmploymentIncome}
+          onChange={v => setField('selfEmploymentIncome', v)}
+          placeholder="120,000"
+        />
+        <Field
+          label="Other income"
+          value={draft.otherIncome}
+          onChange={v => setField('otherIncome', v)}
+          placeholder="0"
+        />
       </div>
 
-      <Field
-        label="W-2 wages"
-        value={draft.wages}
-        onChange={v => setField('wages', v)}
-        placeholder="0"
-      />
-      <Field
-        label="SE / Pass-through"
-        value={draft.selfEmploymentIncome}
-        onChange={v => setField('selfEmploymentIncome', v)}
-        placeholder="120,000"
-      />
-      <Field
-        label="Other income"
-        value={draft.otherIncome}
-        onChange={v => setField('otherIncome', v)}
-        placeholder="0"
-      />
+      {projected && (
+        <p className="mt-3 text-[10px] leading-relaxed text-amber-300/85">
+          Using projected {draft.year} brackets (inflation-extrapolated from
+          {' '}{draft.year - 1}). Replace with final IRS values when Rev. Proc.
+          {' '}{draft.year - 1}-XX is loaded.
+        </p>
+      )}
     </section>
   );
 }

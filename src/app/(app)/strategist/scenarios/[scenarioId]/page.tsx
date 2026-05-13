@@ -130,6 +130,7 @@ export default function ScenarioWorkspacePage() {
     if (!computation) return;
     const lines: string[] = [];
     lines.push(`Tax Scenario: ${draft.name}`);
+    lines.push(`Tax year: ${computation.baseline.year}`);
     lines.push('');
     lines.push(`Baseline tax: $${computation.baseline.totalTax.toLocaleString()}/yr (${(computation.baseline.effectiveRate * 100).toFixed(1)}% effective)`);
     lines.push(`Projected tax: $${computation.projected.totalTax.toLocaleString()}/yr (${(computation.projected.effectiveRate * 100).toFixed(1)}% effective)`);
@@ -150,7 +151,7 @@ export default function ScenarioWorkspacePage() {
       }
     }
     lines.push('');
-    lines.push('Estimates use simplified 2024 federal brackets; state tax not modeled. Verify with a CPA/EA before acting.');
+    lines.push(`Estimates use ${computation.baseline.year} federal brackets; state tax not modeled. Verify with a CPA/EA before acting.`);
 
     try {
       await navigator.clipboard.writeText(lines.join('\n'));

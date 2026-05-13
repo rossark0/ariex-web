@@ -2,6 +2,7 @@
 
 import { useCountUp } from '@/hooks/use-count-up';
 import { cn } from '@/lib/utils';
+import { TAX_YEAR_IS_PROJECTED } from '@/lib/tax/calculator';
 import type { ScenarioComputation } from '@/lib/tax/scenarios';
 
 interface ScenarioImpactPanelProps {
@@ -140,9 +141,10 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
       )}
 
       <p className="mt-auto text-[10px] leading-relaxed text-steel-gray/60">
-        Estimates use simplified 2024 federal brackets, the standard deduction, and a flat 20%
-        Section 199A QBI deduction. State tax and credits are not modeled. Final advice should
-        come from a CPA or EA.
+        Estimates use{' '}
+        {TAX_YEAR_IS_PROJECTED[baseline.year] ? `projected ${baseline.year}` : `${baseline.year}`}
+        {' '}federal brackets, the standard deduction, and a flat 20% Section 199A QBI deduction.
+        State tax and credits are not modeled. Final advice should come from a CPA or EA.
       </p>
     </div>
   );
