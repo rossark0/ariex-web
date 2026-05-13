@@ -1,12 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useMemo } from 'react';
-import { CaretRight } from '@phosphor-icons/react';
+import { CaretRight, Warning } from '@phosphor-icons/react';
 
 import { cn } from '@/lib/utils';
 import { useClientDetailStore } from '@/contexts/strategist-contexts/client-management/ClientDetailStore';
+import { useAuth } from '@/contexts/auth/AuthStore';
+import { useUrgentAlerts } from '@/hooks/use-urgent-alerts';
 import { SidebarToggle } from './sidebar-toggle';
 
 const SEGMENT_LABELS: Record<string, string> = {
@@ -55,7 +57,13 @@ const SUPPRESS_ON_PATTERNS: RegExp[] = [
 
 export function TopContextBar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user } = useAuth();
   const clientInfo = useClientDetailStore(s => s.clientInfo);
+  const urgentAlerts = useUrgentAlerts({
+    role: user?.role,
+    enabled: !!user?.role && (user.role === 'STRATEGIST' || user.role === 'CLIENT'),
+  });
 
   const suppressed = SUPPRESS_ON_PATTERNS.some(re => re.test(pathname));
 
@@ -138,7 +146,24 @@ export function TopContextBar() {
           </ol>
         </nav>
       </div>
-      <div className="flex items-center gap-2" />
+      <div className="flex items-center gap-2">
+        {urgentAlerts.count > 0 && (
+          <button
+            type="button"
+            onClick={() => router.push(urgentAlerts.href)}
+            title={urgentAlerts.label}
+            aria-label={urgentAlerts.label}
+            className={cn(
+              'flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors duration-150 ease-linear',
+              'border-amber-400/40 bg-amber-500/12 text-amber-300 hover:bg-amber-500/20'
+            )}
+          >
+            <Warning weight="fill" className="h-3 w-3" />
+            <span className="tabular-nums">{urgentAlerts.count}</span>
+            <span className="hidden sm:inline">urgent</span>
+          </button>
+        )}
+      </div>
     </header>
   );
 }
