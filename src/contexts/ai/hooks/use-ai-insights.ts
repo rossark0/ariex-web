@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useAiPageContextStore } from '@/contexts/ai/AiPageContextStore';
+import { sanitizePageContext } from '@/lib/ai/sanitize-pii';
 import type { AiInsightItem, AiInsightsResponse } from '@/app/api/ai/insights/route';
 
 export type { AiInsightItem, AiInsightsResponse };
@@ -97,7 +98,7 @@ export function useAiInsights(options: UseAiInsightsOptions = {}): UseAiInsights
       fetch('/api/ai/insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pageContext }),
+        body: JSON.stringify({ pageContext: sanitizePageContext(pageContext) }),
         signal: controller.signal,
       })
         .then(async res => {

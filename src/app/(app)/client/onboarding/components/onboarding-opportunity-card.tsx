@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Lightning, Sparkle } from '@phosphor-icons/react';
+import { sanitizePageContext } from '@/lib/ai/sanitize-pii';
 import type { AiInsightItem, AiInsightsResponse } from '@/app/api/ai/insights/route';
 
 interface OnboardingFormSnapshot {
@@ -65,13 +66,13 @@ export function OnboardingOpportunityCard({
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          pageContext: {
+          pageContext: sanitizePageContext({
             pagePath: '/client/onboarding',
             pageTitle: 'Client Onboarding',
             userRole: 'CLIENT',
             client: form,
             extra: { stage: 'onboarding_profile' },
-          },
+          }),
         }),
       })
         .then(async res => {

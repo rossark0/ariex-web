@@ -32,8 +32,15 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
     onDeleteSelection,
     isDownloadingSelection,
     isDeletingSelection,
+    hydrateAiMessages,
   } = useUiStore();
   const { user } = useAuth();
+
+  // Restore the AI chat history once on mount so a refresh doesn't lose
+  // the conversation. Per-device fallback until server-backed sessions ship.
+  useEffect(() => {
+    hydrateAiMessages();
+  }, [hydrateAiMessages]);
 
   // Provide basic page context (route + role) to AI chatbot for all pages.
   // Individual pages can override with richer context via useAiPageContext.
