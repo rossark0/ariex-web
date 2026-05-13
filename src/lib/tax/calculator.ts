@@ -1,10 +1,17 @@
 /**
  * Federal tax engine — drives "what-if" math inside the Scenario Workspace.
- * Numbers come from published IRS revenue procedures (2024 final, 2025 final
- * per Rev. Proc. 2024-40, 2026 projected from 2025 with the typical inflation
- * adjustment until Rev. Proc. 2025-32 final values are loaded).
  *
- * This is intentionally NOT a full IRS-grade calculator. It models:
+ * Numbers come from the authoritative US sources:
+ *   2024 — IRS Rev. Proc. 2023-34
+ *   2025 — IRS Rev. Proc. 2024-40 + OBBBA §70102 (signed July 2025) which
+ *          retroactively raised the standard-deduction floor for TY2025
+ *   2026 — IRS Rev. Proc. 2025-32 (released Oct 2025)
+ *          SS wage base from SSA cbb.html (Oct 2025)
+ *   2027 — PROJECTED (IRS will release Rev. Proc. for TY2027 around Oct 2026).
+ *          Values here are inflation-extrapolated from 2026 (~2.5%) and the
+ *          UI clearly flags them as projected.
+ *
+ * What this engine models:
  *   - Federal income tax (ordinary brackets per filing status)
  *   - Standard deduction
  *   - Self-employment tax (Social Security cap + Medicare; the additional
@@ -20,25 +27,27 @@ export type FilingStatus =
   | 'married_filing_separately'
   | 'head_of_household';
 
-export type TaxYear = 2024 | 2025 | 2026;
+export type TaxYear = 2024 | 2025 | 2026 | 2027;
 
-export const SUPPORTED_TAX_YEARS: TaxYear[] = [2024, 2025, 2026];
+export const SUPPORTED_TAX_YEARS: TaxYear[] = [2024, 2025, 2026, 2027];
 
 /** The default tax year for new scenarios — picks the current calendar year
  *  if we have data for it, otherwise falls back to the latest known year. */
 export const DEFAULT_TAX_YEAR: TaxYear = (() => {
   const current = new Date().getFullYear();
-  if (current >= 2026) return 2026;
+  if (current >= 2027) return 2027;
+  if (current === 2026) return 2026;
   if (current === 2025) return 2025;
   return 2024;
 })();
 
-/** Some years are still projections (we have the IRS values for 2024/2025 but
- *  inflation-extrapolate 2026 until the final Rev. Proc. is loaded). */
+/** Years for which the IRS has published final figures vs years we're
+ *  extrapolating until the corresponding Rev. Proc. is released. */
 export const TAX_YEAR_IS_PROJECTED: Record<TaxYear, boolean> = {
   2024: false,
   2025: false,
-  2026: true,
+  2026: false,
+  2027: true,
 };
 
 interface Bracket {
@@ -57,7 +66,7 @@ interface YearData {
   seIncomeFactor: number;
 }
 
-// ─── 2024 (final, Rev. Proc. 2023-34) ──────────────────────────────────────
+// ─── 2024 — Rev. Proc. 2023-34 (final) ─────────────────────────────────────
 
 const Y2024: YearData = {
   standardDeduction: {
@@ -110,14 +119,18 @@ const Y2024: YearData = {
   seIncomeFactor: 0.9235,
 };
 
-// ─── 2025 (final, Rev. Proc. 2024-40) ──────────────────────────────────────
+// ─── 2025 — Rev. Proc. 2024-40 + OBBBA §70102 retroactive boost ────────────
+// Standard deduction floors set by the One Big Beautiful Bill Act (signed
+// July 2025) apply retroactively to TY2025: §63(c)(7) as amended makes the
+// 2017 TCJA increases permanent AND raises the base amounts. Bracket
+// thresholds were unchanged by OBBBA.
 
 const Y2025: YearData = {
   standardDeduction: {
-    single: 15000,
-    married_filing_jointly: 30000,
-    married_filing_separately: 15000,
-    head_of_household: 22500,
+    single: 15750,
+    married_filing_jointly: 31500,
+    married_filing_separately: 15750,
+    head_of_household: 23625,
   },
   brackets: {
     single: [
@@ -163,54 +176,112 @@ const Y2025: YearData = {
   seIncomeFactor: 0.9235,
 };
 
-// ─── 2026 (projected — replace with final IRS values when published) ───────
+// ─── 2026 — Rev. Proc. 2025-32 (final) ─────────────────────────────────────
+// Source: https://www.irs.gov/pub/irs-drop/rp-25-32.pdf
+// SS wage base: https://www.ssa.gov/oact/cola/cbb.html ($184,500)
 
 const Y2026: YearData = {
   standardDeduction: {
-    single: 15375,
-    married_filing_jointly: 30750,
-    married_filing_separately: 15375,
-    head_of_household: 23050,
+    single: 16100,
+    married_filing_jointly: 32200,
+    married_filing_separately: 16100,
+    head_of_household: 24150,
   },
   brackets: {
     single: [
-      { upTo: 12225, rate: 0.1 },
-      { upTo: 49700, rate: 0.12 },
-      { upTo: 105950, rate: 0.22 },
-      { upTo: 202250, rate: 0.24 },
-      { upTo: 256800, rate: 0.32 },
-      { upTo: 642000, rate: 0.35 },
+      { upTo: 12400, rate: 0.1 },
+      { upTo: 50400, rate: 0.12 },
+      { upTo: 105700, rate: 0.22 },
+      { upTo: 201775, rate: 0.24 },
+      { upTo: 256225, rate: 0.32 },
+      { upTo: 640600, rate: 0.35 },
       { upTo: null, rate: 0.37 },
     ],
     married_filing_jointly: [
-      { upTo: 24450, rate: 0.1 },
-      { upTo: 99400, rate: 0.12 },
-      { upTo: 211900, rate: 0.22 },
-      { upTo: 404500, rate: 0.24 },
-      { upTo: 513600, rate: 0.32 },
-      { upTo: 770400, rate: 0.35 },
+      { upTo: 24800, rate: 0.1 },
+      { upTo: 100800, rate: 0.12 },
+      { upTo: 211400, rate: 0.22 },
+      { upTo: 403550, rate: 0.24 },
+      { upTo: 512450, rate: 0.32 },
+      { upTo: 768700, rate: 0.35 },
       { upTo: null, rate: 0.37 },
     ],
     married_filing_separately: [
-      { upTo: 12225, rate: 0.1 },
-      { upTo: 49700, rate: 0.12 },
-      { upTo: 105950, rate: 0.22 },
-      { upTo: 202250, rate: 0.24 },
-      { upTo: 256800, rate: 0.32 },
-      { upTo: 385200, rate: 0.35 },
+      { upTo: 12400, rate: 0.1 },
+      { upTo: 50400, rate: 0.12 },
+      { upTo: 105700, rate: 0.22 },
+      { upTo: 201775, rate: 0.24 },
+      { upTo: 256225, rate: 0.32 },
+      { upTo: 384350, rate: 0.35 },
       { upTo: null, rate: 0.37 },
     ],
     head_of_household: [
-      { upTo: 17425, rate: 0.1 },
-      { upTo: 66475, rate: 0.12 },
-      { upTo: 105950, rate: 0.22 },
-      { upTo: 202250, rate: 0.24 },
-      { upTo: 256750, rate: 0.32 },
-      { upTo: 642000, rate: 0.35 },
+      { upTo: 17700, rate: 0.1 },
+      { upTo: 67450, rate: 0.12 },
+      { upTo: 105700, rate: 0.22 },
+      { upTo: 201750, rate: 0.24 },
+      { upTo: 256200, rate: 0.32 },
+      { upTo: 640600, rate: 0.35 },
       { upTo: null, rate: 0.37 },
     ],
   },
-  ssWageBase: 180600,
+  ssWageBase: 184500,
+  ssRate: 0.124,
+  medicareRate: 0.029,
+  seIncomeFactor: 0.9235,
+};
+
+// ─── 2027 — PROJECTED (IRS publishes around Oct 2026) ──────────────────────
+// Inflation-extrapolated from 2026 at ~2.5%. Replace with final values from
+// Rev. Proc. 2026-XX when published. The UI shows an amber projection notice
+// whenever this year is selected.
+
+const Y2027: YearData = {
+  standardDeduction: {
+    single: 16500,
+    married_filing_jointly: 33000,
+    married_filing_separately: 16500,
+    head_of_household: 24750,
+  },
+  brackets: {
+    single: [
+      { upTo: 12710, rate: 0.1 },
+      { upTo: 51660, rate: 0.12 },
+      { upTo: 108343, rate: 0.22 },
+      { upTo: 206819, rate: 0.24 },
+      { upTo: 262631, rate: 0.32 },
+      { upTo: 656615, rate: 0.35 },
+      { upTo: null, rate: 0.37 },
+    ],
+    married_filing_jointly: [
+      { upTo: 25420, rate: 0.1 },
+      { upTo: 103320, rate: 0.12 },
+      { upTo: 216685, rate: 0.22 },
+      { upTo: 413639, rate: 0.24 },
+      { upTo: 525261, rate: 0.32 },
+      { upTo: 787918, rate: 0.35 },
+      { upTo: null, rate: 0.37 },
+    ],
+    married_filing_separately: [
+      { upTo: 12710, rate: 0.1 },
+      { upTo: 51660, rate: 0.12 },
+      { upTo: 108343, rate: 0.22 },
+      { upTo: 206819, rate: 0.24 },
+      { upTo: 262631, rate: 0.32 },
+      { upTo: 393959, rate: 0.35 },
+      { upTo: null, rate: 0.37 },
+    ],
+    head_of_household: [
+      { upTo: 18143, rate: 0.1 },
+      { upTo: 69136, rate: 0.12 },
+      { upTo: 108343, rate: 0.22 },
+      { upTo: 206794, rate: 0.24 },
+      { upTo: 262605, rate: 0.32 },
+      { upTo: 656615, rate: 0.35 },
+      { upTo: null, rate: 0.37 },
+    ],
+  },
+  ssWageBase: 189100,
   ssRate: 0.124,
   medicareRate: 0.029,
   seIncomeFactor: 0.9235,
@@ -220,6 +291,7 @@ const TAX_YEAR_DATA: Record<TaxYear, YearData> = {
   2024: Y2024,
   2025: Y2025,
   2026: Y2026,
+  2027: Y2027,
 };
 
 /** Resolve a year to its constants. Falls back to the default year if the
@@ -311,9 +383,8 @@ export interface TaxResult {
  * QBI deduction, and SE tax. Half of SE tax is deductible above the line.
  */
 export function computeTax(inputs: ScenarioInputs): TaxResult {
-  const year: TaxYear = inputs.year && TAX_YEAR_DATA[inputs.year]
-    ? inputs.year
-    : DEFAULT_TAX_YEAR;
+  const year: TaxYear =
+    inputs.year && TAX_YEAR_DATA[inputs.year] ? inputs.year : DEFAULT_TAX_YEAR;
   const yearData = dataFor(year);
 
   const wages = Math.max(0, inputs.wages);
