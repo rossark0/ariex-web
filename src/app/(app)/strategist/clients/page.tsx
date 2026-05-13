@@ -79,21 +79,21 @@ function ClientCard({
   return (
     <div
       onClick={() => router.push(`/strategist/clients/${client.id}`)}
-      className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white transition-all hover:border-zinc-300 hover:shadow-md"
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-white/10 bg-deep-navy transition-all hover:border-white/15 hover:shadow-md"
     >
       <div className="flex flex-1 flex-col items-start p-4">
         <span
-          className={`mb-4 flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 pl-2 text-xs font-medium ${status.textClassName}`}
+          className={`mb-4 flex items-center gap-1 rounded-full bg-white/8 px-2.5 py-1 pl-2 text-xs font-medium ${status.textClassName}`}
         >
           <div className={`h-1 w-1 rounded-full ${status.badgeColor}`} />
           {status.label}
         </span>
         <div className="mb-1 flex items-center justify-between gap-2">
-          <h3 className="font-semibold text-zinc-900 group-hover:text-zinc-700">
+          <h3 className="font-semibold text-soft-white group-hover:text-soft-white">
             {client.name || client.email}
           </h3>
         </div>
-        <p className="mb-4 line-clamp-2 text-sm text-zinc-500">{description}</p>
+        <p className="mb-4 line-clamp-2 text-sm text-steel-gray">{description}</p>
       </div>
     </div>
   );
@@ -188,27 +188,27 @@ function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProp
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="flex h-full w-full items-center justify-center bg-white">
-        <div className="absolute top-0 left-0 flex h-14 w-full items-center gap-2 border-b border-zinc-200 pl-2">
+      <div className="flex h-full w-full items-center justify-center bg-deep-navy">
+        <div className="absolute top-0 left-0 flex h-14 w-full items-center gap-2 border-b border-white/10 pl-2">
           <button
             onClick={onClose}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
+            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-steel-gray/60 transition-colors hover:bg-white/8 hover:text-steel-gray"
           >
             <X weight="bold" className="h-4.5 w-4.5" />
           </button>
-          <div className="h-4 w-0.5 bg-zinc-200" />
-          <h1 className="rounded-lg bg-zinc-100 px-2 py-1 text-center text-sm font-semibold text-zinc-900">
+          <div className="h-4 w-0.5 bg-white/12" />
+          <h1 className="rounded-lg bg-white/8 px-2 py-1 text-center text-sm font-semibold text-soft-white">
             New Client
           </h1>
         </div>
 
         <div className="w-full max-w-md px-6">
-          <div className="mb-6 rounded-xl border border-zinc-200 bg-white p-4">
+          <div className="mb-6 rounded-xl border border-white/10 bg-deep-navy p-4">
             <div className="flex items-start gap-3">
               <div className="h-full w-1 rounded-full bg-emerald-500" />
               <div>
-                <p className="font-medium text-zinc-900">New Tax Strategy Client</p>
-                <div className="mt-1 flex items-center gap-3 text-sm text-zinc-500">
+                <p className="font-medium text-soft-white">New Tax Strategy Client</p>
+                <div className="mt-1 flex items-center gap-3 text-sm text-steel-gray">
                   <span className="flex items-center gap-1">
                     <Calendar weight="fill" className="h-3.5 w-3.5" />
                     Onboarding
@@ -219,16 +219,16 @@ function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProp
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div className="mb-6 overflow-hidden rounded-xl border border-zinc-200 bg-white">
-              <div className="border-b border-zinc-100 p-1">
-                <div className="flex rounded-lg bg-zinc-100 p-1">
+            <div className="mb-6 overflow-hidden rounded-xl border border-white/10 bg-deep-navy">
+              <div className="border-b border-white/8 p-1">
+                <div className="flex rounded-lg bg-white/8 p-1">
                   <button
                     type="button"
                     onClick={() => setClientType('individual')}
                     className={`flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${
                       clientType === 'individual'
-                        ? 'bg-white text-zinc-900 shadow-sm'
-                        : 'text-zinc-500 hover:text-zinc-700'
+                        ? 'bg-deep-navy text-soft-white shadow-sm'
+                        : 'text-steel-gray hover:text-soft-white'
                     }`}
                   >
                     <User
@@ -242,8 +242,8 @@ function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProp
                     onClick={() => setClientType('business')}
                     className={`flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${
                       clientType === 'business'
-                        ? 'bg-white text-zinc-900 shadow-sm'
-                        : 'text-zinc-500 hover:text-zinc-700'
+                        ? 'bg-deep-navy text-soft-white shadow-sm'
+                        : 'text-steel-gray hover:text-soft-white'
                     }`}
                   >
                     <Buildings
@@ -257,14 +257,14 @@ function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProp
 
               <div className="divide-y divide-zinc-100">
                 <div className="flex items-center justify-between px-4 py-3">
-                  <label className="text-sm font-medium text-zinc-500">Name</label>
+                  <label className="text-sm font-medium text-steel-gray">Name</label>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       placeholder="First"
                       value={formData.firstName}
                       onChange={e => setFormData({ ...formData, firstName: e.target.value })}
-                      className="w-24 rounded-lg border border-zinc-200 px-3 py-1.5 text-right text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                      className="w-24 rounded-lg border border-white/10 px-3 py-1.5 text-right text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-white/15 focus:outline-none"
                       required
                     />
                     <input
@@ -272,63 +272,63 @@ function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProp
                       placeholder="Last"
                       value={formData.lastName}
                       onChange={e => setFormData({ ...formData, lastName: e.target.value })}
-                      className="w-24 rounded-lg border border-zinc-200 px-3 py-1.5 text-right text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                      className="w-24 rounded-lg border border-white/10 px-3 py-1.5 text-right text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-white/15 focus:outline-none"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between px-4 py-3">
-                  <label className="text-sm font-medium text-zinc-500">Email</label>
+                  <label className="text-sm font-medium text-steel-gray">Email</label>
                   <input
                     type="email"
                     placeholder="client@email.com"
                     value={formData.email}
                     onChange={e => setFormData({ ...formData, email: e.target.value })}
-                    className="w-48 rounded-lg border border-zinc-200 px-3 py-1.5 text-right text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                    className="w-48 rounded-lg border border-white/10 px-3 py-1.5 text-right text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-white/15 focus:outline-none"
                     required
                   />
                 </div>
 
                 <div className="flex items-center justify-between px-4 py-3">
-                  <label className="text-sm font-medium text-zinc-500">Phone</label>
+                  <label className="text-sm font-medium text-steel-gray">Phone</label>
                   <input
                     type="tel"
                     placeholder="(555) 000-0000"
                     value={formData.phone}
                     onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-48 rounded-lg border border-zinc-200 px-3 py-1.5 text-right text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                    className="w-48 rounded-lg border border-white/10 px-3 py-1.5 text-right text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-white/15 focus:outline-none"
                   />
                 </div>
 
                 {clientType === 'business' && (
                   <div className="flex items-center justify-between px-4 py-3">
-                    <label className="text-sm font-medium text-zinc-500">Business</label>
+                    <label className="text-sm font-medium text-steel-gray">Business</label>
                     <input
                       type="text"
                       placeholder="Business name"
                       value={formData.businessName}
                       onChange={e => setFormData({ ...formData, businessName: e.target.value })}
-                      className="w-48 rounded-lg border border-zinc-200 px-3 py-1.5 text-right text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                      className="w-48 rounded-lg border border-white/10 px-3 py-1.5 text-right text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-white/15 focus:outline-none"
                     />
                   </div>
                 )}
 
                 <div className="flex items-center justify-between px-4 py-3">
-                  <label className="text-sm font-medium text-zinc-500">Address</label>
+                  <label className="text-sm font-medium text-steel-gray">Address</label>
                   <input
                     type="text"
                     placeholder="City, State"
                     value={formData.address}
                     onChange={e => setFormData({ ...formData, address: e.target.value })}
-                    className="w-48 rounded-lg border border-zinc-200 px-3 py-1.5 text-right text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                    className="w-48 rounded-lg border border-white/10 px-3 py-1.5 text-right text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-white/15 focus:outline-none"
                   />
                 </div>
               </div>
             </div>
 
             {error && (
-              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
                 {error}
               </div>
             )}
@@ -336,12 +336,12 @@ function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProp
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full rounded-xl bg-zinc-900 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:opacity-50"
+              className="w-full rounded-xl bg-electric-blue py-3.5 text-sm font-semibold text-white transition-colors hover:bg-electric-blue/85 disabled:opacity-50"
             >
               {isSubmitting ? 'Creating...' : 'Create Client'}
             </button>
 
-            <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-zinc-400">
+            <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-steel-gray/60">
               <Lock weight="fill" className="h-3 w-3" />
               Client data is secure and encrypted
             </p>
@@ -480,17 +480,17 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
 
   return (
     <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col rounded-2xl bg-white p-0 shadow-xl">
+      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col rounded-2xl bg-deep-navy p-0 shadow-xl">
         {/* Header */}
-        <div className="flex shrink-0 items-center gap-2 border-b border-zinc-200 px-4 py-3">
+        <div className="flex shrink-0 items-center gap-2 border-b border-white/10 px-4 py-3">
           <button
             onClick={onClose}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
+            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-steel-gray/60 transition-colors hover:bg-white/8 hover:text-steel-gray"
           >
             <X weight="bold" className="h-4.5 w-4.5" />
           </button>
-          <div className="h-4 w-0.5 bg-zinc-200" />
-          <h1 className="rounded-lg bg-zinc-100 px-2 py-1 text-center text-sm font-semibold text-zinc-900">
+          <div className="h-4 w-0.5 bg-white/12" />
+          <h1 className="rounded-lg bg-white/8 px-2 py-1 text-center text-sm font-semibold text-soft-white">
             Invite Compliance
           </h1>
         </div>
@@ -498,12 +498,12 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
         <div className="flex-1 overflow-y-auto p-6">
           {/* Info Banner — hide after success */}
           {!apiResponse && (
-            <div className="mb-6 rounded-xl border border-zinc-200 bg-white p-4">
+            <div className="mb-6 rounded-xl border border-white/10 bg-deep-navy p-4">
               <div className="flex items-start gap-3">
                 <div className="h-full w-1 rounded-full bg-teal-500" />
                 <div>
-                  <p className="font-medium text-zinc-900">Compliance Officer Invite</p>
-                  <p className="mt-1 text-sm text-zinc-500">
+                  <p className="font-medium text-soft-white">Compliance Officer Invite</p>
+                  <p className="mt-1 text-sm text-steel-gray">
                     The invited user will receive an email with temporary credentials. They&apos;ll
                     be able to review and approve strategy documents for the selected clients.
                   </p>
@@ -516,33 +516,33 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
             {/* Email input — hide after success */}
             {!apiResponse && (
               <>
-                <div className="mb-4 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+                <div className="mb-4 overflow-hidden rounded-xl border border-white/10 bg-deep-navy">
                   <div className="flex items-center justify-between px-4 py-3">
-                    <label className="text-sm font-medium text-zinc-500">Email</label>
+                    <label className="text-sm font-medium text-steel-gray">Email</label>
                     <input
                       type="email"
                       placeholder="compliance@example.com"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      className="w-56 rounded-lg border border-zinc-200 px-3 py-1.5 text-right text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                      className="w-56 rounded-lg border border-white/10 px-3 py-1.5 text-right text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-white/15 focus:outline-none"
                       required
                     />
                   </div>
                 </div>
 
                 {/* Client Multi-Selector */}
-                <div className="mb-6 rounded-xl border border-zinc-200 bg-white">
-                  <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-2.5">
-                    <p className="text-sm font-medium text-zinc-700">
+                <div className="mb-6 rounded-xl border border-white/10 bg-deep-navy">
+                  <div className="flex items-center justify-between border-b border-white/8 px-4 py-2.5">
+                    <p className="text-sm font-medium text-soft-white">
                       Clients to share
-                      <span className="ml-1.5 text-xs font-normal text-zinc-400">
+                      <span className="ml-1.5 text-xs font-normal text-steel-gray/60">
                         ({selectedClientIds.size} of {clients.length})
                       </span>
                     </p>
                     <button
                       type="button"
                       onClick={toggleAll}
-                      className="text-xs font-medium text-teal-600 hover:text-teal-700"
+                      className="text-xs font-medium text-teal-400 hover:text-teal-300"
                     >
                       {selectedClientIds.size === clients.length ? 'Deselect all' : 'Select all'}
                     </button>
@@ -550,24 +550,24 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
                   <div className="max-h-44 overflow-y-auto">
                     {isLoadingClients ? (
                       <div className="flex items-center justify-center py-6">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-transparent" />
-                        <span className="ml-2 text-xs text-zinc-400">Loading clients...</span>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/15 border-t-transparent" />
+                        <span className="ml-2 text-xs text-steel-gray/60">Loading clients...</span>
                       </div>
                     ) : clients.length === 0 ? (
-                      <div className="py-6 text-center text-xs text-zinc-400">
+                      <div className="py-6 text-center text-xs text-steel-gray/60">
                         No clients found. Create a client first.
                       </div>
                     ) : (
                       clients.map(client => (
                         <label
                           key={client.id}
-                          className="flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-zinc-50"
+                          className="flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-white/3"
                         >
                           <div
                             className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
                               selectedClientIds.has(client.id)
                                 ? 'border-teal-600 bg-teal-600'
-                                : 'border-zinc-300 bg-white'
+                                : 'border-white/15 bg-deep-navy'
                             }`}
                           >
                             {selectedClientIds.has(client.id) && (
@@ -581,10 +581,10 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
                             className="sr-only"
                           />
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-zinc-800">
+                            <p className="truncate text-sm font-medium text-soft-white">
                               {client.name || client.email?.split('@')[0]}
                             </p>
-                            <p className="truncate text-xs text-zinc-400">{client.email}</p>
+                            <p className="truncate text-xs text-steel-gray/60">{client.email}</p>
                           </div>
                         </label>
                       ))
@@ -595,13 +595,13 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
             )}
 
             {error && (
-              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+              <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/15 p-3 text-sm text-emerald-300">
                 ✅ {success}
               </div>
             )}
@@ -611,12 +611,12 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
               <div className="mb-4 space-y-3">
                 {/* Acceptance URL (if token found) */}
                 {acceptanceUrl && (
-                  <div className="rounded-lg border border-teal-200 bg-teal-50 p-3">
+                  <div className="rounded-lg border border-teal-500/30 bg-teal-500/10 p-3">
                     <p className="mb-1.5 text-xs font-semibold text-teal-800">
                       Acceptance Link (share with compliance user)
                     </p>
                     <div className="flex items-center gap-2">
-                      <code className="flex-1 rounded-md border border-teal-200 bg-white px-2 py-1.5 text-xs break-all text-zinc-700">
+                      <code className="flex-1 rounded-md border border-teal-500/30 bg-deep-navy px-2 py-1.5 text-xs break-all text-soft-white">
                         {acceptanceUrl}
                       </code>
                       <button
@@ -631,13 +631,13 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
                 )}
 
                 {/* Raw response fields */}
-                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+                <div className="rounded-lg border border-white/10 bg-white/3 p-3">
                   <div className="mb-2 flex items-center justify-between">
-                    <p className="text-xs font-semibold text-zinc-600">API Response</p>
+                    <p className="text-xs font-semibold text-steel-gray">API Response</p>
                     <button
                       type="button"
                       onClick={() => handleCopy(JSON.stringify(apiResponse, null, 2), 'json')}
-                      className="rounded bg-zinc-200 px-2 py-0.5 text-[10px] font-medium text-zinc-600 hover:bg-zinc-300"
+                      className="rounded bg-white/12 px-2 py-0.5 text-[10px] font-medium text-steel-gray hover:bg-white/20"
                     >
                       {copied === 'json' ? '✓ Copied' : 'Copy JSON'}
                     </button>
@@ -645,10 +645,10 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
                   <div className="space-y-1">
                     {Object.entries(apiResponse).map(([key, value]) => (
                       <div key={key} className="flex items-start gap-2 text-xs">
-                        <span className="min-w-[100px] shrink-0 font-medium text-zinc-500">
+                        <span className="min-w-[100px] shrink-0 font-medium text-steel-gray">
                           {key}:
                         </span>
-                        <span className="font-mono break-all text-zinc-800">{String(value)}</span>
+                        <span className="font-mono break-all text-soft-white">{String(value)}</span>
                       </div>
                     ))}
                   </div>
@@ -660,7 +660,7 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full rounded-xl bg-zinc-900 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:opacity-50"
+                className="w-full rounded-xl bg-electric-blue py-3.5 text-sm font-semibold text-white transition-colors hover:bg-electric-blue/85 disabled:opacity-50"
               >
                 {isSubmitting ? 'Sending Invite...' : 'Send Invite'}
               </button>
@@ -668,13 +668,13 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full rounded-xl bg-zinc-900 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+                className="w-full rounded-xl bg-electric-blue py-3.5 text-sm font-semibold text-white transition-colors hover:bg-electric-blue/85"
               >
                 Done
               </button>
             )}
 
-            <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-zinc-400">
+            <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-steel-gray/60">
               <Lock weight="fill" className="h-3 w-3" />
               Invitation is secure and expires in 7 days
             </p>
@@ -693,7 +693,7 @@ function LoadingState() {
   return (
     <div className="flex flex-col items-center justify-center py-16">
       <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
-      <p className="mt-4 text-sm text-zinc-500">Loading clients...</p>
+      <p className="mt-4 text-sm text-steel-gray">Loading clients...</p>
     </div>
   );
 }
@@ -701,8 +701,8 @@ function LoadingState() {
 function EmptyState({ onAddClient }: { onAddClient: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <p className="mb-1 text-lg font-semibold text-zinc-800">No clients yet</p>
-      <p className="mb-4 text-sm text-zinc-400">Add your first client to get started</p>
+      <p className="mb-1 text-lg font-semibold text-soft-white">No clients yet</p>
+      <p className="mb-4 text-sm text-steel-gray/60">Add your first client to get started</p>
       <button
         onClick={onAddClient}
         className="flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-600"
@@ -797,11 +797,11 @@ const WORKFLOW_SECTIONS: { key: WorkflowGroup; label: string; color: string; des
   { key: 'waiting_on_client', label: 'Waiting on Client', color: 'bg-amber-500', description: 'Pending client action — signature, payment, documents, or approval' },
   { key: 'waiting_on_compliance', label: 'Waiting on Compliance', color: 'bg-sky-500', description: 'Strategy submitted for compliance review' },
   { key: 'active_clients', label: 'Active Clients', color: 'bg-emerald-500', description: 'Strategy approved and active' },
-  { key: 'archived', label: 'Archived', color: 'bg-zinc-400', description: 'Archived clients' },
+  { key: 'archived', label: 'Archived', color: 'bg-white/20', description: 'Archived clients' },
 ];
 
 const FILTER_OPTIONS: { key: FilterOption; label: string; color: string }[] = [
-  { key: 'all', label: 'All Clients', color: 'bg-zinc-500' },
+  { key: 'all', label: 'All Clients', color: 'bg-white/30' },
   ...WORKFLOW_SECTIONS.map(s => ({ key: s.key as FilterOption, label: s.label, color: s.color })),
 ];
 
@@ -882,12 +882,12 @@ export default function StrategistClientsPage() {
   return (
     <div className="flex min-h-full flex-col">
       <div className="flex-1">
-        <div className="shrink-0 bg-white pt-6 pb-6">
+        <div className="shrink-0 bg-deep-navy pt-6 pb-6">
           <div className="mx-auto w-full max-w-[642px]">
             <div className="mb-6 flex items-start justify-between">
               <div>
                 <h1 className="mb-2 text-2xl font-medium tracking-tight">Clients</h1>
-                <p className="mt-1 text-sm text-zinc-500">
+                <p className="mt-1 text-sm text-steel-gray">
                   {clients.length > 0
                     ? `${clients.length} client${clients.length !== 1 ? 's' : ''}`
                     : 'Manage and view all your tax strategy clients'}
@@ -899,18 +899,18 @@ export default function StrategistClientsPage() {
               <div className="relative">
                 <MagnifyingGlassIcon
                   weight="bold"
-                  className="absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500"
+                  className="absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-steel-gray"
                 />
                 <input
                   type="text"
                   placeholder="Search..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="h-[30px] w-64 rounded-lg border border-zinc-200 bg-white pr-3 pl-7 text-sm font-medium text-zinc-900 shadow placeholder:text-zinc-400 hover:bg-zinc-100 focus:border-zinc-300 focus:outline-none"
+                  className="h-[30px] w-64 rounded-lg border border-white/10 bg-deep-navy pr-3 pl-7 text-sm font-medium text-soft-white shadow placeholder:text-steel-gray/60 hover:bg-white/8 focus:border-white/15 focus:outline-none"
                 />
               </div>
               <div className="flex items-center gap-2">
-                {/* <button className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-50">
+                {/* <button className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-deep-navy px-2 py-1 text-sm font-medium text-steel-gray transition-colors hover:bg-white/3">
                   <span>Folder</span>
                   <ChevronDown className="h-4 w-4" />
                 </button> */}
@@ -919,8 +919,8 @@ export default function StrategistClientsPage() {
                     onClick={() => setIsFilterOpen(prev => !prev)}
                     className={`flex items-center gap-1.5 rounded-lg border px-3 py-1 text-sm font-medium transition-colors ${
                       statusFilter !== 'all'
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                        : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50'
+                        ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/15'
+                        : 'border-white/10 bg-deep-navy text-steel-gray hover:bg-white/3'
                     }`}
                   >
                     {statusFilter !== 'all' && (
@@ -932,7 +932,7 @@ export default function StrategistClientsPage() {
                     />
                   </button>
                   {isFilterOpen && (
-                    <div className="absolute right-0 z-50 mt-1 w-48 overflow-hidden rounded-xl border border-zinc-200 bg-white py-1 shadow-lg">
+                    <div className="absolute right-0 z-50 mt-1 w-48 overflow-hidden rounded-xl border border-white/10 bg-deep-navy py-1 shadow-lg">
                       {FILTER_OPTIONS.map(option => (
                         <button
                           key={option.key}
@@ -940,7 +940,7 @@ export default function StrategistClientsPage() {
                             setStatusFilter(option.key);
                             setIsFilterOpen(false);
                           }}
-                          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-soft-white transition-colors hover:bg-white/3"
                         >
                           <div className={`h-2 w-2 rounded-full ${option.color}`} />
                           <span className="flex-1">{option.label}</span>
@@ -954,7 +954,7 @@ export default function StrategistClientsPage() {
                 </div>
                 <button
                   onClick={() => setIsInviteComplianceModalOpen(true)}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-deep-navy px-2 py-1 text-sm font-medium text-soft-white transition-colors hover:bg-white/3"
                 >
                   <ShieldCheck weight="bold" className="h-4 w-4" />
                   <span>Invite Compliance</span>
@@ -971,7 +971,7 @@ export default function StrategistClientsPage() {
           </div>
         </div>
 
-        <div className="bg-white pb-42">
+        <div className="bg-deep-navy pb-42">
           <div className="mx-auto w-full max-w-[642px] py-6">
             {isLoading ? (
               <LoadingState />
@@ -979,8 +979,8 @@ export default function StrategistClientsPage() {
               <EmptyState onAddClient={() => setIsAddClientModalOpen(true)} />
             ) : filteredClients.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <p className="mb-1 text-lg font-semibold text-zinc-800">No clients found</p>
-                <p className="text-sm text-zinc-400">Try adjusting your search or filter</p>
+                <p className="mb-1 text-lg font-semibold text-soft-white">No clients found</p>
+                <p className="text-sm text-steel-gray/60">Try adjusting your search or filter</p>
               </div>
             ) : (
               <div className="space-y-10">
@@ -991,12 +991,12 @@ export default function StrategistClientsPage() {
                     <div key={section.key}>
                       <div className="mb-1 flex items-center gap-2">
                         <div className={`h-2 w-2 rounded-full ${section.color}`} />
-                        <h2 className="text-sm font-semibold text-zinc-700">{section.label}</h2>
-                        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">
+                        <h2 className="text-sm font-semibold text-soft-white">{section.label}</h2>
+                        <span className="rounded-full bg-white/8 px-2 py-0.5 text-xs font-medium text-steel-gray">
                           {group.length}
                         </span>
                       </div>
-                      <p className="mb-3 text-xs text-zinc-400 pl-4">{section.description}</p>
+                      <p className="mb-3 text-xs text-steel-gray/60 pl-4">{section.description}</p>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         {group.map(client => (
                           <ClientCard

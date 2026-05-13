@@ -51,7 +51,7 @@ export const ClientHeader = memo(function ClientHeader({
       {/* Back Button */}
       <div className="absolute top-4 left-4 mb-4 flex items-center gap-2">
         <div
-          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-700"
+          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white"
           onClick={() => router.back()}
         >
           <ArrowLeftIcon weight="bold" className="h-4 w-4" />
@@ -60,12 +60,12 @@ export const ClientHeader = memo(function ClientHeader({
 
       <div className="relative z-40 mx-auto w-full max-w-2xl px-4 pt-22">
         {/* Banner color */}
-        <div className="absolute top-0 left-0 -z-10 h-24 w-full bg-zinc-50" />
+        <div className="absolute top-0 left-0 -z-10 h-24 w-full bg-white/3" />
 
         {/* Header Section */}
         <div className="flex flex-col gap-4">
           <ClientAvatar name={clientName} size="lg" className="h-12 w-12" />
-          <h1 className="z-20 text-2xl font-semibold">{clientName}</h1>
+          <h1 className="z-20 text-2xl font-semibold text-soft-white">{clientName}</h1>
 
           {/* Action Buttons */}
           <div className="mb-6 flex w-full items-center justify-between gap-2">
@@ -83,10 +83,10 @@ export const ClientHeader = memo(function ClientHeader({
             <button
               disabled={!canSendStrategy}
               onClick={canSendStrategy ? onStrategyClick : undefined}
-              className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-sm font-medium transition-colors duration-150 ease-linear ${
                 canSendStrategy
                   ? 'cursor-pointer border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600'
-                  : 'cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400'
+                  : 'cursor-not-allowed border-white/10 bg-white/6 text-steel-gray/60'
               }`}
             >
               <StarFourIcon weight="fill" className="h-4 w-4" />

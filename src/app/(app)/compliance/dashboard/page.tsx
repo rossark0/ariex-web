@@ -10,8 +10,8 @@ export default function ComplianceDashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-zinc-900">Compliance Dashboard</h1>
-          <p className="mt-1 text-zinc-600">Monitor strategists and clients across the platform</p>
+          <h1 className="text-3xl font-bold text-soft-white">Compliance Dashboard</h1>
+          <p className="mt-1 text-steel-gray">Monitor strategists and clients across the platform</p>
         </div>
       </div>
 
@@ -26,9 +26,9 @@ export default function ComplianceDashboardPage() {
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Strategists Overview */}
-        <div className="rounded-lg border border-zinc-200 bg-white p-6">
-          <h2 className="mb-4 text-xl font-semibold text-zinc-900">Strategists</h2>
-          <p className="mb-4 text-sm text-zinc-600">Monitor all strategist activity and performance</p>
+        <div className="rounded-lg border border-white/10 bg-deep-navy p-6">
+          <h2 className="mb-4 text-xl font-semibold text-soft-white">Strategists</h2>
+          <p className="mb-4 text-sm text-steel-gray">Monitor all strategist activity and performance</p>
           
           <div className="space-y-3">
             <StrategistRow name="Alex Morgan" clients={23} status="Active" />
@@ -37,15 +37,15 @@ export default function ComplianceDashboardPage() {
             <StrategistRow name="Emily Rodriguez" clients={21} status="Active" />
           </div>
 
-          <button className="mt-4 w-full rounded-lg border border-zinc-300 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
+          <button className="mt-4 w-full rounded-lg border border-white/15 py-2 text-sm font-medium text-soft-white transition-colors hover:bg-white/3">
             View All Strategists
           </button>
         </div>
 
         {/* Recent Activity */}
-        <div className="rounded-lg border border-zinc-200 bg-white p-6">
-          <h2 className="mb-4 text-xl font-semibold text-zinc-900">Recent Activity</h2>
-          <p className="mb-4 text-sm text-zinc-600">Latest actions requiring oversight</p>
+        <div className="rounded-lg border border-white/10 bg-deep-navy p-6">
+          <h2 className="mb-4 text-xl font-semibold text-soft-white">Recent Activity</h2>
+          <p className="mb-4 text-sm text-steel-gray">Latest actions requiring oversight</p>
           
           <div className="space-y-3">
             <ActivityRow
@@ -71,15 +71,15 @@ export default function ComplianceDashboardPage() {
             />
           </div>
 
-          <button className="mt-4 w-full rounded-lg border border-zinc-300 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
+          <button className="mt-4 w-full rounded-lg border border-white/15 py-2 text-sm font-medium text-soft-white transition-colors hover:bg-white/3">
             View All Activity
           </button>
         </div>
       </div>
 
       {/* Pending Reviews */}
-      <div className="rounded-lg border border-zinc-200 bg-white p-6">
-        <h2 className="mb-4 text-xl font-semibold text-zinc-900">Pending Reviews</h2>
+      <div className="rounded-lg border border-white/10 bg-deep-navy p-6">
+        <h2 className="mb-4 text-xl font-semibold text-soft-white">Pending Reviews</h2>
         <div className="space-y-3">
           <ReviewRow
             client="Emily Davis"
@@ -117,10 +117,10 @@ function StatCard({
   positive?: boolean;
 }) {
   return (
-    <div className="rounded-lg bg-white p-6 shadow-sm">
-      <div className="text-sm font-medium text-zinc-500">{label}</div>
-      <div className="mt-2 text-3xl font-bold text-zinc-900">{value}</div>
-      <div className={`mt-1 text-xs ${positive ? 'text-emerald-600' : 'text-amber-600'}`}>
+    <div className="rounded-lg bg-deep-navy p-6 shadow-sm">
+      <div className="text-sm font-medium text-steel-gray">{label}</div>
+      <div className="mt-2 text-3xl font-bold text-soft-white">{value}</div>
+      <div className={`mt-1 text-xs ${positive ? 'text-emerald-400' : 'text-amber-400'}`}>
         {change}
       </div>
     </div>
@@ -137,12 +137,12 @@ function StrategistRow({
   status: string;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-zinc-100 p-3">
+    <div className="flex items-center justify-between rounded-lg border border-white/8 p-3">
       <div>
-        <div className="font-medium text-zinc-900">{name}</div>
-        <div className="text-sm text-zinc-500">{clients} clients</div>
+        <div className="font-medium text-soft-white">{name}</div>
+        <div className="text-sm text-steel-gray">{clients} clients</div>
       </div>
-      <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">
+      <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-xs font-medium text-emerald-300">
         {status}
       </span>
     </div>
@@ -161,15 +161,15 @@ function ActivityRow({
   flagged?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between border-b border-zinc-100 pb-3 last:border-0">
+    <div className="flex items-center justify-between border-b border-white/8 pb-3 last:border-0">
       <div>
-        <div className={`text-sm font-medium ${flagged ? 'text-amber-700' : 'text-zinc-900'}`}>
+        <div className={`text-sm font-medium ${flagged ? 'text-amber-300' : 'text-soft-white'}`}>
           {flagged && '⚠️ '}
           {action}
         </div>
-        <div className="text-xs text-zinc-500">{strategist}</div>
+        <div className="text-xs text-steel-gray">{strategist}</div>
       </div>
-      <div className="text-xs text-zinc-400">{time}</div>
+      <div className="text-xs text-steel-gray/60">{time}</div>
     </div>
   );
 }
@@ -186,13 +186,13 @@ function ReviewRow({
   submitted: string;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-zinc-200 p-4">
+    <div className="flex items-center justify-between rounded-lg border border-white/10 p-4">
       <div>
-        <div className="font-medium text-zinc-900">{client}</div>
-        <div className="text-sm text-zinc-600">
+        <div className="font-medium text-soft-white">{client}</div>
+        <div className="text-sm text-steel-gray">
           {type} · by {strategist}
         </div>
-        <div className="text-xs text-zinc-400">Submitted {submitted}</div>
+        <div className="text-xs text-steel-gray/60">Submitted {submitted}</div>
       </div>
       <button className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
         Review

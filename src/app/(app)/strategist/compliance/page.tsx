@@ -58,18 +58,18 @@ function ComplianceCard({
   onDeleteClient: (complianceUserId: string, clientId: string, clientEmail: string) => void;
 }) {
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white transition-all hover:border-zinc-300 hover:shadow-md">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-deep-navy transition-all hover:border-white/15 hover:shadow-md">
       <div className="flex items-center gap-3 p-4">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-xs font-semibold text-emerald-700">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/15 text-xs font-semibold text-emerald-300">
           {getInitials(complianceUser.name || complianceUser.email)}
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold text-zinc-900">
+          <h3 className="truncate text-sm font-semibold text-soft-white">
             {complianceUser.name || complianceUser.email.split('@')[0]}
           </h3>
-          <p className="truncate text-xs text-zinc-500">{complianceUser.email}</p>
+          <p className="truncate text-xs text-steel-gray">{complianceUser.email}</p>
         </div>
-        <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+        <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-medium text-emerald-300">
           <ShieldCheck weight="fill" className="h-3 w-3" />
           Compliance
         </span>
@@ -77,18 +77,18 @@ function ComplianceCard({
 
       {/* Linked Clients List */}
       {complianceUser.clients && complianceUser.clients.length > 0 && (
-        <div className="border-t border-zinc-100 px-4 py-3">
-          <p className="mb-2 text-xs font-medium text-zinc-600">Linked Clients</p>
+        <div className="border-t border-white/8 px-4 py-3">
+          <p className="mb-2 text-xs font-medium text-steel-gray">Linked Clients</p>
           <div className="space-y-2">
             {complianceUser.clients.map(client => (
               <div
                 key={client.id}
-                className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2"
+                className="flex items-center justify-between rounded-lg bg-white/3 px-3 py-2"
               >
-                <p className="text-xs text-zinc-700">{client.email}</p>
+                <p className="text-xs text-soft-white">{client.email}</p>
                 <button
                   onClick={() => onDeleteClient(complianceUser.complianceUserId, client.id, client.email)}
-                  className="flex items-center justify-center text-red-500 transition-colors hover:text-red-700"
+                  className="flex items-center justify-center text-red-500 transition-colors hover:text-red-300"
                   title="Remove client"
                 >
                   <Trash weight="fill" className="h-3.5 w-3.5" />
@@ -101,7 +101,7 @@ function ComplianceCard({
 
       <button
         onClick={() => onAddClient(complianceUser)}
-        className="flex w-full cursor-pointer items-center justify-center gap-1.5 border-t border-zinc-100 py-2.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
+        className="flex w-full cursor-pointer items-center justify-center gap-1.5 border-t border-white/8 py-2.5 text-xs font-medium text-steel-gray transition-colors hover:bg-white/3 hover:text-soft-white"
       >
         <Plus weight="bold" className="h-3.5 w-3.5" />
         Add Client
@@ -207,31 +207,31 @@ function AddClientToComplianceModal({
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="flex h-full w-full items-center justify-center bg-white">
+      <div className="flex h-full w-full items-center justify-center bg-deep-navy">
         {/* Top bar */}
-        <div className="absolute top-0 left-0 flex h-14 w-full items-center gap-2 border-b border-zinc-200 pl-2">
+        <div className="absolute top-0 left-0 flex h-14 w-full items-center gap-2 border-b border-white/10 pl-2">
           <button
             onClick={onClose}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
+            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-steel-gray/60 transition-colors hover:bg-white/8 hover:text-steel-gray"
           >
             <X weight="bold" className="h-4.5 w-4.5" />
           </button>
-          <div className="h-4 w-0.5 bg-zinc-200" />
-          <h1 className="rounded-lg bg-zinc-100 px-2 py-1 text-center text-sm font-semibold text-zinc-900">
+          <div className="h-4 w-0.5 bg-white/12" />
+          <h1 className="rounded-lg bg-white/8 px-2 py-1 text-center text-sm font-semibold text-soft-white">
             Add Client to Compliance
           </h1>
         </div>
 
         <div className="w-full max-w-md px-6">
           {/* Info banner */}
-          <div className="mb-6 rounded-xl border border-zinc-200 bg-white p-4">
+          <div className="mb-6 rounded-xl border border-white/10 bg-deep-navy p-4">
             <div className="flex items-start gap-3">
               <div className="h-full w-1 rounded-full bg-emerald-500" />
               <div>
-                <p className="font-medium text-zinc-900">
+                <p className="font-medium text-soft-white">
                   Add client to {complianceName}
                 </p>
-                <p className="mt-1 text-sm text-zinc-500">
+                <p className="mt-1 text-sm text-steel-gray">
                   Select a client below to grant this compliance user review access.
                 </p>
               </div>
@@ -239,20 +239,20 @@ function AddClientToComplianceModal({
           </div>
 
           {/* Client list */}
-          <div className="mb-6 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+          <div className="mb-6 overflow-hidden rounded-xl border border-white/10 bg-deep-navy">
             {/* Search */}
-            <div className="border-b border-zinc-100 px-3 py-2.5">
+            <div className="border-b border-white/8 px-3 py-2.5">
               <div className="relative">
                 <MagnifyingGlassIcon
                   weight="bold"
-                  className="absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
+                  className="absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-steel-gray/60"
                 />
                 <input
                   type="text"
                   placeholder="Search clients..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-200 py-1.5 pr-3 pl-7 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-300 focus:outline-none"
+                  className="w-full rounded-lg border border-white/10 py-1.5 pr-3 pl-7 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-white/15 focus:outline-none"
                   autoFocus
                 />
               </div>
@@ -262,15 +262,15 @@ function AddClientToComplianceModal({
             <div className="max-h-64 overflow-y-auto">
               {allClients.length === 0 ? (
                 <div className="flex flex-col items-center py-8 text-center">
-                  <User weight="fill" className="mb-2 h-5 w-5 text-zinc-300" />
-                  <p className="text-sm font-medium text-zinc-500">No clients yet</p>
-                  <p className="mt-0.5 text-xs text-zinc-400">
+                  <User weight="fill" className="mb-2 h-5 w-5 text-steel-gray/40" />
+                  <p className="text-sm font-medium text-steel-gray">No clients yet</p>
+                  <p className="mt-0.5 text-xs text-steel-gray/60">
                     Create clients first from the Clients page.
                   </p>
                 </div>
               ) : filteredClients.length === 0 ? (
                 <div className="py-8 text-center">
-                  <p className="text-sm text-zinc-400">No clients match your search</p>
+                  <p className="text-sm text-steel-gray/60">No clients match your search</p>
                 </div>
               ) : (
                 <div className="divide-y divide-zinc-50">
@@ -285,30 +285,30 @@ function AddClientToComplianceModal({
                         }
                         className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
                           isSelected
-                            ? 'bg-emerald-50'
-                            : 'hover:bg-zinc-50'
+                            ? 'bg-emerald-500/15'
+                            : 'hover:bg-white/3'
                         }`}
                       >
                         <div
                           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ${
                             isSelected
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : 'bg-zinc-100 text-zinc-600'
+                              ? 'bg-emerald-500/15 text-emerald-300'
+                              : 'bg-white/8 text-steel-gray'
                           }`}
                         >
                           {getInitials(client.name)}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-zinc-900">
+                          <p className="truncate text-sm font-medium text-soft-white">
                             {client.name || client.email}
                           </p>
-                          <p className="truncate text-xs text-zinc-500">{client.email}</p>
+                          <p className="truncate text-xs text-steel-gray">{client.email}</p>
                         </div>
                         <div
                           className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
                             isSelected
                               ? 'border-emerald-500 bg-emerald-500'
-                              : 'border-zinc-300'
+                              : 'border-white/15'
                           }`}
                         >
                           {isSelected && (
@@ -327,7 +327,7 @@ function AddClientToComplianceModal({
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting || !selectedClientId}
-            className="w-full rounded-xl bg-zinc-900 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:opacity-50"
+            className="w-full rounded-xl bg-electric-blue py-3.5 text-sm font-semibold text-white transition-colors hover:bg-electric-blue/85 disabled:opacity-50"
           >
             {isSubmitting ? 'Adding...' : 'Add Client'}
           </button>
@@ -377,10 +377,10 @@ function DeleteClientConfirmationModal({
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-6 shadow-lg">
+      <div className="w-full max-w-sm rounded-xl border border-white/10 bg-deep-navy p-6 shadow-lg">
         <div className="mb-4">
-          <h2 className="text-lg font-semibold text-zinc-900">Remove Client</h2>
-          <p className="mt-2 text-sm text-zinc-600">
+          <h2 className="text-lg font-semibold text-soft-white">Remove Client</h2>
+          <p className="mt-2 text-sm text-steel-gray">
             Are you sure you want to remove <span className="font-medium">{clientEmail}</span> from this compliance user&apos;s access?
           </p>
         </div>
@@ -389,7 +389,7 @@ function DeleteClientConfirmationModal({
           <button
             onClick={onClose}
             disabled={isDeleting}
-            className="flex-1 rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+            className="flex-1 rounded-lg border border-white/15 px-4 py-2.5 text-sm font-medium text-soft-white transition-colors hover:bg-white/3 disabled:opacity-50"
           >
             Cancel
           </button>
@@ -432,14 +432,14 @@ function ErrorModal({ isOpen, onClose, errorMessage }: ErrorModalProps) {
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-xl border border-red-200 bg-white p-6 shadow-lg">
+      <div className="w-full max-w-sm rounded-xl border border-red-500/30 bg-deep-navy p-6 shadow-lg">
         <div className="mb-4 flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-100">
-            <X weight="bold" className="h-5 w-5 text-red-600" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-500/15">
+            <X weight="bold" className="h-5 w-5 text-red-400" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900">Error</h2>
-            <p className="mt-2 text-sm text-zinc-600">{errorMessage}</p>
+            <h2 className="text-lg font-semibold text-soft-white">Error</h2>
+            <p className="mt-2 text-sm text-steel-gray">{errorMessage}</p>
           </div>
         </div>
 
@@ -462,19 +462,19 @@ function LoadingState() {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {[1, 2].map(i => (
-        <div key={i} className="animate-pulse rounded-xl border border-zinc-200 bg-white p-4">
+        <div key={i} className="animate-pulse rounded-xl border border-white/10 bg-deep-navy p-4">
           <div className="mb-3 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-zinc-100" />
+            <div className="h-9 w-9 rounded-lg bg-white/8" />
             <div className="flex-1">
-              <div className="mb-1 h-4 w-24 rounded bg-zinc-100" />
-              <div className="h-3 w-32 rounded bg-zinc-100" />
+              <div className="mb-1 h-4 w-24 rounded bg-white/8" />
+              <div className="h-3 w-32 rounded bg-white/8" />
             </div>
           </div>
-          <div className="mt-3 border-t border-zinc-100 pt-3">
-            <div className="mb-2 h-3 w-16 rounded bg-zinc-100" />
+          <div className="mt-3 border-t border-white/8 pt-3">
+            <div className="mb-2 h-3 w-16 rounded bg-white/8" />
             <div className="space-y-2">
-              <div className="h-8 rounded-lg bg-zinc-50" />
-              <div className="h-8 rounded-lg bg-zinc-50" />
+              <div className="h-8 rounded-lg bg-white/3" />
+              <div className="h-8 rounded-lg bg-white/3" />
             </div>
           </div>
         </div>
@@ -490,11 +490,11 @@ function LoadingState() {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-100">
-        <ShieldCheck weight="fill" className="h-6 w-6 text-zinc-400" />
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-white/8">
+        <ShieldCheck weight="fill" className="h-6 w-6 text-steel-gray/60" />
       </div>
-      <p className="mb-1 text-lg font-semibold text-zinc-800">No compliance users</p>
-      <p className="text-sm text-zinc-400">
+      <p className="mb-1 text-lg font-semibold text-soft-white">No compliance users</p>
+      <p className="text-sm text-steel-gray/60">
         Invite a compliance user from the Clients page to get started
       </p>
     </div>
@@ -603,12 +603,12 @@ export default function StrategistCompliancePage() {
   return (
     <div className="flex min-h-full flex-col">
       <div className="flex-1">
-        <div className="shrink-0 bg-white pt-6 pb-6">
+        <div className="shrink-0 bg-deep-navy pt-6 pb-6">
           <div className="mx-auto w-full max-w-[642px]">
             <div className="mb-6 flex items-start justify-between">
               <div>
                 <h1 className="mb-2 text-2xl font-medium tracking-tight">Compliance</h1>
-                <p className="mt-1 text-sm text-zinc-500">
+                <p className="mt-1 text-sm text-steel-gray">
                   {complianceUsers.length > 0
                     ? `${complianceUsers.length} compliance user${complianceUsers.length !== 1 ? 's' : ''}`
                     : 'Manage your compliance team and client access'}
@@ -619,20 +619,20 @@ export default function StrategistCompliancePage() {
             <div className="relative">
               <MagnifyingGlassIcon
                 weight="bold"
-                className="absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500"
+                className="absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-steel-gray"
               />
               <input
                 type="text"
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="h-[30px] w-64 rounded-lg border border-zinc-200 bg-white pr-3 pl-7 text-sm font-medium text-zinc-900 shadow placeholder:text-zinc-400 hover:bg-zinc-100 focus:border-zinc-300 focus:outline-none"
+                className="h-[30px] w-64 rounded-lg border border-white/10 bg-deep-navy pr-3 pl-7 text-sm font-medium text-soft-white shadow placeholder:text-steel-gray/60 hover:bg-white/8 focus:border-white/15 focus:outline-none"
               />
             </div>
           </div>
         </div>
 
-        <div className="bg-white pb-42">
+        <div className="bg-deep-navy pb-42">
           <div className="mx-auto w-full max-w-[642px] py-6">
             {isLoading ? (
               <LoadingState />
@@ -640,8 +640,8 @@ export default function StrategistCompliancePage() {
               <EmptyState />
             ) : filteredUsers.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <p className="mb-1 text-lg font-semibold text-zinc-800">No results found</p>
-                <p className="text-sm text-zinc-400">Try adjusting your search</p>
+                <p className="mb-1 text-lg font-semibold text-soft-white">No results found</p>
+                <p className="text-sm text-steel-gray/60">Try adjusting your search</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

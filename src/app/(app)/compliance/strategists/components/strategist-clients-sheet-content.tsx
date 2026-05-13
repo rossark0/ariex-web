@@ -82,7 +82,7 @@ export function StrategistClientsSheetContent({ strategist }: StrategistClientsS
                 strategist.profile.specializations?.length > 0 ? (
                   <StatusBadge>{strategist.profile.specializations[0]}</StatusBadge>
                 ) : (
-                  <span className="text-zinc-400">Not set</span>
+                  <span className="text-steel-gray/60">Not set</span>
                 )
               }
             />
@@ -101,26 +101,26 @@ export function StrategistClientsSheetContent({ strategist }: StrategistClientsS
                 <DetailRow
                   label="Title"
                   icon={<Briefcase className="h-4 w-4" />}
-                  value={strategist.profile.title || <span className="text-zinc-400">Not set</span>}
+                  value={strategist.profile.title || <span className="text-steel-gray/60">Not set</span>}
                 />
               </>
             )}
             <button
               onClick={() => setShowMore(!showMore)}
-              className="mt-2 text-sm text-zinc-500 hover:text-zinc-700"
+              className="mt-2 text-sm text-steel-gray hover:text-soft-white"
             >
               {showMore ? 'See less' : 'See more'} ↓
             </button>
           </div>
 
           <div className="w-full px-6">
-            <div className="h-px bg-zinc-200"></div>
+            <div className="h-px bg-white/12"></div>
           </div>
 
           {/* About Section */}
-          <div className="border-b border-zinc-100 px-6 py-4">
-            <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">About</h4>
-            <p className="text-sm leading-relaxed text-zinc-700">
+          <div className="border-b border-white/8 px-6 py-4">
+            <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-steel-gray/60">About</h4>
+            <p className="text-sm leading-relaxed text-soft-white">
               {strategist.profile.title
                 ? `${strategist.user.name} is a ${strategist.profile.title}`
                 : strategist.user.name}
@@ -137,10 +137,10 @@ export function StrategistClientsSheetContent({ strategist }: StrategistClientsS
         {/* Clients Section */}
         <div className={`px-6 py-4 ${isSearching ? 'pt-6' : ''}`}>
           <div className="mb-4 flex items-center justify-between">
-            <h4 className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+            <h4 className="text-xs font-medium uppercase tracking-wide text-steel-gray/60">
               {isSearching ? `Search results` : 'Clients'}
             </h4>
-            <span className="text-xs text-zinc-400">
+            <span className="text-xs text-steel-gray/60">
               {isSearching ? `${filteredClients.length} found` : `${clients.length} total`}
             </span>
           </div>
@@ -159,16 +159,16 @@ export function StrategistClientsSheetContent({ strategist }: StrategistClientsS
             if (searchQuery && clients.length > 0) {
               return (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <p className="mb-1 text-sm font-medium text-zinc-600">No results found</p>
-                  <p className="text-xs text-zinc-400">Try a different search term</p>
+                  <p className="mb-1 text-sm font-medium text-steel-gray">No results found</p>
+                  <p className="text-xs text-steel-gray/60">Try a different search term</p>
                 </div>
               );
             }
 
             return (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <p className="mb-1 text-sm font-medium text-zinc-600">No clients</p>
-                <p className="text-xs text-zinc-400">This strategist has no assigned clients</p>
+                <p className="mb-1 text-sm font-medium text-steel-gray">No clients</p>
+                <p className="text-xs text-steel-gray/60">This strategist has no assigned clients</p>
               </div>
             );
           })()}
@@ -177,17 +177,17 @@ export function StrategistClientsSheetContent({ strategist }: StrategistClientsS
 
       {/* Fixed Bottom Search Input */}
       <div className="absolute right-0 bottom-0 left-0 bg-gradient-to-t from-white via-white to-transparent px-6 pt-8 pb-6">
-        <div className="relative flex items-center rounded-full border border-zinc-200 bg-white shadow-2xl transition-all duration-300 focus-within:ring-2 focus-within:ring-zinc-300">
+        <div className="relative flex items-center rounded-full border border-white/10 bg-deep-navy shadow-2xl transition-all duration-300 focus-within:ring-2 focus-within:ring-zinc-300">
           <MagnifyingGlass
             weight="bold"
-            className="absolute left-5 h-5 w-5 text-zinc-400"
+            className="absolute left-5 h-5 w-5 text-steel-gray/60"
           />
           <input
             type="text"
             placeholder="Search clients..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="min-h-[56px] flex-1 bg-transparent pl-14 pr-6 text-sm font-medium leading-relaxed tracking-normal text-black placeholder:text-zinc-500 focus:outline-none"
+            className="min-h-[56px] flex-1 bg-transparent pl-14 pr-6 text-sm font-medium leading-relaxed tracking-normal text-soft-white placeholder:text-steel-gray focus:outline-none"
           />
         </div>
       </div>

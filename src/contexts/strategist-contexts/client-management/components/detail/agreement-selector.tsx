@@ -111,7 +111,7 @@ export const AgreementSelector = memo(function AgreementSelector({
         <button
           type="button"
           onClick={onCreateNew}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-300 bg-white px-4 py-3 text-sm font-medium text-zinc-600 transition-colors hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-900"
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-white/15 bg-white/3 px-4 py-3 text-sm font-medium text-steel-gray transition-colors duration-150 ease-linear hover:border-white/25 hover:bg-white/5 hover:text-soft-white"
         >
           <Plus className="h-4 w-4" weight="bold" />
           New Agreement
@@ -135,7 +135,7 @@ export const AgreementSelector = memo(function AgreementSelector({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex w-full cursor-pointer px-2 uppercase items-center justify-center gap-1 rounded-md border border-emerald-200 py-0.5 text-xs font-medium tracking-wide text-emerald-700 transition-colors duration-500 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-900"
+            className="flex w-full cursor-pointer px-2 uppercase items-center justify-center gap-1 rounded-md border border-emerald-500/30 py-0.5 text-xs font-medium tracking-wide text-emerald-300 transition-colors duration-500 hover:border-emerald-300 hover:bg-emerald-500/15 hover:text-emerald-900"
           >
             <span className="truncate">{agreementDisplayName(selected)}</span>
             <CaretDown
@@ -156,17 +156,17 @@ export const AgreementSelector = memo(function AgreementSelector({
                     onSelect(agreement.id);
                     setOpen(false);
                   }}
-                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors ${
-                    isActive ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-700 hover:bg-zinc-50'
+                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors duration-150 ease-linear ${
+                    isActive ? 'bg-white/8 text-soft-white' : 'text-soft-white/85 hover:bg-white/5'
                   }`}
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-medium">{agreementDisplayName(agreement)}</p>
-                    <p className="text-[10px] text-zinc-500">
+                    <p className="text-[10px] text-steel-gray">
                       {statusLabel(agreement.status)}
                     </p>
                   </div>
-                  {isActive && <Check className="h-3 w-3 shrink-0 text-emerald-600" weight="bold" />}
+                  {isActive && <Check className="h-3 w-3 shrink-0 text-emerald-400" weight="bold" />}
                 </button>
               );
             })}
@@ -183,15 +183,15 @@ export const AgreementSelector = memo(function AgreementSelector({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex w-full min-w-0 flex-1 items-center justify-between rounded-lg border border-zinc-200 bg-white px-4 py-3 text-left shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50"
+            className="flex w-full min-w-0 flex-1 items-center justify-between rounded-lg border border-white/10 bg-white/3 px-4 py-3 text-left shadow-sm transition-colors duration-150 ease-linear hover:border-white/15 hover:bg-white/5"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <FileText className="h-5 w-5 shrink-0 text-zinc-400" weight="duotone" />
+              <FileText className="h-5 w-5 shrink-0 text-steel-gray" weight="duotone" />
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-zinc-900">
+                <p className="truncate text-sm font-medium text-soft-white">
                   {agreementDisplayName(selected)}
                 </p>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-steel-gray">
                   {formatDate(new Date(selected.createdAt))}
                   {' · '}
                   {formatCurrency(selectedPrice)}
@@ -204,7 +204,7 @@ export const AgreementSelector = memo(function AgreementSelector({
                 {statusLabel(selected.status)}
               </Badge>
               <CaretDown
-                className={`h-4 w-4 text-zinc-400 transition-transform ${open ? 'rotate-180' : ''}`}
+                className={`h-4 w-4 text-steel-gray transition-transform duration-150 ease-linear ${open ? 'rotate-180' : ''}`}
                 weight="bold"
               />
             </div>
@@ -228,17 +228,17 @@ export const AgreementSelector = memo(function AgreementSelector({
                     onSelect(agreement.id);
                     setOpen(false);
                   }}
-                  className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${
+                  className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors duration-150 ease-linear ${
                     isActive
-                      ? 'bg-zinc-100 text-zinc-900'
-                      : 'text-zinc-700 hover:bg-zinc-50'
+                      ? 'bg-white/8 text-soft-white'
+                      : 'text-soft-white/85 hover:bg-white/5'
                   }`}
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
                       {agreementDisplayName(agreement)}
                     </p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-steel-gray">
                       {formatDate(new Date(agreement.createdAt))}
                       {' · '}
                       {formatCurrency(price)}
@@ -252,7 +252,7 @@ export const AgreementSelector = memo(function AgreementSelector({
                     >
                       {statusLabel(agreement.status)}
                     </Badge>
-                    {isActive && <Check className="h-4 w-4 text-emerald-600" weight="bold" />}
+                    {isActive && <Check className="h-4 w-4 text-emerald-400" weight="bold" />}
                   </div>
                 </button>
               );
@@ -266,7 +266,7 @@ export const AgreementSelector = memo(function AgreementSelector({
           type="button"
           onClick={onCreateNew}
           title="New agreement"
-          className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-white text-zinc-500 transition-colors hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-900"
+          className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-lg border border-dashed border-white/15 bg-white/3 text-steel-gray transition-colors duration-150 ease-linear hover:border-white/25 hover:bg-white/5 hover:text-soft-white"
         >
           <Plus className="h-5 w-5" weight="bold" />
         </button>

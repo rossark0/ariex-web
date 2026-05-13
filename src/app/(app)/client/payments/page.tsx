@@ -169,7 +169,7 @@ export default function ClientPaymentsPage() {
             </button>
             
             {/* Request Payment Button */}
-            {/* <button className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-800">
+            {/* <button className="inline-flex items-center gap-1.5 rounded-lg bg-electric-blue px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-electric-blue/85">
               <Plus className="h-3.5 w-3.5" weight="bold" />
               Request Payment
             </button> */}

@@ -53,14 +53,14 @@ function getInitials(name: string | null | undefined): string {
 
 function getAvatarColor(name: string | null | undefined): string {
   const colors = [
-    'bg-amber-100 text-amber-700',
-    'bg-emerald-100 text-emerald-700',
+    'bg-amber-500/15 text-amber-300',
+    'bg-emerald-500/15 text-emerald-300',
     'bg-blue-100 text-blue-700',
     'bg-purple-100 text-purple-700',
     'bg-rose-100 text-rose-700',
     'bg-cyan-100 text-cyan-700',
     'bg-orange-100 text-orange-700',
-    'bg-teal-100 text-teal-700',
+    'bg-teal-500/15 text-teal-300',
   ];
   if (!name) return colors[0];
   const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -80,16 +80,16 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
   switch (status?.toUpperCase()) {
     case 'COMPLETED':
     case 'SIGNED':
-      return { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' };
+      return { bg: 'bg-emerald-500/15', text: 'text-emerald-300', dot: 'bg-emerald-500' };
     case 'PENDING':
     case 'PROCESSING':
-      return { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' };
+      return { bg: 'bg-amber-500/10', text: 'text-amber-300', dot: 'bg-amber-500' };
     case 'FAILED':
     case 'DECLINED':
     case 'EXPIRED':
-      return { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' };
+      return { bg: 'bg-red-500/10', text: 'text-red-300', dot: 'bg-red-500' };
     default:
-      return { bg: 'bg-zinc-50', text: 'text-zinc-600', dot: 'bg-zinc-400' };
+      return { bg: 'bg-white/3', text: 'text-steel-gray', dot: 'bg-white/20' };
   }
 }
 
@@ -114,13 +114,13 @@ function FilterChip({
   onRemove: () => void;
 }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-sm">
-      <CalendarBlank className="h-3.5 w-3.5 text-zinc-500" weight="bold" />
-      <span className="font-medium text-zinc-700">{label}</span>
-      <span className="text-zinc-400">{value}</span>
+    <div className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/3 px-2.5 py-1.5 text-sm">
+      <CalendarBlank className="h-3.5 w-3.5 text-steel-gray" weight="bold" />
+      <span className="font-medium text-soft-white">{label}</span>
+      <span className="text-steel-gray/60">{value}</span>
       <button
         onClick={onRemove}
-        className="ml-0.5 rounded p-0.5 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-600"
+        className="ml-0.5 rounded p-0.5 text-steel-gray/60 hover:bg-white/12 hover:text-steel-gray"
       >
         <X className="h-3 w-3" weight="bold" />
       </button>
@@ -167,12 +167,12 @@ function ClientFilterDropdown({
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 rounded-md border border-dashed border-zinc-300 px-2.5 py-1.5 text-sm text-zinc-600 transition-colors hover:border-zinc-400 hover:bg-zinc-50"
+        className="flex items-center gap-1.5 rounded-md border border-dashed border-white/15 px-2.5 py-1.5 text-sm text-steel-gray transition-colors hover:border-white/25 hover:bg-white/3"
       >
         <FunnelSimple className="h-3.5 w-3.5" weight="bold" />
         <span>Client</span>
         {selectedClientIds.size > 0 && (
-          <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-zinc-900 px-1 text-[10px] font-semibold text-white">
+          <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-electric-blue px-1 text-[10px] font-semibold text-white">
             {selectedClientIds.size}
           </span>
         )}
@@ -180,22 +180,22 @@ function ClientFilterDropdown({
       </button>
 
       {open && (
-        <div className="absolute left-0 z-50 mt-1.5 w-64 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg">
-          <div className="border-b border-zinc-100 p-2">
-            <div className="flex items-center gap-2 rounded-md bg-zinc-50 px-2.5 py-1.5">
-              <MagnifyingGlass className="h-3.5 w-3.5 text-zinc-400" />
+        <div className="absolute left-0 z-50 mt-1.5 w-64 overflow-hidden rounded-lg border border-white/10 bg-deep-navy shadow-lg">
+          <div className="border-b border-white/8 p-2">
+            <div className="flex items-center gap-2 rounded-md bg-white/3 px-2.5 py-1.5">
+              <MagnifyingGlass className="h-3.5 w-3.5 text-steel-gray/60" />
               <input
                 type="text"
                 placeholder="Search clients..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="flex-1 bg-transparent text-sm text-zinc-700 placeholder:text-zinc-400 focus:outline-none"
+                className="flex-1 bg-transparent text-sm text-soft-white placeholder:text-steel-gray/60 focus:outline-none"
               />
             </div>
           </div>
           <div className="max-h-56 overflow-y-auto p-1">
             {filtered.length === 0 ? (
-              <div className="px-3 py-4 text-center text-sm text-zinc-400">
+              <div className="px-3 py-4 text-center text-sm text-steel-gray/60">
                 No clients found
               </div>
             ) : (
@@ -205,18 +205,18 @@ function ClientFilterDropdown({
                   <button
                     key={client.id}
                     onClick={() => onToggle(client.id)}
-                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-zinc-50"
+                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-white/3"
                   >
                     <div
                       className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${getAvatarColor(client.name)}`}
                     >
                       {getInitials(client.name)}
                     </div>
-                    <span className="flex-1 truncate text-sm text-zinc-700">
+                    <span className="flex-1 truncate text-sm text-soft-white">
                       {client.name || client.email}
                     </span>
                     {isSelected && (
-                      <Check className="h-3.5 w-3.5 shrink-0 text-zinc-900" weight="bold" />
+                      <Check className="h-3.5 w-3.5 shrink-0 text-soft-white" weight="bold" />
                     )}
                   </button>
                 );
@@ -224,12 +224,12 @@ function ClientFilterDropdown({
             )}
           </div>
           {selectedClientIds.size > 0 && (
-            <div className="border-t border-zinc-100 p-1.5">
+            <div className="border-t border-white/8 p-1.5">
               <button
                 onClick={() => {
                   selectedClientIds.forEach(id => onToggle(id));
                 }}
-                className="w-full rounded-md px-2.5 py-1.5 text-center text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-700"
+                className="w-full rounded-md px-2.5 py-1.5 text-center text-xs font-medium text-steel-gray transition-colors hover:bg-white/3 hover:text-soft-white"
               >
                 Clear all
               </button>
@@ -279,12 +279,12 @@ function StatusFilterDropdown({
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 rounded-md border border-dashed border-zinc-300 px-2.5 py-1.5 text-sm text-zinc-600 transition-colors hover:border-zinc-400 hover:bg-zinc-50"
+        className="flex items-center gap-1.5 rounded-md border border-dashed border-white/15 px-2.5 py-1.5 text-sm text-steel-gray transition-colors hover:border-white/25 hover:bg-white/3"
       >
         <FunnelSimple className="h-3.5 w-3.5" weight="bold" />
         <span>Status</span>
         {selectedStatuses.size > 0 && (
-          <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-zinc-900 px-1 text-[10px] font-semibold text-white">
+          <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-electric-blue px-1 text-[10px] font-semibold text-white">
             {selectedStatuses.size}
           </span>
         )}
@@ -292,7 +292,7 @@ function StatusFilterDropdown({
       </button>
 
       {open && (
-        <div className="absolute left-0 z-50 mt-1.5 w-48 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg">
+        <div className="absolute left-0 z-50 mt-1.5 w-48 overflow-hidden rounded-lg border border-white/10 bg-deep-navy shadow-lg">
           <div className="max-h-56 overflow-y-auto p-1">
             {DOCUMENT_STATUSES.map(status => {
               const isSelected = selectedStatuses.has(status);
@@ -301,26 +301,26 @@ function StatusFilterDropdown({
                 <button
                   key={status}
                   onClick={() => onToggle(status)}
-                  className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-zinc-50"
+                  className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-white/3"
                 >
                   <div className={`h-2 w-2 rounded-full ${style.dot}`} />
-                  <span className="flex-1 text-sm capitalize text-zinc-700">
+                  <span className="flex-1 text-sm capitalize text-soft-white">
                     {status.toLowerCase()}
                   </span>
                   {isSelected && (
-                    <Check className="h-3.5 w-3.5 shrink-0 text-zinc-900" weight="bold" />
+                    <Check className="h-3.5 w-3.5 shrink-0 text-soft-white" weight="bold" />
                   )}
                 </button>
               );
             })}
           </div>
           {selectedStatuses.size > 0 && (
-            <div className="border-t border-zinc-100 p-1.5">
+            <div className="border-t border-white/8 p-1.5">
               <button
                 onClick={() => {
                   selectedStatuses.forEach(s => onToggle(s));
                 }}
-                className="w-full rounded-md px-2.5 py-1.5 text-center text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-700"
+                className="w-full rounded-md px-2.5 py-1.5 text-center text-xs font-medium text-steel-gray transition-colors hover:bg-white/3 hover:text-soft-white"
               >
                 Clear all
               </button>
@@ -607,21 +607,21 @@ export default function StrategistDocumentsPage() {
     return (
       <div className="flex min-h-full flex-col items-center justify-center">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-zinc-900">Not authenticated</h1>
-          <p className="text-zinc-500">Please sign in to view documents.</p>
+          <h1 className="text-xl font-semibold text-soft-white">Not authenticated</h1>
+          <p className="text-steel-gray">Please sign in to view documents.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-full bg-white pb-24">
+    <div className="min-h-full bg-deep-navy pb-24">
       <div className="mx-auto flex w-full max-w-2xl flex-col py-6">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-zinc-900">Documents</h2>
-            <p className="mt-0.5 text-sm text-zinc-500">
+            <h2 className="text-2xl font-semibold text-soft-white">Documents</h2>
+            <p className="mt-0.5 text-sm text-steel-gray">
               {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''}
               {hasActiveFilters ? ' (filtered)' : ''}
             </p>
@@ -664,19 +664,19 @@ export default function StrategistDocumentsPage() {
           />
 
           {/* Search on the right */}
-          <div className="ml-auto flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-2.5 py-1.5">
-            <MagnifyingGlass className="h-3.5 w-3.5 text-zinc-400" />
+          <div className="ml-auto flex items-center gap-2 rounded-md border border-white/10 bg-deep-navy px-2.5 py-1.5">
+            <MagnifyingGlass className="h-3.5 w-3.5 text-steel-gray/60" />
             <input
               type="text"
               placeholder="Search documents..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-48 bg-transparent text-sm text-zinc-700 placeholder:text-zinc-400 focus:outline-none"
+              className="w-48 bg-transparent text-sm text-soft-white placeholder:text-steel-gray/60 focus:outline-none"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="text-zinc-400 hover:text-zinc-600"
+                className="text-steel-gray/60 hover:text-steel-gray"
               >
                 <X className="h-3 w-3" weight="bold" />
               </button>
@@ -691,8 +691,8 @@ export default function StrategistDocumentsPage() {
         {!isLoading && filteredDocuments.length === 0 && documents.length === 0 && (
           <div className="flex flex-col items-center justify-center pt-24 pb-12 text-center">
             <EmptyDocumentsIllustration />
-            <p className="text-lg font-semibold text-zinc-800">No documents yet</p>
-            <p className="text-sm text-zinc-400">
+            <p className="text-lg font-semibold text-soft-white">No documents yet</p>
+            <p className="text-sm text-steel-gray/60">
               Documents will appear here as they&apos;re added
             </p>
           </div>
@@ -701,9 +701,9 @@ export default function StrategistDocumentsPage() {
         {/* No results from filter */}
         {!isLoading && filteredDocuments.length === 0 && documents.length > 0 && (
           <div className="flex flex-col items-center justify-center pt-16 pb-12 text-center">
-            <MagnifyingGlass className="mb-3 h-10 w-10 text-zinc-300" />
-            <p className="text-lg font-semibold text-zinc-800">No matching documents</p>
-            <p className="text-sm text-zinc-400">
+            <MagnifyingGlass className="mb-3 h-10 w-10 text-steel-gray/40" />
+            <p className="text-lg font-semibold text-soft-white">No matching documents</p>
+            <p className="text-sm text-steel-gray/60">
               Try adjusting your filters or search query
             </p>
           </div>
@@ -711,18 +711,18 @@ export default function StrategistDocumentsPage() {
 
         {/* Table */}
         {!isLoading && filteredDocuments.length > 0 && (
-          <div className="overflow-hidden rounded-lg border border-zinc-200">
+          <div className="overflow-hidden rounded-lg border border-white/10">
             <table className="w-full">
               {/* Table Header */}
               <thead>
-                <tr className="border-b border-zinc-100 bg-zinc-50/60">
+                <tr className="border-b border-white/8 bg-white/3/60">
                   <th className="w-11 px-3 py-3">
                     <button
                       onClick={toggleSelectAll}
                       className={`flex h-4.5 w-4.5 items-center justify-center rounded border transition-colors ${
                         selectedDocs.size === filteredDocuments.length && filteredDocuments.length > 0
-                          ? 'border-zinc-900 bg-zinc-900'
-                          : 'border-zinc-300 bg-white hover:border-zinc-400'
+                          ? 'border-electric-blue bg-electric-blue'
+                          : 'border-white/15 bg-deep-navy hover:border-white/25'
                       }`}
                     >
                       {selectedDocs.size === filteredDocuments.length && filteredDocuments.length > 0 && (
@@ -730,7 +730,7 @@ export default function StrategistDocumentsPage() {
                       )}
                     </button>
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+                  <th className="px-3 py-3 text-left text-xs font-semibold tracking-wide text-steel-gray uppercase">
                     <SortableHeader
                       label="Document"
                       field="name"
@@ -739,7 +739,7 @@ export default function StrategistDocumentsPage() {
                       onSort={handleSort}
                     />
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+                  <th className="px-3 py-3 text-left text-xs font-semibold tracking-wide text-steel-gray uppercase">
                     <SortableHeader
                       label="Type"
                       field="type"
@@ -748,7 +748,7 @@ export default function StrategistDocumentsPage() {
                       onSort={handleSort}
                     />
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+                  <th className="px-3 py-3 text-left text-xs font-semibold tracking-wide text-steel-gray uppercase">
                     <SortableHeader
                       label="Status"
                       field="status"
@@ -757,7 +757,7 @@ export default function StrategistDocumentsPage() {
                       onSort={handleSort}
                     />
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+                  <th className="px-3 py-3 text-left text-xs font-semibold tracking-wide text-steel-gray uppercase">
                     <SortableHeader
                       label="Client"
                       field="client"
@@ -766,7 +766,7 @@ export default function StrategistDocumentsPage() {
                       onSort={handleSort}
                     />
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+                  <th className="px-3 py-3 text-left text-xs font-semibold tracking-wide text-steel-gray uppercase">
                     <SortableHeader
                       label="Date"
                       field="date"
@@ -788,7 +788,7 @@ export default function StrategistDocumentsPage() {
                     <tr
                       key={doc.id}
                       className={`group transition-colors ${
-                        isSelected ? 'bg-zinc-50' : 'hover:bg-zinc-50/50'
+                        isSelected ? 'bg-white/3' : 'hover:bg-white/3/50'
                       }`}
                     >
                       {/* Checkbox */}
@@ -797,8 +797,8 @@ export default function StrategistDocumentsPage() {
                           onClick={() => toggleDocSelection(doc.id)}
                           className={`flex h-4.5 w-4.5 items-center justify-center rounded border transition-colors ${
                             isSelected
-                              ? 'border-zinc-900 bg-zinc-900'
-                              : 'border-zinc-300 bg-white hover:border-zinc-400'
+                              ? 'border-electric-blue bg-electric-blue'
+                              : 'border-white/15 bg-deep-navy hover:border-white/25'
                           }`}
                         >
                           {isSelected && (
@@ -810,10 +810,10 @@ export default function StrategistDocumentsPage() {
                       {/* Document name */}
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-                            <FileText className="h-4 w-4 text-zinc-400" />
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/8">
+                            <FileText className="h-4 w-4 text-steel-gray/60" />
                           </div>
-                          <span className="max-w-50 truncate text-sm font-medium text-zinc-900">
+                          <span className="max-w-50 truncate text-sm font-medium text-soft-white">
                             {doc.name || 'Untitled'}
                           </span>
                         </div>
@@ -821,7 +821,7 @@ export default function StrategistDocumentsPage() {
 
                       {/* Type */}
                       <td className="px-3 py-3">
-                        <span className="text-sm text-zinc-600">
+                        <span className="text-sm text-steel-gray">
                           {getDocumentTypeLabel(doc.type)}
                         </span>
                       </td>
@@ -844,7 +844,7 @@ export default function StrategistDocumentsPage() {
                           >
                             {getInitials(doc.clientName || doc.clientEmail)}
                           </div>
-                          <span className="max-w-35 truncate text-sm text-zinc-700">
+                          <span className="max-w-35 truncate text-sm text-soft-white">
                             {doc.clientName || doc.clientEmail || '—'}
                           </span>
                         </div>
@@ -852,7 +852,7 @@ export default function StrategistDocumentsPage() {
 
                       {/* Date */}
                       <td className="px-3 py-3">
-                        <span className="text-sm text-zinc-500">
+                        <span className="text-sm text-steel-gray">
                           {formatDate(doc.createdAt)}
                         </span>
                       </td>

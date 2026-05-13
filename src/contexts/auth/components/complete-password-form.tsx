@@ -47,9 +47,9 @@ export function CompletePasswordForm() {
   if (!challenge) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-700">
+        <div className="rounded-lg bg-amber-500/10 p-4 text-sm text-amber-300">
           <p className="font-medium">No password setup required</p>
-          <p className="mt-1 text-amber-600">Please log in with your credentials first.</p>
+          <p className="mt-1 text-amber-400">Please log in with your credentials first.</p>
         </div>
         <Button
           onClick={() => router.push('/login')}
@@ -91,19 +91,19 @@ export function CompletePasswordForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="rounded-lg bg-emerald-50 p-4 text-sm text-emerald-700">
+      <div className="rounded-lg bg-emerald-500/15 p-4 text-sm text-emerald-300">
         <p className="font-medium">Welcome to Ariex!</p>
-        <p className="mt-1 text-emerald-600">
+        <p className="mt-1 text-emerald-400">
           Please set a new password for your account to continue.
         </p>
       </div>
 
       {displayError && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{displayError}</div>
+        <div className="rounded-lg bg-red-500/10 p-3 text-sm text-red-400">{displayError}</div>
       )}
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="newPassword" className="text-sm font-medium text-zinc-700">
+        <label htmlFor="newPassword" className="text-sm font-medium text-soft-white">
           New Password
         </label>
         <div className="relative">
@@ -113,7 +113,7 @@ export function CompletePasswordForm() {
             placeholder="••••••••"
             value={newPassword}
             onChange={e => setNewPassword(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-4 py-2.5 pr-10 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+            className="w-full rounded-lg border border-white/15 px-4 py-2.5 pr-10 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
             required
             autoComplete="new-password"
             minLength={8}
@@ -121,16 +121,16 @@ export function CompletePasswordForm() {
           <button
             type="button"
             onClick={() => setShowNewPassword(!showNewPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-steel-gray/60 hover:text-steel-gray"
           >
             {showNewPassword ? <EyeSlash className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
           </button>
         </div>
-        <p className="text-xs text-zinc-500">Must be at least 8 characters</p>
+        <p className="text-xs text-steel-gray">Must be at least 8 characters</p>
       </div>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="confirmPassword" className="text-sm font-medium text-zinc-700">
+        <label htmlFor="confirmPassword" className="text-sm font-medium text-soft-white">
           Confirm Password
         </label>
         <div className="relative">
@@ -140,14 +140,14 @@ export function CompletePasswordForm() {
             placeholder="••••••••"
             value={confirmPassword}
             onChange={e => setConfirmPassword(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-4 py-2.5 pr-10 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+            className="w-full rounded-lg border border-white/15 px-4 py-2.5 pr-10 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
             required
             autoComplete="new-password"
           />
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-steel-gray/60 hover:text-steel-gray"
           >
             {showConfirmPassword ? <EyeSlash className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
           </button>

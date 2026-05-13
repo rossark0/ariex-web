@@ -161,26 +161,26 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
   return (
     <div className="flex flex-col gap-6">
       {/* Account Info (Read-only) */}
-      <div className="border-b border-zinc-200 pb-6">
-        <h3 className="mb-4 text-xs font-medium text-zinc-400 uppercase">Account Information</h3>
+      <div className="border-b border-white/10 pb-6">
+        <h3 className="mb-4 text-xs font-medium text-steel-gray/60 uppercase">Account Information</h3>
 
         <div className="space-y-4">
           <div className="flex items-center gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-sm font-semibold text-zinc-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/8 text-sm font-semibold text-steel-gray">
               {(user?.fullName || user?.name || user?.email)?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div>
-              <p className="text-sm font-medium text-zinc-900">
+              <p className="text-sm font-medium text-soft-white">
                 {user?.fullName || user?.name || 'N/A'}
               </p>
-              <p className="text-xs text-zinc-500">{user?.email || 'N/A'}</p>
+              <p className="text-xs text-steel-gray">{user?.email || 'N/A'}</p>
             </div>
           </div>
 
           {strategist && (
             <div className="flex justify-between pt-2">
-              <span className="text-xs text-zinc-500">Your Strategist</span>
-              <span className="text-xs font-medium text-zinc-900">{strategist.name}</span>
+              <span className="text-xs text-steel-gray">Your Strategist</span>
+              <span className="text-xs font-medium text-soft-white">{strategist.name}</span>
             </div>
           )}
         </div>
@@ -188,28 +188,28 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
 
       {/* Contact Information (Editable) */}
       <div className="py-6">
-        <h3 className="mb-4 text-xs font-medium text-zinc-400 uppercase">Contact Information</h3>
+        <h3 className="mb-4 text-xs font-medium text-steel-gray/60 uppercase">Contact Information</h3>
 
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-500">Phone Number</label>
+            <label className="mb-1 block text-xs font-medium text-steel-gray">Phone Number</label>
             <input
               type="tel"
               placeholder="(555) 000-0000"
               value={formData.phoneNumber}
               onChange={e => handleInputChange('phoneNumber', e.target.value)}
-              className="w-full border-b border-zinc-200 bg-transparent py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none"
+              className="w-full border-b border-white/10 bg-transparent py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-500">Address</label>
+            <label className="mb-1 block text-xs font-medium text-steel-gray">Address</label>
             <input
               type="text"
               placeholder="City, State"
               value={formData.address}
               onChange={e => handleInputChange('address', e.target.value)}
-              className="w-full border-b border-zinc-200 bg-transparent py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none"
+              className="w-full border-b border-white/10 bg-transparent py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
             />
           </div>
         </div>
@@ -217,26 +217,26 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
 
       {/* Business Information (Editable) */}
       <div className="pt-0">
-        <h3 className="mb-4 text-xs font-medium text-zinc-400 uppercase">Business Information</h3>
+        <h3 className="mb-4 text-xs font-medium text-steel-gray/60 uppercase">Business Information</h3>
 
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-500">Business Name</label>
+            <label className="mb-1 block text-xs font-medium text-steel-gray">Business Name</label>
             <input
               type="text"
               placeholder="Your business name"
               value={formData.businessName}
               onChange={e => handleInputChange('businessName', e.target.value)}
-              className="w-full border-b border-zinc-200 bg-transparent py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none"
+              className="w-full border-b border-white/10 bg-transparent py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-500">Business Type</label>
+            <label className="mb-1 block text-xs font-medium text-steel-gray">Business Type</label>
             <select
               value={formData.businessType}
               onChange={e => handleInputChange('businessType', e.target.value)}
-              className="w-full border-b border-zinc-200 bg-transparent py-2 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none"
+              className="w-full border-b border-white/10 bg-transparent py-2 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
             >
               {BUSINESS_TYPES.map(type => (
                 <option key={type.value} value={type.value}>
@@ -249,7 +249,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
       </div>
 
       {/* Error message */}
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
 
       {/* Navigation Buttons */}
       <div className="mt-8 flex gap-3">
@@ -257,7 +257,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
           <button
             onClick={onBack}
             disabled={isSaving}
-            className="flex-1 rounded-md border border-zinc-200 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-40"
+            className="flex-1 rounded-md border border-white/10 py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3 disabled:opacity-40"
           >
             Back
           </button>
@@ -265,7 +265,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
         <button
           onClick={handleSaveAndContinue}
           disabled={isSaving}
-          className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white py-3 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 disabled:opacity-40"
+          className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3 disabled:opacity-40"
         >
           {isSaving ? 'Saving...' : 'Continue'}
         </button>
@@ -439,12 +439,12 @@ function AgreementStep({
     return (
       <div className="flex flex-col gap-6">
         {/* Success Message */}
-        <div className="border-b border-zinc-200 pb-6 text-center">
-          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
-            <Check weight="bold" className="h-5 w-5 text-emerald-600" />
+        <div className="border-b border-white/10 pb-6 text-center">
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15">
+            <Check weight="bold" className="h-5 w-5 text-emerald-400" />
           </div>
-          <h3 className="mb-1 text-sm font-medium text-zinc-900">Agreement Signed</h3>
-          <p className="text-xs text-zinc-500">
+          <h3 className="mb-1 text-sm font-medium text-soft-white">Agreement Signed</h3>
+          <p className="text-xs text-steel-gray">
             Signed
             {pendingAgreement?.signedAt
               ? ` on ${new Date(pendingAgreement.signedAt).toLocaleDateString()}`
@@ -454,34 +454,34 @@ function AgreementStep({
 
         {/* Agreement Info */}
         <div className="py-4">
-          <h3 className="mb-2 text-sm font-medium text-zinc-900">{agreementTitle}</h3>
-          <div className="flex items-center justify-between border-t border-zinc-200 pt-4">
-            <span className="text-xs text-zinc-500">Service Fee</span>
-            <span className="text-sm font-medium text-zinc-900">{agreementPrice}</span>
+          <h3 className="mb-2 text-sm font-medium text-soft-white">{agreementTitle}</h3>
+          <div className="flex items-center justify-between border-t border-white/10 pt-4">
+            <span className="text-xs text-steel-gray">Service Fee</span>
+            <span className="text-sm font-medium text-soft-white">{agreementPrice}</span>
           </div>
         </div>
 
         {/* Signed Document Preview */}
         <div className="py-4">
-          <h4 className="mb-3 text-xs font-medium text-zinc-400 uppercase">Signed Document</h4>
+          <h4 className="mb-3 text-xs font-medium text-steel-gray/60 uppercase">Signed Document</h4>
           {isLoadingDocument ? (
-            <div className="flex h-64 w-full items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
-              <SpinnerGap weight="bold" className="h-5 w-5 animate-spin text-zinc-400" />
+            <div className="flex h-64 w-full items-center justify-center rounded-md border border-white/10 bg-white/3">
+              <SpinnerGap weight="bold" className="h-5 w-5 animate-spin text-steel-gray/60" />
             </div>
           ) : signedDocumentUrl ? (
-            <div className="overflow-hidden rounded-md border border-zinc-200 bg-white">
+            <div className="overflow-hidden rounded-md border border-white/10 bg-deep-navy">
               <iframe
                 src={signedDocumentUrl}
                 className="h-80 w-full"
                 title="Signed Agreement Document"
               />
-              <div className="flex items-center justify-between border-t border-zinc-200 bg-zinc-50 px-4 py-2">
-                <span className="text-xs text-zinc-500">Signed Agreement PDF</span>
+              <div className="flex items-center justify-between border-t border-white/10 bg-white/3 px-4 py-2">
+                <span className="text-xs text-steel-gray">Signed Agreement PDF</span>
                 <div className="flex items-center gap-3">
                   <a
                     href={signedDocumentUrl}
                     download
-                    className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 hover:text-emerald-800"
+                    className="flex items-center gap-1.5 text-xs font-medium text-emerald-300 hover:text-emerald-800"
                   >
                     <DownloadSimple weight="bold" className="h-3.5 w-3.5" />
                     Download
@@ -490,7 +490,7 @@ function AgreementStep({
                     href={signedDocumentUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900"
+                    className="flex items-center gap-1.5 text-xs font-medium text-soft-white hover:text-soft-white"
                   >
                     <ArrowSquareOut weight="bold" className="h-3.5 w-3.5" />
                     Open PDF
@@ -499,15 +499,15 @@ function AgreementStep({
               </div>
             </div>
           ) : documentUrl ? (
-            <div className="overflow-hidden rounded-md border border-zinc-200 bg-white">
+            <div className="overflow-hidden rounded-md border border-white/10 bg-deep-navy">
               <iframe src={documentUrl} className="h-80 w-full" title="Agreement Document" />
-              <div className="flex items-center justify-between border-t border-zinc-200 bg-zinc-50 px-4 py-2">
-                <span className="text-xs text-zinc-500">Agreement PDF</span>
+              <div className="flex items-center justify-between border-t border-white/10 bg-white/3 px-4 py-2">
+                <span className="text-xs text-steel-gray">Agreement PDF</span>
                 <a
                   href={documentUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900"
+                  className="flex items-center gap-1.5 text-xs font-medium text-soft-white hover:text-soft-white"
                 >
                   <ArrowSquareOut weight="bold" className="h-3.5 w-3.5" />
                   Open PDF
@@ -515,9 +515,9 @@ function AgreementStep({
               </div>
             </div>
           ) : (
-            <div className="flex h-32 w-full flex-col items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
+            <div className="flex h-32 w-full flex-col items-center justify-center rounded-md border border-white/10 bg-white/3">
               <FilePdf weight="duotone" className="mb-2 h-8 w-8 text-emerald-500" />
-              <p className="text-xs text-zinc-500">Agreement signed successfully</p>
+              <p className="text-xs text-steel-gray">Agreement signed successfully</p>
             </div>
           )}
         </div>
@@ -527,14 +527,14 @@ function AgreementStep({
           {!isFirst && (
             <button
               onClick={onBack}
-              className="flex-1 rounded-md border border-zinc-200 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+              className="flex-1 rounded-md border border-white/10 py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3"
             >
               Back
             </button>
           )}
           <button
             onClick={onContinue}
-            className="flex-1 cursor-pointer rounded-md bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+            className="flex-1 cursor-pointer rounded-md bg-electric-blue py-3 text-sm font-medium text-white transition-colors hover:bg-electric-blue/85"
           >
             Continue
           </button>
@@ -547,16 +547,16 @@ function AgreementStep({
     <div className="flex flex-col gap-6">
       {/* Agreement Info */}
       {pendingAgreement ? (
-        <div className="border-b border-zinc-200 pb-6">
-          <h3 className="mb-2 text-sm font-medium text-zinc-900">{agreementTitle}</h3>
+        <div className="border-b border-white/10 pb-6">
+          <h3 className="mb-2 text-sm font-medium text-soft-white">{agreementTitle}</h3>
           <div className="flex items-center justify-between pt-2">
-            <span className="text-xs text-zinc-500">Service Fee</span>
-            <span className="text-sm font-medium text-zinc-900">{agreementPrice}</span>
+            <span className="text-xs text-steel-gray">Service Fee</span>
+            <span className="text-sm font-medium text-soft-white">{agreementPrice}</span>
           </div>
         </div>
       ) : (
-        <div className="border-b border-zinc-200 pb-6 text-left">
-          <p className="text-sm text-zinc-500">
+        <div className="border-b border-white/10 pb-6 text-left">
+          <p className="text-sm text-steel-gray">
             No agreement has been sent yet. Your strategist will send you an agreement to sign
             shortly.
           </p>
@@ -565,21 +565,21 @@ function AgreementStep({
 
       {/* Document Preview */}
       <div className="py-4">
-        <h4 className="mb-3 text-xs font-medium text-zinc-400 uppercase">Document Preview</h4>
+        <h4 className="mb-3 text-xs font-medium text-steel-gray/60 uppercase">Document Preview</h4>
         {isLoadingDocument ? (
-          <div className="flex h-64 w-full items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
-            <SpinnerGap weight="bold" className="h-5 w-5 animate-spin text-zinc-400" />
+          <div className="flex h-64 w-full items-center justify-center rounded-md border border-white/10 bg-white/3">
+            <SpinnerGap weight="bold" className="h-5 w-5 animate-spin text-steel-gray/60" />
           </div>
         ) : documentUrl ? (
-          <div className="overflow-hidden rounded-md border border-zinc-200 bg-white">
+          <div className="overflow-hidden rounded-md border border-white/10 bg-deep-navy">
             <iframe src={documentUrl} className="h-80 w-full" title="Agreement Document" />
-            <div className="flex items-center justify-between border-t border-zinc-200 bg-zinc-50 px-4 py-2">
-              <span className="text-xs text-zinc-500">Agreement PDF</span>
+            <div className="flex items-center justify-between border-t border-white/10 bg-white/3 px-4 py-2">
+              <span className="text-xs text-steel-gray">Agreement PDF</span>
               <a
                 href={documentUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900"
+                className="flex items-center gap-1.5 text-xs font-medium text-soft-white hover:text-soft-white"
               >
                 <ArrowSquareOut weight="bold" className="h-3.5 w-3.5" />
                 Open PDF
@@ -587,17 +587,17 @@ function AgreementStep({
             </div>
           </div>
         ) : (
-          <div className="flex h-40 w-full flex-col items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
-            <FilePdf weight="duotone" className="mb-3 h-10 w-10 text-zinc-300" />
-            <p className="text-xs text-zinc-500">Service Agreement</p>
-            <p className="mt-1 text-xs text-zinc-400">Click below to view and sign</p>
+          <div className="flex h-40 w-full flex-col items-center justify-center rounded-md border border-white/10 bg-white/3">
+            <FilePdf weight="duotone" className="mb-3 h-10 w-10 text-steel-gray/40" />
+            <p className="text-xs text-steel-gray">Service Agreement</p>
+            <p className="mt-1 text-xs text-steel-gray/60">Click below to view and sign</p>
           </div>
         )}
       </div>
 
       {signingInProgress && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-center text-xs text-amber-700">
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+          <p className="text-center text-xs text-amber-300">
             A new tab has opened for signing. After signing, click &ldquo;Check Status&rdquo; below
             to verify.
           </p>
@@ -609,8 +609,8 @@ function AgreementStep({
         <div
           className={`rounded-md px-4 py-3 text-center text-xs ${
             signatureVerified
-              ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
-              : 'border border-zinc-200 bg-zinc-50 text-zinc-600'
+              ? 'border border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
+              : 'border border-white/10 bg-white/3 text-steel-gray'
           }`}
         >
           {statusMessage}
@@ -624,7 +624,7 @@ function AgreementStep({
           <button
             onClick={handleCheckSignatureStatus}
             disabled={isCheckingStatus}
-            className="flex w-full items-center justify-center gap-2 rounded-md bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-electric-blue py-3 text-sm font-medium text-white transition-colors hover:bg-electric-blue/85 disabled:opacity-40"
           >
             {isCheckingStatus ? (
               <>
@@ -641,7 +641,7 @@ function AgreementStep({
           {!isFirst && (
             <button
               onClick={onBack}
-              className="flex-1 rounded-md border border-zinc-200 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+              className="flex-1 rounded-md border border-white/10 py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3"
             >
               Back
             </button>
@@ -656,12 +656,12 @@ function AgreementStep({
           ) : !signingInProgress && pendingAgreement?.signatureCeremonyUrl ? (
             <button
               onClick={handleSignAgreement}
-              className="flex-1 rounded-md bg-zinc-900 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+              className="flex-1 rounded-md bg-electric-blue py-3 text-sm font-medium text-white transition-colors hover:bg-electric-blue/85"
             >
               Sign Agreement
             </button>
           ) : !signingInProgress ? (
-            <div className="flex-1 py-3 text-center text-xs text-zinc-400">
+            <div className="flex-1 py-3 text-center text-xs text-steel-gray/60">
               Waiting for agreement link...
             </div>
           ) : null}
@@ -1066,20 +1066,20 @@ function PaymentStep({
       <div className="flex flex-col items-center justify-center gap-6 py-12">
         {/* Animated spinner */}
         <div className="relative">
-          <div className="h-16 w-16 rounded-full border-4 border-zinc-200"></div>
+          <div className="h-16 w-16 rounded-full border-4 border-white/10"></div>
           <div className="absolute inset-0 h-16 w-16 animate-spin rounded-full border-4 border-transparent border-t-emerald-500"></div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-lg font-bold text-zinc-700">
+            <span className="text-lg font-bold text-soft-white">
               {verifyCountdown > 0 ? verifyCountdown : <SpinnerGap weight="bold" className="h-6 w-6 animate-spin text-emerald-500" />}
             </span>
           </div>
         </div>
         
         <div className="text-center">
-          <p className="text-sm font-medium text-zinc-900">
+          <p className="text-sm font-medium text-soft-white">
             {verifyCountdown > 0 ? 'Confirming your payment...' : 'Verifying with payment system...'}
           </p>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-steel-gray">
             {verifyCountdown > 0 
               ? `Starting in ${verifyCountdown}s`
               : `Attempt ${verifyAttempts}/${MAX_VERIFY_ATTEMPTS}`}
@@ -1089,7 +1089,7 @@ function PaymentStep({
         {/* Cancel auto-verify button */}
         <button
           onClick={() => setIsAutoVerifying(false)}
-          className="text-xs text-zinc-400 hover:text-zinc-600 underline"
+          className="text-xs text-steel-gray/60 hover:text-steel-gray underline"
         >
           Cancel and verify manually
         </button>
@@ -1100,7 +1100,7 @@ function PaymentStep({
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
-        <p className="text-xs font-medium text-zinc-400 uppercase">
+        <p className="text-xs font-medium text-steel-gray/60 uppercase">
           Loading payment information...
         </p>
       </div>
@@ -1110,22 +1110,22 @@ function PaymentStep({
   return (
     <div className="flex flex-col gap-6">
       {/* Payment Summary */}
-      <div className="border-b border-zinc-200 pb-6">
-        <h3 className="mb-4 text-xs font-medium text-zinc-400 uppercase">Payment Summary</h3>
+      <div className="border-b border-white/10 pb-6">
+        <h3 className="mb-4 text-xs font-medium text-steel-gray/60 uppercase">Payment Summary</h3>
 
         <div className="space-y-3">
           <div className="flex justify-between">
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-steel-gray">
               {pendingAgreement?.title || pendingAgreement?.name || 'Tax Advisory Services'}
             </span>
-            <span className="text-sm font-medium text-zinc-900">
+            <span className="text-sm font-medium text-soft-white">
               ${agreementPrice.toLocaleString()}
             </span>
           </div>
-          <div className="h-px bg-zinc-100" />
+          <div className="h-px bg-white/8" />
           <div className="flex justify-between">
-            <span className="text-xs font-medium text-zinc-900">Total</span>
-            <span className="text-sm font-medium text-zinc-900">
+            <span className="text-xs font-medium text-soft-white">Total</span>
+            <span className="text-sm font-medium text-soft-white">
               ${agreementPrice.toLocaleString()}
             </span>
           </div>
@@ -1136,11 +1136,11 @@ function PaymentStep({
       {isPaymentComplete ? (
         // Payment already complete
         <div className="py-6 text-center">
-          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
-            <Check weight="bold" className="h-5 w-5 text-emerald-600" />
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15">
+            <Check weight="bold" className="h-5 w-5 text-emerald-400" />
           </div>
-          <p className="text-sm font-medium text-zinc-900">Payment Complete</p>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="text-sm font-medium text-soft-white">Payment Complete</p>
+          <p className="mt-1 text-xs text-steel-gray">
             Thank you for your payment. Click continue to finish onboarding.
           </p>
         </div>
@@ -1149,28 +1149,28 @@ function PaymentStep({
         <>
           <div className="py-4">
             <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100">
-                <CreditCard weight="duotone" className="h-4 w-4 text-zinc-600" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/8">
+                <CreditCard weight="duotone" className="h-4 w-4 text-steel-gray" />
               </div>
               <div>
-                <h4 className="text-sm font-medium text-zinc-900">Secure Payment</h4>
-                <p className="text-xs text-zinc-400">Powered by Stripe</p>
+                <h4 className="text-sm font-medium text-soft-white">Secure Payment</h4>
+                <p className="text-xs text-steel-gray/60">Powered by Stripe</p>
               </div>
             </div>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-steel-gray">
               Click the button below to complete your payment securely via Stripe. You will be
               redirected to a secure checkout page.
             </p>
           </div>
 
           {/* Error Message */}
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-400">{error}</p>}
 
           {/* Pay Button */}
           <button
             onClick={handlePayNow}
             disabled={isGeneratingLink}
-            className="flex w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white py-3 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3 disabled:opacity-40"
           >
             {isGeneratingLink ? (
               'Preparing checkout...'
@@ -1187,7 +1187,7 @@ function PaymentStep({
             <button
               onClick={handleVerifyPayment}
               disabled={isVerifying}
-              className="flex w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white py-2 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-40"
+              className="flex w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-deep-navy py-2 text-xs font-medium text-soft-white transition-colors hover:bg-white/8 disabled:opacity-40"
             >
               {isVerifying ? (
                 <>
@@ -1203,11 +1203,11 @@ function PaymentStep({
       ) : (
         // No charge or payment link found - waiting for strategist
         <div className="py-6 text-center">
-          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
-            <Warning weight="duotone" className="h-5 w-5 text-amber-600" />
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/15">
+            <Warning weight="duotone" className="h-5 w-5 text-amber-400" />
           </div>
-          <p className="text-sm font-medium text-zinc-900">Waiting for payment link</p>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="text-sm font-medium text-soft-white">Waiting for payment link</p>
+          <p className="mt-1 text-xs text-steel-gray">
             Your strategist is setting up the payment. You&apos;ll receive an email when it&apos;s
             ready.
           </p>
@@ -1220,7 +1220,7 @@ function PaymentStep({
           {!isFirst && !isPaymentComplete && (
             <button
               onClick={onBack}
-              className="flex-1 rounded-md border border-zinc-200 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+              className="flex-1 rounded-md border border-white/10 py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3"
             >
               Back
             </button>
@@ -1228,7 +1228,7 @@ function PaymentStep({
           {isPaymentComplete && (
             <button
               onClick={onContinue}
-              className="flex-1 cursor-pointer rounded-md border border-zinc-200 bg-white py-3 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50"
+              className="flex-1 cursor-pointer rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3"
             >
               Continue
             </button>
@@ -1251,33 +1251,33 @@ function CompleteStep({ dashboardData }: { dashboardData: ClientDashboardData | 
   return (
     <div className="flex flex-col items-center gap-6 text-center">
       {/* Success Icon */}
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-        <Check weight="bold" className="h-6 w-6 text-emerald-600" />
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15">
+        <Check weight="bold" className="h-6 w-6 text-emerald-400" />
       </div>
 
       {/* Message */}
       <div>
-        <h2 className="mb-2 text-lg font-medium text-zinc-900">Welcome to Ariex</h2>
-        <p className="text-xs text-zinc-500">
+        <h2 className="mb-2 text-lg font-medium text-soft-white">Welcome to Ariex</h2>
+        <p className="text-xs text-steel-gray">
           Your account is set up and ready to go.
           {strategist && ` ${strategist.name} will be your dedicated tax strategist.`}
         </p>
       </div>
 
       {/* Next Steps */}
-      <div className="w-full border-t border-zinc-200 pt-6 text-left">
-        <h3 className="mb-3 text-xs font-medium text-zinc-400 uppercase">What happens next</h3>
-        <ul className="space-y-2 text-xs text-zinc-600">
+      <div className="w-full border-t border-white/10 pt-6 text-left">
+        <h3 className="mb-3 text-xs font-medium text-steel-gray/60 uppercase">What happens next</h3>
+        <ul className="space-y-2 text-xs text-steel-gray">
           <li className="flex items-start gap-2">
             <span className="mt-1 h-1 w-1 rounded-full bg-emerald-500" />
             <span>Sign the agreement</span>
           </li>
           <li className="flex items-start gap-2">
-            <span className="mt-1 h-1 w-1 rounded-full bg-zinc-300" />
+            <span className="mt-1 h-1 w-1 rounded-full bg-white/20" />
             <span>Upload your tax documents when requested</span>
           </li>
           <li className="flex items-start gap-2">
-            <span className="mt-1 h-1 w-1 rounded-full bg-zinc-300" />
+            <span className="mt-1 h-1 w-1 rounded-full bg-white/20" />
             <span>Receive your personalized tax strategy</span>
           </li>
         </ul>
@@ -1287,7 +1287,7 @@ function CompleteStep({ dashboardData }: { dashboardData: ClientDashboardData | 
       <button
         onClick={() => router.push('/client/home')}
         disabled={isFinishing}
-        className="w-full rounded-md border border-zinc-200 bg-white py-3 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 disabled:opacity-40"
+        className="w-full rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3 disabled:opacity-40"
       >
         {isFinishing ? 'Finishing...' : 'Go to Dashboard'}
       </button>
@@ -1311,7 +1311,7 @@ function StepIndicator({ currentStep, steps }: StepIndicatorProps) {
         <div
           key={step.id}
           className={`h-1.5 w-1.5 rounded-full ${
-            index <= currentStep ? 'bg-emerald-500' : 'bg-zinc-200'
+            index <= currentStep ? 'bg-emerald-500' : 'bg-white/12'
           }`}
         />
       ))}
@@ -1570,16 +1570,16 @@ function OnboardingContent() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white">
-        <p className="text-xs font-medium text-zinc-400 uppercase">Loading...</p>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-deep-navy">
+        <p className="text-xs font-medium text-steel-gray/60 uppercase">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="flex min-h-screen flex-col bg-deep-navy">
       {/* Header — fixed so the agreement switcher is always visible */}
-      <header className="fixed inset-x-0 top-0 z-50 flex items-center justify-between border-b border-zinc-100 bg-white/95 px-6 py-3 backdrop-blur-sm">
+      <header className="fixed inset-x-0 top-0 z-50 flex items-center justify-between border-b border-white/8 bg-white/95 px-6 py-3 backdrop-blur-sm">
         {/* Agreement switcher replaces the logo */}
         <div className="flex items-center">
           {(dashboardData?.agreements?.length ?? 0) > 1 ? (
@@ -1589,15 +1589,15 @@ function OnboardingContent() {
               onSelect={setSelectedAgreementId}
             />
           ) : (
-            <span className="font-mono text-sm font-medium text-zinc-500 uppercase">ARIEX AI</span>
+            <span className="font-mono text-sm font-medium text-steel-gray uppercase">ARIEX AI</span>
           )}
         </div>
 
         <div className="flex items-center gap-4">
-          <span className="text-sm text-zinc-500">{user?.email}</span>
+          <span className="text-sm text-steel-gray">{user?.email}</span>
           <button
             onClick={handleLogout}
-            className="text-sm font-medium text-zinc-600 hover:text-zinc-900"
+            className="text-sm font-medium text-steel-gray hover:text-soft-white"
           >
             Log out
           </button>
@@ -1615,8 +1615,8 @@ function OnboardingContent() {
         <div className="w-full max-w-sm">
           {/* Step Title */}
           <div className="mb-8">
-            <h1 className="mb-2 text-xl font-medium text-zinc-900">{currentStepData.title}</h1>
-            <p className="text-sm text-zinc-500">{currentStepData.description}</p>
+            <h1 className="mb-2 text-xl font-medium text-soft-white">{currentStepData.title}</h1>
+            <p className="text-sm text-steel-gray">{currentStepData.description}</p>
           </div>
 
           {/* Step Content */}
@@ -1703,7 +1703,7 @@ function OnboardingContent() {
       </main>
 
       {/* Footer */}
-      {/* <footer className="flex items-center justify-between bg-zinc-900 px-6 py-4">
+      {/* <footer className="flex items-center justify-between bg-electric-blue px-6 py-4">
         <div className="flex items-center gap-2">
           <div className="relative h-6 w-6">
             <Image
@@ -1715,7 +1715,7 @@ function OnboardingContent() {
           </div>
           <span className="text-sm font-medium text-white">Ariex</span>
         </div>
-        <p className="text-xs text-zinc-400 uppercase">Secure onboarding</p>
+        <p className="text-xs text-steel-gray/60 uppercase">Secure onboarding</p>
       </footer> */}
     </div>
   );
@@ -1726,8 +1726,8 @@ export default function ClientOnboardingPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen flex-col items-center justify-center bg-white">
-          <p className="text-xs font-medium text-zinc-400 uppercase">Loading...</p>
+        <div className="flex min-h-screen flex-col items-center justify-center bg-deep-navy">
+          <p className="text-xs font-medium text-steel-gray/60 uppercase">Loading...</p>
         </div>
       }
     >

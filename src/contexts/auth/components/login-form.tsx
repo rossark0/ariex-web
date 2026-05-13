@@ -42,11 +42,11 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {displayError && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{displayError}</div>
+        <div className="rounded-lg bg-red-500/10 p-3 text-sm text-red-400">{displayError}</div>
       )}
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="email" className="text-sm font-medium text-zinc-700">
+        <label htmlFor="email" className="text-sm font-medium text-soft-white">
           Email
         </label>
         <input
@@ -55,7 +55,7 @@ export function LoginForm() {
           placeholder="you@example.com"
           value={email}
           onChange={e => setEmail(e.target.value)}
-          className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+          className="rounded-lg border border-white/15 px-4 py-2.5 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
           required
           autoComplete="email"
         />
@@ -63,10 +63,10 @@ export function LoginForm() {
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <label htmlFor="password" className="text-sm font-medium text-zinc-700">
+          <label htmlFor="password" className="text-sm font-medium text-soft-white">
             Password
           </label>
-          <Link href="/forgot-password" className="text-sm text-emerald-600 hover:text-emerald-700">
+          <Link href="/forgot-password" className="text-sm text-emerald-400 hover:text-emerald-300">
             Forgot password?
           </Link>
         </div>
@@ -76,7 +76,7 @@ export function LoginForm() {
           placeholder="••••••••"
           value={password}
           onChange={e => setPassword(e.target.value)}
-          className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+          className="rounded-lg border border-white/15 px-4 py-2.5 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
           required
           autoComplete="current-password"
         />
@@ -90,9 +90,9 @@ export function LoginForm() {
         {isLoading ? 'Signing in...' : 'Sign In'}
       </Button>
 
-      <p className="text-center text-sm text-zinc-600">
+      <p className="text-center text-sm text-steel-gray">
         Don&apos;t have an account?{' '}
-        <Link href="/register" className="font-medium text-emerald-600 hover:text-emerald-700">
+        <Link href="/register" className="font-medium text-emerald-400 hover:text-emerald-300">
           Create one
         </Link>
       </p>

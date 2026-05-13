@@ -673,7 +673,7 @@ export function StrategyReviewSheet({
                       variant="outline"
                       onClick={() => setShowRejectDialog(true)}
                       disabled={internalApproving || internalRejecting}
-                      className="border-red-200 text-red-600 hover:bg-red-50"
+                      className="border-red-500/30 text-red-400 hover:bg-red-500/10"
                       size="sm"
                     >
                       <XCircle className="mr-1.5 h-4 w-4" weight="fill" />

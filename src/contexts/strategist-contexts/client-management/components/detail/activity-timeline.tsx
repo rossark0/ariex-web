@@ -257,7 +257,7 @@ export function ActivityTimeline({
   if (isLoadingAgreements || isLoadingCharges) {
     return (
       <div className="mb-6">
-        <h2 className="mb-4 text-base font-medium text-zinc-900">Activity</h2>
+        <h2 className="mb-4 text-base font-medium text-soft-white">Activity</h2>
         <div className="flex items-center justify-center py-12">
           <SpinnerGap className="h-6 w-6 animate-spin text-emerald-500" />
         </div>
@@ -269,7 +269,7 @@ export function ActivityTimeline({
 
   return (
     <div className="mb-6">
-      <h2 className="mb-4 text-base font-medium text-zinc-900">Activity</h2>
+      <h2 className="mb-4 text-base font-medium text-soft-white">Activity</h2>
       <div className="relative pl-6">
         <div className="flex flex-col gap-0">
           {/* ── Step 1: Account Created ── */}
@@ -277,15 +277,15 @@ export function ActivityTimeline({
             <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
               <div className="h-2 w-2 rounded-full bg-emerald-500" />
             </div>
-            <div className="absolute top-5 bottom-2 -left-[19px] w-[2px] bg-emerald-200" />
+            <div className="absolute top-5 bottom-2 -left-[19px] w-[2px] bg-emerald-500/30" />
             <div className="flex flex-1 flex-col">
-              <span className="font-medium text-zinc-900">
+              <span className="font-medium text-soft-white">
                 Account created for {client.profile.businessName || client.user.name}
               </span>
-              <span className="text-sm text-zinc-500">
+              <span className="text-sm text-steel-gray">
                 Client onboarding initiated by strategist
               </span>
-              <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+              <span className="mt-1 text-xs font-medium tracking-wide text-steel-gray/60 uppercase">
                 {formatDate(client.user.createdAt)} · Created by Alex Morgan
               </span>
             </div>
@@ -295,21 +295,21 @@ export function ActivityTimeline({
           <div className="relative flex gap-4 pb-6">
             <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
               <div
-                className={`h-2 w-2 rounded-full ${hasAgreementSent || hasAgreementSigned ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                className={`h-2 w-2 rounded-full ${hasAgreementSent || hasAgreementSigned ? 'bg-emerald-500' : 'bg-white/20'}`}
               />
             </div>
             <div
-              className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${hasAgreementSigned ? 'bg-emerald-200' : 'bg-zinc-200'}`}
+              className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${hasAgreementSigned ? 'bg-emerald-500/30' : 'bg-white/12'}`}
             />
             <div className="flex flex-1 flex-col">
-              <span className="font-medium text-zinc-900">
+              <span className="font-medium text-soft-white">
                 {hasAgreementSigned
                   ? 'Service agreement signed'
                   : hasAgreementSent
                     ? 'Agreement sent for signature'
                     : 'Agreement pending'}
               </span>
-              <span className="text-sm text-zinc-500">
+              <span className="text-sm text-steel-gray">
                 {hasAgreementSigned
                   ? (strategistHasSigned && clientHasSigned)
                     ? 'Both parties have signed the agreement'
@@ -322,7 +322,7 @@ export function ActivityTimeline({
                     ? 'Waiting for signatures'
                     : 'Send service agreement to client'}
               </span>
-              <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+              <span className="mt-1 text-xs font-medium tracking-wide text-steel-gray/60 uppercase">
                 {formatDate(agreementTask?.updatedAt || client.user.createdAt)}
               </span>
 
@@ -333,10 +333,10 @@ export function ActivityTimeline({
                     {clientHasSigned ? (
                       <CheckIcon weight="bold" className="h-3.5 w-3.5 text-emerald-500" />
                     ) : (
-                      <Clock weight="bold" className="h-3.5 w-3.5 text-zinc-400" />
+                      <Clock weight="bold" className="h-3.5 w-3.5 text-steel-gray/60" />
                     )}
                     <span
-                      className={`text-xs font-medium ${clientHasSigned ? 'text-emerald-600' : 'text-zinc-500'}`}
+                      className={`text-xs font-medium ${clientHasSigned ? 'text-emerald-400' : 'text-steel-gray'}`}
                     >
                       Client {clientHasSigned ? 'signed' : 'pending'}
                     </span>
@@ -345,10 +345,10 @@ export function ActivityTimeline({
                     {strategistHasSigned ? (
                       <CheckIcon weight="bold" className="h-3.5 w-3.5 text-emerald-500" />
                     ) : (
-                      <Clock weight="bold" className="h-3.5 w-3.5 text-zinc-400" />
+                      <Clock weight="bold" className="h-3.5 w-3.5 text-steel-gray/60" />
                     )}
                     <span
-                      className={`text-xs font-medium ${strategistHasSigned ? 'text-emerald-600' : 'text-zinc-500'}`}
+                      className={`text-xs font-medium ${strategistHasSigned ? 'text-emerald-400' : 'text-steel-gray'}`}
                     >
                       Strategist {strategistHasSigned ? 'signed' : 'pending'}
                     </span>
@@ -361,7 +361,7 @@ export function ActivityTimeline({
                 <div className="mt-2 flex flex-col gap-2">
                   <div className="flex items-center gap-2">
                     {strategistHasSigned && (
-                      <span className="flex w-fit items-center gap-1 rounded bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+                      <span className="flex w-fit items-center gap-1 rounded bg-emerald-500/15 px-2 py-1 text-xs font-medium text-emerald-300">
                         <CheckIcon weight="bold" className="h-3 w-3" />
                         You signed
                       </span>
@@ -370,7 +370,7 @@ export function ActivityTimeline({
                       <button
                         onClick={handleDownloadSignedAgreement}
                         disabled={isDownloadingAgreement}
-                        className="flex w-fit items-center gap-1 rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200 disabled:opacity-50"
+                        className="flex w-fit items-center gap-1 rounded bg-white/8 px-2 py-1 text-xs font-semibold text-steel-gray hover:bg-white/12 disabled:opacity-50"
                       >
                         {isDownloadingAgreement ? (
                           <SpinnerGap weight="bold" className="h-3.5 w-3.5 animate-spin" />
@@ -383,7 +383,7 @@ export function ActivityTimeline({
                       <button
                         onClick={handleDownloadSignedAgreement}
                         disabled={isDownloadingAgreement}
-                        className="flex w-fit items-center gap-1 rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200 disabled:opacity-50"
+                        className="flex w-fit items-center gap-1 rounded bg-white/8 px-2 py-1 text-xs font-semibold text-steel-gray hover:bg-white/12 disabled:opacity-50"
                       >
                         {isDownloadingAgreement ? (
                           <SpinnerGap weight="bold" className="h-3.5 w-3.5 animate-spin" />
@@ -397,7 +397,7 @@ export function ActivityTimeline({
                   {/* Show sign button if e-signature not fully completed */}
                   {!signedAgreementDocUrl && !strategistHasSigned && strategistCeremonyUrl && onStrategistSign && (
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-amber-600">
+                      <span className="text-xs text-amber-400">
                         E-signature not fully completed
                       </span>
                       <button
@@ -418,7 +418,7 @@ export function ActivityTimeline({
                     onClick={onOpenAgreementModal}
                     className={`mt-2 flex w-fit items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${
                       hasAgreementSent
-                        ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                        ? 'bg-white/8 text-steel-gray hover:bg-white/12'
                         : 'bg-emerald-600 text-white hover:bg-emerald-700'
                     }`}
                   >
@@ -450,28 +450,28 @@ export function ActivityTimeline({
           <div className="relative flex gap-4 pb-6">
             <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
               <div
-                className={`h-2 w-2 rounded-full ${step3Sent || step3Complete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                className={`h-2 w-2 rounded-full ${step3Sent || step3Complete ? 'bg-emerald-500' : 'bg-white/20'}`}
               />
             </div>
             <div
-              className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${step3Complete ? 'bg-emerald-200' : 'bg-zinc-200'}`}
+              className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${step3Complete ? 'bg-emerald-500/30' : 'bg-white/12'}`}
             />
             <div className="flex flex-1 flex-col">
-              <span className="font-medium text-zinc-900">
+              <span className="font-medium text-soft-white">
                 {step3Complete
                   ? `Payment received · ${formatCurrency(resolvedPrice)}`
                   : step3Sent
                     ? `Payment pending · ${formatCurrency(resolvedPrice)}`
                     : 'Payment link pending'}
               </span>
-              <span className="text-sm text-zinc-500">
+              <span className="text-sm text-steel-gray">
                 {step3Complete
                   ? `${payment?.description || 'Onboarding Fee'} via ${payment?.paymentMethod || 'Stripe'}`
                   : step3Sent
                     ? 'Awaiting payment via Stripe link'
                     : 'Send payment link to client'}
               </span>
-              <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+              <span className="mt-1 text-xs font-medium tracking-wide text-steel-gray/60 uppercase">
                 {payment?.paidAt
                   ? formatDate(payment.paidAt)
                   : payment?.dueDate
@@ -484,7 +484,7 @@ export function ActivityTimeline({
                   disabled={isSendingPayment}
                   className={`mt-2 flex w-fit items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${
                     step3Sent
-                      ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                      ? 'bg-white/8 text-steel-gray hover:bg-white/12'
                       : 'bg-emerald-600 text-white hover:bg-emerald-700'
                   } ${isSendingPayment ? 'cursor-not-allowed opacity-50' : ''}`}
                 >
@@ -508,14 +508,14 @@ export function ActivityTimeline({
           <div className="relative flex gap-4 pb-6">
             <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
               <div
-                className={`h-2 w-2 rounded-full ${hasDocumentsRequested || hasAllDocumentsUploaded ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                className={`h-2 w-2 rounded-full ${hasDocumentsRequested || hasAllDocumentsUploaded ? 'bg-emerald-500' : 'bg-white/20'}`}
               />
             </div>
             <div
-              className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${hasAllDocumentsAccepted ? 'bg-emerald-200' : 'bg-zinc-200'}`}
+              className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${hasAllDocumentsAccepted ? 'bg-emerald-500/30' : 'bg-white/12'}`}
             />
             <div className="flex flex-1 flex-col">
-              <span className="font-medium text-zinc-900">
+              <span className="font-medium text-soft-white">
                 {hasAllDocumentsAccepted
                   ? `Documents accepted · ${acceptedDocCount}/${totalDocTodos} complete`
                   : hasAllDocumentsUploaded
@@ -524,7 +524,7 @@ export function ActivityTimeline({
                       ? `Documents pending · ${uploadedDocCount}/${totalDocTodos} uploaded`
                       : 'Documents'}
               </span>
-              <span className="text-sm text-zinc-500">
+              <span className="text-sm text-steel-gray">
                 {hasAllDocumentsAccepted
                   ? 'All documents have been reviewed and accepted'
                   : hasAllDocumentsUploaded
@@ -552,10 +552,10 @@ export function ActivityTimeline({
                         key={todo.id}
                         className={`group rounded-lg border p-2.5 ${
                           isRejected
-                            ? 'border-red-200 bg-red-50'
+                            ? 'border-red-500/30 bg-red-500/10'
                             : isAccepted
-                              ? 'border-emerald-200 bg-emerald-50'
-                              : 'border-zinc-200 bg-zinc-50'
+                              ? 'border-emerald-500/30 bg-emerald-500/15'
+                              : 'border-white/10 bg-white/3'
                         }`}
                       >
                         <div className="flex items-start gap-2">
@@ -569,36 +569,36 @@ export function ActivityTimeline({
                           ) : isPendingReview ? (
                             <Clock
                               weight="bold"
-                              className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500"
+                              className="mt-0.5 h-4 w-4 shrink-0 text-steel-gray"
                             />
                           ) : (
-                            <div className="mt-0.5 h-4 w-4 shrink-0 rounded-full border border-zinc-300" />
+                            <div className="mt-0.5 h-4 w-4 shrink-0 rounded-full border border-white/20" />
                           )}
                           <div className="flex min-w-0 flex-1 flex-col">
                             <div className="flex items-center gap-2">
                               <span
                                 className={`text-sm font-medium ${
                                   isAccepted
-                                    ? 'text-emerald-700'
+                                    ? 'text-emerald-300'
                                     : isRejected
-                                      ? 'text-red-700'
-                                      : 'text-zinc-700'
+                                      ? 'text-red-300'
+                                      : 'text-soft-white'
                                 }`}
                               >
                                 {todo.title}
                               </span>
                               {isPendingReview && (
-                                <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-xs font-medium text-zinc-600">
+                                <span className="rounded bg-white/12 px-1.5 py-0.5 text-xs font-medium text-steel-gray">
                                   Pending review
                                 </span>
                               )}
                               {isAccepted && (
-                                <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-600">
+                                <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-xs font-medium text-emerald-400">
                                   Accepted
                                 </span>
                               )}
                               {isRejected && (
-                                <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-600">
+                                <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-xs font-medium text-red-400">
                                   Declined
                                 </span>
                               )}
@@ -608,7 +608,7 @@ export function ActivityTimeline({
                                 href={uploadedFile.downloadUrl || '#'}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="rounded bg-zinc-100 px-1.5 py-0.5 text-zinc-600 hover:bg-zinc-200"
+                                className="rounded bg-white/8 px-1.5 py-0.5 text-steel-gray hover:bg-white/12"
                               >
                                 <FileArrowDownIcon weight="fill" className="h-3.5 w-3.5" />
                                 <span className="max-w-[200px] truncate">
@@ -638,7 +638,7 @@ export function ActivityTimeline({
                                   disabled={
                                     acceptingDocId === documentId || decliningDocId === documentId
                                   }
-                                  className="flex items-center gap-1 rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-200 disabled:opacity-50"
+                                  className="flex items-center gap-1 rounded bg-red-500/15 px-2 py-1 text-xs font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-50"
                                 >
                                   {decliningDocId === documentId ? (
                                     <SpinnerGap className="h-3 w-3 animate-spin" />
@@ -651,7 +651,7 @@ export function ActivityTimeline({
                             )}
                             {/* Re-upload message for rejected */}
                             {isRejected && (
-                              <p className="mt-1 text-xs text-red-600">
+                              <p className="mt-1 text-xs text-red-400">
                                 Client needs to re-upload this document
                               </p>
                             )}
@@ -661,7 +661,7 @@ export function ActivityTimeline({
                             <button
                               onClick={() => handleDeclineDocument(documentId)}
                               disabled={decliningDocId === documentId}
-                              className="rounded p-1 text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+                              className="rounded p-1 text-steel-gray/60 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
                               title="Decline document"
                             >
                               {decliningDocId === documentId ? (
@@ -684,7 +684,7 @@ export function ActivityTimeline({
                                 }
                               }}
                               disabled={openingDocId === documentId}
-                              className="rounded p-1 text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-200 hover:text-zinc-600 disabled:opacity-50"
+                              className="rounded p-1 text-steel-gray/60 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white/12 hover:text-steel-gray disabled:opacity-50"
                               title="Open document"
                             >
                               {openingDocId === documentId ? (
@@ -701,7 +701,7 @@ export function ActivityTimeline({
                                 onDeleteTodoRequest({ id: todo.id, title: todo.title })
                               }
                               disabled={deletingTodoId === todo.id}
-                              className="rounded p-1 text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+                              className="rounded p-1 text-steel-gray/60 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
                               title="Delete request"
                             >
                               {deletingTodoId === todo.id ? (
@@ -718,7 +718,7 @@ export function ActivityTimeline({
                 </div>
               )}
 
-              <span className="mt-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+              <span className="mt-2 text-xs font-medium tracking-wide text-steel-gray/60 uppercase">
                 {formatDate(docsTask?.updatedAt || client.user.createdAt)}
               </span>
 
@@ -727,7 +727,7 @@ export function ActivityTimeline({
                 {hasAgreementSigned && (
                   <button
                     onClick={onOpenRequestDocsModal}
-                    className="mt-2 w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200"
+                    className="mt-2 w-fit rounded bg-white/8 px-2 py-1 text-xs font-semibold text-steel-gray hover:bg-white/12"
                   >
                     {hasDocumentsRequested ? 'Ask more documents' : 'Request documents'}
                   </button>
@@ -759,12 +759,12 @@ export function ActivityTimeline({
           <div className="relative flex gap-4">
             <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
               <div
-                className={`h-2 w-2 rounded-full ${step5State?.strategySent || step5State?.isComplete ? 'bg-emerald-500' : step5Sent || step5Complete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                className={`h-2 w-2 rounded-full ${step5State?.strategySent || step5State?.isComplete ? 'bg-emerald-500' : step5Sent || step5Complete ? 'bg-emerald-500' : 'bg-white/20'}`}
               />
             </div>
             <div className="flex flex-1 flex-col">
               {/* ── Phase-aware headline ── */}
-              <span className="font-medium text-zinc-900">
+              <span className="font-medium text-soft-white">
                 {step5State?.isComplete
                   ? 'Tax strategy approved'
                   : step5State?.phase === 'client_review'
@@ -779,7 +779,7 @@ export function ActivityTimeline({
                             ? 'Strategy sent for review'
                             : 'Tax strategy pending'}
               </span>
-              <span className="text-sm text-zinc-500">
+              <span className="text-sm text-steel-gray">
                 {step5State?.isComplete
                   ? 'Both compliance and client have approved'
                   : step5State?.phase === 'client_review'
@@ -792,7 +792,7 @@ export function ActivityTimeline({
                           ? 'Compliance has rejected the strategy. Revise and resend.'
                           : 'Ready to create personalized tax strategy'}
               </span>
-              <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+              <span className="mt-1 text-xs font-medium tracking-wide text-steel-gray/60 uppercase">
                 {strategyMetadata?.sentAt
                   ? formatDate(new Date(strategyMetadata.sentAt))
                   : 'Not started'}
@@ -805,10 +805,10 @@ export function ActivityTimeline({
                   <div
                     className={`rounded-lg border p-2.5 ${
                       step5State.complianceRejected
-                        ? 'border-red-200 bg-red-50'
+                        ? 'border-red-500/30 bg-red-500/10'
                         : step5State.complianceApproved
-                          ? 'border-emerald-200 bg-emerald-50'
-                          : 'border-amber-200 bg-amber-50'
+                          ? 'border-emerald-500/30 bg-emerald-500/15'
+                          : 'border-amber-500/30 bg-amber-500/10'
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -822,10 +822,10 @@ export function ActivityTimeline({
                       <span
                         className={`text-sm font-medium ${
                           step5State.complianceRejected
-                            ? 'text-red-700'
+                            ? 'text-red-300'
                             : step5State.complianceApproved
-                              ? 'text-emerald-700'
-                              : 'text-amber-700'
+                              ? 'text-emerald-300'
+                              : 'text-amber-300'
                         }`}
                       >
                         Compliance review
@@ -833,10 +833,10 @@ export function ActivityTimeline({
                       <span
                         className={`rounded px-1.5 py-0.5 text-xs font-medium ${
                           step5State.complianceRejected
-                            ? 'bg-red-100 text-red-600'
+                            ? 'bg-red-500/15 text-red-400'
                             : step5State.complianceApproved
-                              ? 'bg-emerald-100 text-emerald-600'
-                              : 'bg-amber-100 text-amber-600'
+                              ? 'bg-emerald-500/15 text-emerald-400'
+                              : 'bg-amber-500/15 text-amber-400'
                         }`}
                       >
                         {step5State.complianceRejected
@@ -848,9 +848,9 @@ export function ActivityTimeline({
                     </div>
 
                     {step5State.complianceRejected && (
-                      <div className="mt-2 flex flex-col gap-2 border-t border-red-200 pt-2">
+                      <div className="mt-2 flex flex-col gap-2 border-t border-red-500/30 pt-2">
                         {/* {strategyMetadata?.rejectionReason && (
-                          <p className="text-sm text-red-700">
+                          <p className="text-sm text-red-300">
                             <span className="font-medium">Reason:</span>{' '}
                             {strategyMetadata.rejectionReason}
                           </p>
@@ -875,10 +875,10 @@ export function ActivityTimeline({
                     <div
                       className={`rounded-lg border p-2.5 ${
                         step5State.clientDeclined
-                          ? 'border-red-200 bg-red-50'
+                          ? 'border-red-500/30 bg-red-500/10'
                           : step5State.clientApproved
-                            ? 'border-emerald-200 bg-emerald-50'
-                            : 'border-teal-200 bg-teal-50'
+                            ? 'border-emerald-500/30 bg-emerald-500/15'
+                            : 'border-teal-500/30 bg-teal-500/10'
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -892,10 +892,10 @@ export function ActivityTimeline({
                         <span
                           className={`text-sm font-medium ${
                             step5State.clientDeclined
-                              ? 'text-red-700'
+                              ? 'text-red-300'
                               : step5State.clientApproved
-                                ? 'text-emerald-700'
-                                : 'text-teal-700'
+                                ? 'text-emerald-300'
+                                : 'text-teal-300'
                           }`}
                         >
                           Client review
@@ -903,10 +903,10 @@ export function ActivityTimeline({
                         <span
                           className={`rounded px-1.5 py-0.5 text-xs font-medium ${
                             step5State.clientDeclined
-                              ? 'bg-red-100 text-red-600'
+                              ? 'bg-red-500/15 text-red-400'
                               : step5State.clientApproved
-                                ? 'bg-emerald-100 text-emerald-600'
-                                : 'bg-teal-100 text-teal-600'
+                                ? 'bg-emerald-500/15 text-emerald-400'
+                                : 'bg-teal-500/15 text-teal-400'
                           }`}
                         >
                           {step5State.clientDeclined
@@ -932,7 +932,7 @@ export function ActivityTimeline({
                       step5State?.complianceRejected || step5State?.clientDeclined
                         ? 'bg-amber-600 text-white hover:bg-amber-700'
                         : step5State?.strategySent
-                          ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                          ? 'bg-white/8 text-steel-gray hover:bg-white/12'
                           : 'bg-emerald-600 text-white hover:bg-emerald-700'
                     }`}
                   >
@@ -951,7 +951,7 @@ export function ActivityTimeline({
                 !step5State?.clientDeclined && (
                   <button
                     onClick={() => onViewStrategyDocument()}
-                    className="mt-2 w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200"
+                    className="mt-2 w-fit rounded bg-white/8 px-2 py-1 text-xs font-semibold text-steel-gray hover:bg-white/12"
                   >
                     View strategy document
                   </button>
@@ -977,7 +977,7 @@ export function ActivityTimeline({
                     </button>
                   )}
                   {signedAgreement?.status === AgreementStatus.COMPLETED && (
-                    <span className="w-fit rounded bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                    <span className="w-fit rounded bg-emerald-500/15 px-2 py-1 text-xs font-semibold text-emerald-300">
                       ✓ Completed
                     </span>
                   )}

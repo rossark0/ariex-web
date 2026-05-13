@@ -68,9 +68,9 @@ export function ForgotPasswordForm() {
   if (step === 'success') {
     return (
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15">
           <svg
-            className="h-8 w-8 text-emerald-600"
+            className="h-8 w-8 text-emerald-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -78,8 +78,8 @@ export function ForgotPasswordForm() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 className="text-xl font-semibold text-zinc-900">Password Reset!</h2>
-        <p className="text-zinc-600">Your password has been successfully reset.</p>
+        <h2 className="text-xl font-semibold text-soft-white">Password Reset!</h2>
+        <p className="text-steel-gray">Your password has been successfully reset.</p>
         <Link
           href="/login"
           className="mt-4 inline-flex h-11 items-center justify-center rounded-lg bg-emerald-600 px-6 font-medium text-white hover:bg-emerald-700"
@@ -94,16 +94,16 @@ export function ForgotPasswordForm() {
     return (
       <form onSubmit={handleResetSubmit} className="flex flex-col gap-4">
         <div className="text-center">
-          <p className="text-sm text-zinc-600">We sent a reset code to</p>
-          <p className="font-medium text-zinc-900">{pendingEmail || email}</p>
+          <p className="text-sm text-steel-gray">We sent a reset code to</p>
+          <p className="font-medium text-soft-white">{pendingEmail || email}</p>
         </div>
 
         {displayError && (
-          <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{displayError}</div>
+          <div className="rounded-lg bg-red-500/10 p-3 text-sm text-red-400">{displayError}</div>
         )}
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="code" className="text-sm font-medium text-zinc-700">
+          <label htmlFor="code" className="text-sm font-medium text-soft-white">
             Reset Code
           </label>
           <input
@@ -112,14 +112,14 @@ export function ForgotPasswordForm() {
             placeholder="Enter 6-digit code"
             value={code}
             onChange={e => setCode(e.target.value)}
-            className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+            className="rounded-lg border border-white/15 px-4 py-2.5 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
             required
             autoComplete="one-time-code"
           />
         </div>
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="newPassword" className="text-sm font-medium text-zinc-700">
+          <label htmlFor="newPassword" className="text-sm font-medium text-soft-white">
             New Password
           </label>
           <div className="relative">
@@ -129,7 +129,7 @@ export function ForgotPasswordForm() {
               placeholder="••••••••"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-4 py-2.5 pr-10 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+              className="w-full rounded-lg border border-white/15 px-4 py-2.5 pr-10 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
               required
               autoComplete="new-password"
               minLength={8}
@@ -137,7 +137,7 @@ export function ForgotPasswordForm() {
             <button
               type="button"
               onClick={() => setShowNewPassword(!showNewPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-steel-gray/60 hover:text-steel-gray"
               aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
             >
               {showNewPassword ? <EyeSlash className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -146,7 +146,7 @@ export function ForgotPasswordForm() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="confirmPassword" className="text-sm font-medium text-zinc-700">
+          <label htmlFor="confirmPassword" className="text-sm font-medium text-soft-white">
             Confirm New Password
           </label>
           <div className="relative">
@@ -156,14 +156,14 @@ export function ForgotPasswordForm() {
               placeholder="••••••••"
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-4 py-2.5 pr-10 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+              className="w-full rounded-lg border border-white/15 px-4 py-2.5 pr-10 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
               required
               autoComplete="new-password"
             />
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-steel-gray/60 hover:text-steel-gray"
               aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
             >
               {showConfirmPassword ? (
@@ -186,7 +186,7 @@ export function ForgotPasswordForm() {
         <button
           type="button"
           onClick={() => setStep('email')}
-          className="text-center text-sm text-zinc-600 hover:text-zinc-900"
+          className="text-center text-sm text-steel-gray hover:text-soft-white"
         >
           ← Back to email
         </button>
@@ -197,15 +197,15 @@ export function ForgotPasswordForm() {
   return (
     <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
       {displayError && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{displayError}</div>
+        <div className="rounded-lg bg-red-500/10 p-3 text-sm text-red-400">{displayError}</div>
       )}
 
-      <p className="text-sm text-zinc-600">
+      <p className="text-sm text-steel-gray">
         Enter your email address and we&apos;ll send you a code to reset your password.
       </p>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="email" className="text-sm font-medium text-zinc-700">
+        <label htmlFor="email" className="text-sm font-medium text-soft-white">
           Email
         </label>
         <input
@@ -214,7 +214,7 @@ export function ForgotPasswordForm() {
           placeholder="you@example.com"
           value={email}
           onChange={e => setEmail(e.target.value)}
-          className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+          className="rounded-lg border border-white/15 px-4 py-2.5 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
           required
           autoComplete="email"
         />
@@ -228,9 +228,9 @@ export function ForgotPasswordForm() {
         {isLoading ? 'Sending...' : 'Send Reset Code'}
       </Button>
 
-      <p className="text-center text-sm text-zinc-600">
+      <p className="text-center text-sm text-steel-gray">
         Remember your password?{' '}
-        <Link href="/login" className="font-medium text-emerald-600 hover:text-emerald-700">
+        <Link href="/login" className="font-medium text-emerald-400 hover:text-emerald-300">
           Sign in
         </Link>
       </p>

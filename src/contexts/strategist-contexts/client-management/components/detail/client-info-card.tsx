@@ -35,16 +35,16 @@ export const ClientInfoCard = memo(function ClientInfoCard({
   filingStatus,
 }: ClientInfoCardProps) {
   return (
-    <div className="mb-4 rounded-xl bg-zinc-50 p-5">
+    <div className="mb-4 rounded-xl border border-white/8 bg-white/3 p-5">
       {/* Header */}
       <div className="mb-4 flex items-center gap-2">
-        <span className="text-sm text-zinc-500">About</span>
+        <span className="text-sm text-steel-gray">About</span>
         <ClientAvatar name={clientName} size="sm" className="h-6 w-6" />
-        <span className="text-sm font-medium text-zinc-500">{clientName}</span>
+        <span className="text-sm font-medium text-steel-gray">{clientName}</span>
       </div>
 
       {/* Bio/Description */}
-      <p className="mb-5 text-[15px] leading-relaxed text-zinc-700">
+      <p className="mb-5 text-[15px] leading-relaxed text-soft-white/90">
         {estimatedIncome ? ` Estimated annual income of ${formatCurrency(estimatedIncome)}.` : ''}
         {filingStatus ? ` Filing status: ${filingStatus.replace('_', ' ')}.` : ''}
       </p>
@@ -54,10 +54,10 @@ export const ClientInfoCard = memo(function ClientInfoCard({
         {email && (
           <a
             href={`mailto:${email}`}
-            className="flex items-center gap-2.5 text-sm text-zinc-600 hover:text-zinc-900"
+            className="flex items-center gap-2.5 text-sm text-steel-gray transition-colors duration-150 ease-linear hover:text-soft-white"
           >
-            <EnvelopeIcon weight="fill" className="h-4 w-4 text-zinc-400" />
-            <span className="underline decoration-zinc-300 underline-offset-2 hover:decoration-zinc-500">
+            <EnvelopeIcon weight="fill" className="h-4 w-4 text-steel-gray/70" />
+            <span className="underline decoration-white/20 underline-offset-2 hover:decoration-white/50">
               {email}
             </span>
           </a>
@@ -66,18 +66,18 @@ export const ClientInfoCard = memo(function ClientInfoCard({
         {phoneNumber && (
           <a
             href={`tel:${phoneNumber}`}
-            className="flex items-center gap-2.5 text-sm text-zinc-600 hover:text-zinc-900"
+            className="flex items-center gap-2.5 text-sm text-steel-gray transition-colors duration-150 ease-linear hover:text-soft-white"
           >
-            <PhoneIcon weight="fill" className="h-4 w-4 text-zinc-400" />
-            <span className="underline decoration-zinc-300 underline-offset-2 hover:decoration-zinc-500">
+            <PhoneIcon weight="fill" className="h-4 w-4 text-steel-gray/70" />
+            <span className="underline decoration-white/20 underline-offset-2 hover:decoration-white/50">
               {phoneNumber}
             </span>
           </a>
         )}
 
         {businessName && (
-          <div className="flex items-center gap-2.5 text-sm text-zinc-600">
-            <BuildingsIcon weight="fill" className="h-4 w-4 text-zinc-400" />
+          <div className="flex items-center gap-2.5 text-sm text-steel-gray">
+            <BuildingsIcon weight="fill" className="h-4 w-4 text-steel-gray/70" />
             <span>{businessName}</span>
           </div>
         )}

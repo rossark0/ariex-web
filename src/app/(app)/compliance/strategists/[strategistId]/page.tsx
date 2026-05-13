@@ -71,14 +71,14 @@ function ClientItemReal({
     <div className="group relative">
       <div
         onClick={() => router.push(`/compliance/clients/${client.id}?strategistId=${strategistId}`)}
-        className="flex cursor-pointer items-center gap-4 rounded-none py-4 transition-colors hover:bg-zinc-50"
+        className="flex cursor-pointer items-center gap-4 rounded-none py-4 transition-colors hover:bg-white/3"
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-          <User className="h-5 w-5 text-zinc-400" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/8">
+          <User className="h-5 w-5 text-steel-gray/60" />
         </div>
         <div className="flex flex-1 flex-col">
-          <span className="font-medium text-zinc-900">{client.name}</span>
-          <span className="text-sm text-zinc-500">{description}</span>
+          <span className="font-medium text-soft-white">{client.name}</span>
+          <span className="text-sm text-steel-gray">{description}</span>
         </div>
         <div className="flex flex-col items-end gap-1">
           <span
@@ -87,7 +87,7 @@ function ClientItemReal({
             <div className={`h-1.5 w-1.5 rounded-full ${status.badgeColor}`} />
             {status.label.split(' ')[0]}
           </span>
-          <span className="text-xs text-zinc-400">{formatRelativeTime(client.createdAt)}</span>
+          <span className="text-xs text-steel-gray/60">{formatRelativeTime(client.createdAt)}</span>
         </div>
       </div>
     </div>
@@ -103,10 +103,10 @@ function LoadingState() {
     <div className="flex flex-col gap-4 py-8">
       {[1, 2, 3].map(i => (
         <div key={i} className="flex animate-pulse items-center gap-4 py-4">
-          <div className="h-10 w-10 rounded-lg bg-zinc-100" />
+          <div className="h-10 w-10 rounded-lg bg-white/8" />
           <div className="flex-1">
-            <div className="mb-2 h-4 w-32 rounded bg-zinc-100" />
-            <div className="h-3 w-48 rounded bg-zinc-100" />
+            <div className="mb-2 h-4 w-32 rounded bg-white/8" />
+            <div className="h-3 w-48 rounded bg-white/8" />
           </div>
         </div>
       ))}
@@ -144,10 +144,10 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
   if (!isLoadingStrategist && !strategist) {
     return (
       <div className="flex min-h-full flex-col items-center justify-center">
-        <p className="text-zinc-500">Strategist not found</p>
+        <p className="text-steel-gray">Strategist not found</p>
         <Link
           href="/compliance/strategists"
-          className="mt-4 text-sm text-zinc-600 hover:text-zinc-900"
+          className="mt-4 text-sm text-steel-gray hover:text-soft-white"
         >
           Back to Strategists
         </Link>
@@ -161,7 +161,7 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
   const isActive = clientCount > 0;
 
   return (
-    <div className="relative flex min-h-full flex-col bg-white">
+    <div className="relative flex min-h-full flex-col bg-deep-navy">
       {/* Breadcrumb */}
       <div
         className={`fixed top-4 z-50 pl-2 pt-3.75 pb-2 transition-all duration-300 ${isSidebarCollapsed ? 'left-14' : 'left-56'}`}
@@ -200,9 +200,9 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
           </div>
 
           {/* About Section */}
-          <div className="border-b border-zinc-100 px-6 py-4">
-            <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">About</h4>
-            <p className="text-sm leading-relaxed text-zinc-700">
+          <div className="border-b border-white/8 px-6 py-4">
+            <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-steel-gray/60">About</h4>
+            <p className="text-sm leading-relaxed text-soft-white">
               {strategistName} is a tax strategist currently managing {clientCount} client
               {clientCount !== 1 ? 's' : ''}.
             </p>
@@ -243,20 +243,20 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
             )}
             <button
               onClick={() => setShowMore(!showMore)}
-              className="mt-2 text-sm text-zinc-500 hover:text-zinc-700"
+              className="mt-2 text-sm text-steel-gray hover:text-soft-white"
             >
               {showMore ? 'See less' : 'See more'} ↓
             </button>
           </div>
 
           <div className="w-full px-6">
-            <div className="h-px bg-zinc-200" />
+            <div className="h-px bg-white/12" />
           </div>
 
           {/* Clients Section */}
           <div className="px-6 py-4">
             <div className="mb-4 flex items-center justify-between">
-              <h4 className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+              <h4 className="text-xs font-medium uppercase tracking-wide text-steel-gray/60">
                 {clientCount} Client{clientCount !== 1 ? 's' : ''}
               </h4>
             </div>
@@ -267,22 +267,22 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
                 <div className="relative">
                   <MagnifyingGlass
                     weight="bold"
-                    className="absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500"
+                    className="absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-steel-gray"
                   />
                   <input
                     type="text"
                     placeholder="Search..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="h-[32px] w-64 rounded-lg bg-zinc-100 pr-2 pl-7 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 hover:bg-zinc-50 focus:border-zinc-300 focus:outline-none"
+                    className="h-[32px] w-64 rounded-lg bg-white/8 pr-2 pl-7 text-sm font-medium text-soft-white placeholder:text-steel-gray/60 hover:bg-white/3 focus:border-white/15 focus:outline-none"
                   />
                 </div>
-                <button className="inline-flex h-[32px] cursor-pointer items-center gap-1.5 rounded-lg bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500 shadow transition-colors hover:bg-zinc-100">
+                <button className="inline-flex h-[32px] cursor-pointer items-center gap-1.5 rounded-lg bg-white/8 px-2 py-1 text-xs font-semibold text-steel-gray shadow transition-colors hover:bg-white/8">
                   Status
                   <CaretDown className="h-3.5 w-3.5" weight="bold" />
                 </button>
               </div>
-              <button className="inline-flex h-[32px] cursor-pointer items-center gap-1.5 rounded-lg bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500 shadow transition-colors hover:bg-zinc-100">
+              <button className="inline-flex h-[32px] cursor-pointer items-center gap-1.5 rounded-lg bg-white/8 px-2 py-1 text-xs font-semibold text-steel-gray shadow transition-colors hover:bg-white/8">
                 <FunnelSimple className="h-3.5 w-3.5" weight="bold" />
                 Filters
               </button>
@@ -296,10 +296,10 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
                 {groupedClients.awaitingCompliance.length > 0 && (
                   <div>
                     <div className="mb-2 flex items-center gap-2">
-                      <h5 className="text-xs font-semibold uppercase text-zinc-500">
+                      <h5 className="text-xs font-semibold uppercase text-steel-gray">
                         Awaiting Compliance Review
                       </h5>
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-300">
                         {groupedClients.awaitingCompliance.length}
                       </span>
                     </div>
@@ -319,10 +319,10 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
                 {groupedClients.awaitingApproval.length > 0 && (
                   <div>
                     <div className="mb-2 flex items-center gap-2">
-                      <h5 className="text-xs font-semibold uppercase text-zinc-500">
+                      <h5 className="text-xs font-semibold uppercase text-steel-gray">
                         Pending Client Approval
                       </h5>
-                      <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-700">
+                      <span className="rounded-full bg-teal-500/15 px-2 py-0.5 text-xs font-medium text-teal-300">
                         {groupedClients.awaitingApproval.length}
                       </span>
                     </div>
@@ -342,10 +342,10 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
                 {groupedClients.readyForStrategy.length > 0 && (
                   <div>
                     <div className="mb-2 flex items-center gap-2">
-                      <h5 className="text-xs font-semibold uppercase text-zinc-500">
+                      <h5 className="text-xs font-semibold uppercase text-steel-gray">
                         Ready for Strategy
                       </h5>
-                      <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">
+                      <span className="rounded-full bg-white/8 px-2 py-0.5 text-xs font-medium text-steel-gray">
                         {groupedClients.readyForStrategy.length}
                       </span>
                     </div>
@@ -365,8 +365,8 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
                 {groupedClients.active.length > 0 && (
                   <div>
                     <div className="mb-2 flex items-center gap-2">
-                      <h5 className="text-xs font-semibold uppercase text-zinc-500">Active</h5>
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                      <h5 className="text-xs font-semibold uppercase text-steel-gray">Active</h5>
+                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-300">
                         {groupedClients.active.length}
                       </span>
                     </div>
@@ -386,10 +386,10 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
                 {groupedClients.inProgress.length > 0 && (
                   <div>
                     <div className="mb-2 flex items-center gap-2">
-                      <h5 className="text-xs font-semibold uppercase text-zinc-500">
+                      <h5 className="text-xs font-semibold uppercase text-steel-gray">
                         In Progress
                       </h5>
-                      <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">
+                      <span className="rounded-full bg-white/8 px-2 py-0.5 text-xs font-medium text-steel-gray">
                         {groupedClients.inProgress.length}
                       </span>
                     </div>
@@ -407,10 +407,10 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <p className="mb-1 text-sm font-medium text-zinc-600">
+                <p className="mb-1 text-sm font-medium text-steel-gray">
                   {searchQuery ? 'No results found' : 'No clients'}
                 </p>
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-steel-gray/60">
                   {searchQuery
                     ? 'Try a different search term'
                     : 'This strategist has no assigned clients'}

@@ -106,7 +106,7 @@ export function ChatConversationItem({
           </span>
         </div>
         {/* {conversation.isLoading ? (
-          <div className="flex items-center gap-1 text-xs text-zinc-400">
+          <div className="flex items-center gap-1 text-xs text-steel-gray/60">
             <SpinnerGap className="h-3 w-3 animate-spin" />
             <span>Loading...</span>
           </div>

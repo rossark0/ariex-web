@@ -69,9 +69,9 @@ export const DocumentsList = memo(function DocumentsList({
     <div>
       <div className="flex w-full items-center justify-between">
         <div>
-          <h2 className="text-base font-medium text-zinc-900">Documents</h2>
+          <h2 className="text-base font-medium text-soft-white">Documents</h2>
           {!isLoading && hasContent && (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-steel-gray">
               {documents.length} uploaded
               {pendingTodos.length > 0 ? ` · ${pendingTodos.length} pending` : ''}
             </p>
@@ -98,8 +98,8 @@ export const DocumentsList = memo(function DocumentsList({
       {!isLoading && !hasContent && (
         <div className="flex flex-col items-center justify-center pt-12 pb-8 text-center">
           <EmptyDocumentsIllustration />
-          <p className="text-lg font-semibold text-zinc-800">No documents yet</p>
-          <p className="text-sm text-zinc-400">
+          <p className="text-lg font-semibold text-soft-white">No documents yet</p>
+          <p className="text-sm text-steel-gray/60">
             When this client uploads a document, it will show up here
           </p>
         </div>
@@ -108,7 +108,7 @@ export const DocumentsList = memo(function DocumentsList({
       {/* Pending document requests */}
       {!isLoading && pendingTodos.length > 0 && (
         <div className="mt-4 mb-2">
-          <p className="mb-3 text-sm font-medium text-amber-600">
+          <p className="mb-3 text-sm font-medium text-amber-400">
             Awaiting upload · {pendingTodos.length} request{pendingTodos.length !== 1 ? 's' : ''}
           </p>
           <div className="flex flex-col gap-2">
@@ -120,28 +120,28 @@ export const DocumentsList = memo(function DocumentsList({
                   key={todo.id}
                   className={`flex items-center gap-3 rounded-lg border p-3 ${
                     isRejected
-                      ? 'border-red-200 bg-red-50'
-                      : 'border-dashed border-zinc-200 bg-zinc-50'
+                      ? 'border-red-500/30 bg-red-500/10'
+                      : 'border-dashed border-white/10 bg-white/3'
                   }`}
                 >
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
                     {isRejected ? (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/15">
                         <XIcon weight="bold" className="h-4 w-4 text-red-500" />
                       </div>
                     ) : (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-dashed border-zinc-300">
-                        <FileArrowUp className="h-4 w-4 text-zinc-400" />
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-dashed border-white/15">
+                        <FileArrowUp className="h-4 w-4 text-steel-gray/60" />
                       </div>
                     )}
                   </div>
                   <div className="flex flex-1 flex-col">
                     <span
-                      className={`text-sm font-medium ${isRejected ? 'text-red-700' : 'text-zinc-700'}`}
+                      className={`text-sm font-medium ${isRejected ? 'text-red-300' : 'text-soft-white'}`}
                     >
                       {todo.title}
                     </span>
-                    <span className={`text-xs ${isRejected ? 'text-red-500' : 'text-zinc-400'}`}>
+                    <span className={`text-xs ${isRejected ? 'text-red-500' : 'text-steel-gray/60'}`}>
                       {isRejected
                         ? 'Declined — waiting for client to re-upload'
                         : 'Waiting for client to upload'}
@@ -149,7 +149,7 @@ export const DocumentsList = memo(function DocumentsList({
                   </div>
                   <span
                     className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${
-                      isRejected ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                      isRejected ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'
                     }`}
                   >
                     {isRejected ? 'Re-upload needed' : 'Pending'}
@@ -169,7 +169,7 @@ export const DocumentsList = memo(function DocumentsList({
             )
           ).map(group => (
             <div key={group.label} className="mb-6">
-              <p className="mb-3 text-sm font-medium text-zinc-400">{group.label}</p>
+              <p className="mb-3 text-sm font-medium text-steel-gray/60">{group.label}</p>
               <div className="flex flex-col">
                 {group.documents.map(doc => {
                   const isSelected = selectedDocs.has(doc.id);
@@ -186,44 +186,44 @@ export const DocumentsList = memo(function DocumentsList({
                             <CheckIcon weight="bold" className="h-3 w-3 text-white" />
                           </div>
                         ) : (
-                          <div className="h-4 w-4 rounded border-2 border-zinc-300 bg-white transition-colors group-hover:border-teal-400" />
+                          <div className="h-4 w-4 rounded border-2 border-white/15 bg-deep-navy transition-colors group-hover:border-teal-400" />
                         )}
                       </div>
                       <div
                         onClick={() => onToggleSelection(doc.id)}
-                        className={`flex cursor-pointer items-center gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-zinc-50 ${
-                          isSelected ? 'bg-zinc-50' : ''
+                        className={`flex cursor-pointer items-center gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-white/3 ${
+                          isSelected ? 'bg-white/3' : ''
                         }`}
                       >
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-                          <FileIcon className="h-5 w-5 text-zinc-400" />
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/8">
+                          <FileIcon className="h-5 w-5 text-steel-gray/60" />
                         </div>
                         <div className="flex flex-1 flex-col gap-0.5">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-zinc-900">{doc.name}</span>
+                            <span className="font-medium text-soft-white">{doc.name}</span>
                             {isContractDoc && signedDocumentUrl && (
-                              <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-700">
+                              <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-xs font-medium text-emerald-300">
                                 Signed
                               </span>
                             )}
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm text-zinc-500">
+                            <span className="text-sm text-steel-gray">
                               {doc.todoId && todoTitles.get(doc.todoId)
                                 ? todoTitles.get(doc.todoId)
                                 : doc.type || 'Document'}
                             </span>
                             {doc.uploadedByName && (
                               <>
-                                <span className="text-zinc-300">·</span>
-                                <span className="text-sm text-zinc-500">
+                                <span className="text-steel-gray/40">·</span>
+                                <span className="text-sm text-steel-gray">
                                   Uploaded by {doc.uploadedByName}
                                 </span>
                               </>
                             )}
                           </div>
                           {doc.description && (
-                            <p className="mt-0.5 line-clamp-1 text-sm text-zinc-400">
+                            <p className="mt-0.5 line-clamp-1 text-sm text-steel-gray/60">
                               {doc.description}
                             </p>
                           )}
@@ -234,7 +234,7 @@ export const DocumentsList = memo(function DocumentsList({
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={e => e.stopPropagation()}
-                            className="flex h-8 shrink-0 items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
+                            className="flex h-8 shrink-0 items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-2 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/15"
                             title="Download signed copy"
                           >
                             <SealIcon weight="fill" className="h-3.5 w-3.5" />
@@ -253,7 +253,7 @@ export const DocumentsList = memo(function DocumentsList({
                             }
                           }}
                           disabled={openingDocId === doc.id}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 opacity-0 transition-all group-hover:opacity-100 hover:bg-zinc-50 hover:text-zinc-700 disabled:opacity-50"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-deep-navy text-steel-gray opacity-0 transition-all group-hover:opacity-100 hover:bg-white/3 hover:text-soft-white disabled:opacity-50"
                           title="Open document"
                         >
                           {openingDocId === doc.id ? (
@@ -262,7 +262,7 @@ export const DocumentsList = memo(function DocumentsList({
                             <Eye weight="bold" className="h-4 w-4" />
                           )}
                         </button>
-                        <span className="shrink-0 text-sm text-zinc-400">
+                        <span className="shrink-0 text-sm text-steel-gray/60">
                           {formatRelativeTime(new Date(doc.createdAt))}
                         </span>
                       </div>

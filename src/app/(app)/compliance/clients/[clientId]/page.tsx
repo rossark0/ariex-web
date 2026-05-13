@@ -153,9 +153,9 @@ function RejectStrategyModal({
 
   return (
     <div className="fixed inset-0 z-100000 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-        <h3 className="mb-1 text-lg font-semibold text-zinc-900">Reject Strategy</h3>
-        <p className="mb-4 text-sm text-zinc-500">
+      <div className="w-full max-w-md rounded-xl bg-deep-navy p-6 shadow-xl">
+        <h3 className="mb-1 text-lg font-semibold text-soft-white">Reject Strategy</h3>
+        <p className="mb-4 text-sm text-steel-gray">
           Provide a reason for the rejection. The strategist will be notified.
         </p>
         <textarea
@@ -163,7 +163,7 @@ function RejectStrategyModal({
           onChange={e => setReason(e.target.value)}
           placeholder="Enter rejection reason…"
           rows={4}
-          className="mb-4 w-full resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none"
+          className="mb-4 w-full resize-none rounded-lg border border-white/10 px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-white/20 focus:outline-none"
         />
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose} disabled={isRejecting}>
@@ -206,9 +206,9 @@ function ApproveStrategyModal({
 
   return (
     <div className="fixed inset-0 z-100000 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-        <h3 className="mb-1 text-lg font-semibold text-zinc-900">Approve Strategy</h3>
-        <p className="mb-4 text-sm text-zinc-500">
+      <div className="w-full max-w-md rounded-xl bg-deep-navy p-6 shadow-xl">
+        <h3 className="mb-1 text-lg font-semibold text-soft-white">Approve Strategy</h3>
+        <p className="mb-4 text-sm text-steel-gray">
           Once approved, this strategy will be sent to the client for review. This action cannot be
           undone.
         </p>
@@ -272,26 +272,26 @@ function CommentsPanel({
 
   return (
     <div className="mt-6 mb-6">
-      <h2 className="mb-4 text-base font-medium text-zinc-900">Comments</h2>
+      <h2 className="mb-4 text-base font-medium text-soft-white">Comments</h2>
 
       {isLoading ? (
-        <div className="flex items-center gap-2 py-4 text-sm text-zinc-400">
+        <div className="flex items-center gap-2 py-4 text-sm text-steel-gray/60">
           <SpinnerGap className="h-4 w-4 animate-spin" />
           Loading comments…
         </div>
       ) : comments.length === 0 ? (
-        <p className="py-4 text-sm text-zinc-400">No comments yet</p>
+        <p className="py-4 text-sm text-steel-gray/60">No comments yet</p>
       ) : (
         <div className="mb-4 flex flex-col gap-3">
           {comments.map(c => (
-            <div key={c.id} className="rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3">
+            <div key={c.id} className="rounded-lg border border-white/8 bg-white/3 px-4 py-3">
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-sm font-medium text-zinc-700">
+                <span className="text-sm font-medium text-soft-white">
                   {c.userName || 'Compliance'}
                 </span>
-                <span className="text-xs text-zinc-400">{formatRelativeTime(c.createdAt)}</span>
+                <span className="text-xs text-steel-gray/60">{formatRelativeTime(c.createdAt)}</span>
               </div>
-              <p className="text-sm leading-relaxed text-zinc-600">{c.body}</p>
+              <p className="text-sm leading-relaxed text-steel-gray">{c.body}</p>
             </div>
           ))}
         </div>
@@ -314,7 +314,7 @@ function CommentsPanel({
           }}
           placeholder="Add a comment…"
           rows={1}
-          className="flex-1 resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none"
+          className="flex-1 resize-none rounded-lg border border-white/10 px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-white/20 focus:outline-none"
           disabled={isSending}
         />
         <Button size="sm" onClick={handleSubmit} disabled={!newComment.trim() || isSending}>
@@ -329,19 +329,19 @@ function CommentsPanel({
 
 function LoadingState() {
   return (
-    <div className="flex min-h-full flex-col bg-white">
+    <div className="flex min-h-full flex-col bg-deep-navy">
       <div className="mx-auto w-full max-w-2xl animate-pulse px-4 pt-20">
-        <div className="mb-4 h-12 w-12 rounded-full bg-zinc-200" />
-        <div className="mb-2 h-8 w-48 rounded bg-zinc-200" />
-        <div className="mb-8 h-6 w-32 rounded bg-zinc-100" />
-        <div className="mb-4 h-40 rounded-xl bg-zinc-100" />
+        <div className="mb-4 h-12 w-12 rounded-full bg-white/12" />
+        <div className="mb-2 h-8 w-48 rounded bg-white/12" />
+        <div className="mb-8 h-6 w-32 rounded bg-white/8" />
+        <div className="mb-4 h-40 rounded-xl bg-white/8" />
         <div className="space-y-4">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex gap-4">
-              <div className="h-2 w-2 rounded-full bg-zinc-200" />
+              <div className="h-2 w-2 rounded-full bg-white/12" />
               <div className="flex-1 space-y-2">
-                <div className="h-4 w-3/4 rounded bg-zinc-200" />
-                <div className="h-3 w-1/2 rounded bg-zinc-100" />
+                <div className="h-4 w-3/4 rounded bg-white/12" />
+                <div className="h-3 w-1/2 rounded bg-white/8" />
               </div>
             </div>
           ))}
@@ -536,8 +536,8 @@ export default function ComplianceClientDetailPage({ params }: Props) {
     return (
       <section className="flex flex-col items-center justify-center gap-4 p-12">
         <Warning className="h-12 w-12 text-amber-500" weight="duotone" />
-        <h1 className="text-xl font-semibold text-zinc-900">{error || 'Client Not Found'}</h1>
-        <p className="text-zinc-500">
+        <h1 className="text-xl font-semibold text-soft-white">{error || 'Client Not Found'}</h1>
+        <p className="text-steel-gray">
           {error
             ? 'There was a problem loading this client.'
             : `The client with ID "${params.clientId}" does not exist.`}
@@ -595,7 +595,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
   const strategyDocName = strategyDocument?.name?.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan';
 
   return (
-    <div className="flex min-h-full flex-col bg-white">
+    <div className="flex min-h-full flex-col bg-deep-navy">
       {/* Breadcrumb */}
       <div
         className={`fixed top-4 z-50 pt-3.75 pb-2 pl-2 transition-all duration-300 ${isSidebarCollapsed ? 'left-14' : 'left-60'}`}
@@ -628,15 +628,15 @@ export default function ComplianceClientDetailPage({ params }: Props) {
       <div className="relative flex-1 pt-10">
         <div className="relative z-40 mx-auto w-full max-w-2xl px-4 pt-8">
           {/* Banner color */}
-          <div className="absolute top-0 left-0 -z-10 h-24 w-full bg-zinc-50" />
+          <div className="absolute top-0 left-0 -z-10 h-24 w-full bg-white/3" />
 
           {/* Action feedback banner */}
           {actionFeedback && (
             <div
               className={`mb-4 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium ${
                 actionFeedback.type === 'success'
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                  : 'border-red-200 bg-red-50 text-red-700'
+                  ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
+                  : 'border-red-500/30 bg-red-500/10 text-red-300'
               }`}
             >
               {actionFeedback.type === 'success' ? (
@@ -650,7 +650,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
 
           {/* Header Section */}
           <div className="flex flex-col gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800 text-2xl font-medium text-white">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-electric-blue/85 text-2xl font-medium text-white">
               {getInitials(clientName)}
             </div>
             <h1 className="z-20 text-2xl font-semibold">{clientName}</h1>
@@ -677,7 +677,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                 className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-sm font-medium transition-colors ${
                   strategyPdfUrl
                     ? 'cursor-pointer border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600'
-                    : 'cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400'
+                    : 'cursor-not-allowed border-white/10 bg-white/8 text-steel-gray/60'
                 }`}
               >
                 <StarFourIcon weight="fill" className="h-4 w-4" />
@@ -696,11 +696,11 @@ export default function ComplianceClientDetailPage({ params }: Props) {
 
             {/* Compliance Review Action Bar */}
             {isComplianceReview && (
-              <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-5">
+              <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-5">
                 <h3 className="mb-1 text-sm font-semibold text-amber-800">
                   Compliance Review Required
                 </h3>
-                <p className="mb-4 text-sm text-amber-700">
+                <p className="mb-4 text-sm text-amber-300">
                   Review the tax strategy document and approve or reject it before it&apos;s sent to
                   the client.
                 </p>
@@ -726,7 +726,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                     variant="outline"
                     onClick={() => setIsRejectModalOpen(true)}
                     disabled={isApproving || isRejecting}
-                    className="border-red-200 text-red-600 hover:bg-red-50"
+                    className="border-red-500/30 text-red-400 hover:bg-red-500/10"
                   >
                     <XCircle className="mr-1.5 h-4 w-4" weight="fill" />
                     Reject
@@ -737,12 +737,12 @@ export default function ComplianceClientDetailPage({ params }: Props) {
 
             {/* Previous rejection reason */}
             {strategyMetadata?.rejectionReason && (
-              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-5">
+              <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-5">
                 <h3 className="mb-1 text-sm font-semibold text-red-800">
                   Previously Rejected
                   {strategyMetadata.rejectedBy ? ` by ${strategyMetadata.rejectedBy}` : ''}
                 </h3>
-                <p className="text-sm text-red-700">{strategyMetadata.rejectionReason}</p>
+                <p className="text-sm text-red-300">{strategyMetadata.rejectionReason}</p>
                 {strategyMetadata.rejectedAt && (
                   <p className="mt-1 text-xs text-red-500">
                     {formatDate(strategyMetadata.rejectedAt)}
@@ -752,16 +752,16 @@ export default function ComplianceClientDetailPage({ params }: Props) {
             )}
 
             {/* About Section */}
-            <div className="mb-4 rounded-xl bg-zinc-50 p-5">
+            <div className="mb-4 rounded-xl bg-white/3 p-5">
               <div className="mb-4 flex items-center gap-2">
-                <span className="text-sm text-zinc-500">About</span>
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-800 text-xs font-medium text-white">
+                <span className="text-sm text-steel-gray">About</span>
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-electric-blue/85 text-xs font-medium text-white">
                   {getInitials(clientName)}
                 </div>
-                <span className="text-sm font-medium text-zinc-500">{clientName}</span>
+                <span className="text-sm font-medium text-steel-gray">{clientName}</span>
               </div>
 
-              <p className="mb-5 text-[15px] leading-relaxed text-zinc-700">
+              <p className="mb-5 text-[15px] leading-relaxed text-soft-white">
                 {clientName} is the owner of {profile?.businessName || 'a business'}
                 {profile?.businessType ? `, a ${profile.businessType}` : ''}
                 {profile?.city || profile?.state
@@ -779,9 +779,9 @@ export default function ComplianceClientDetailPage({ params }: Props) {
               <div className="flex flex-col gap-2.5">
                 <a
                   href={`mailto:${client.email}`}
-                  className="flex items-center gap-2.5 text-sm text-zinc-600 hover:text-zinc-900"
+                  className="flex items-center gap-2.5 text-sm text-steel-gray hover:text-soft-white"
                 >
-                  <EnvelopeIcon weight="fill" className="h-4 w-4 text-zinc-400" />
+                  <EnvelopeIcon weight="fill" className="h-4 w-4 text-steel-gray/60" />
                   <span className="underline decoration-zinc-300 underline-offset-2 hover:decoration-zinc-500">
                     {client.email}
                   </span>
@@ -790,9 +790,9 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                 {(profile?.phoneNumber || profile?.phone) && (
                   <a
                     href={`tel:${profile?.phoneNumber || profile?.phone}`}
-                    className="flex items-center gap-2.5 text-sm text-zinc-600 hover:text-zinc-900"
+                    className="flex items-center gap-2.5 text-sm text-steel-gray hover:text-soft-white"
                   >
-                    <PhoneIcon weight="fill" className="h-4 w-4 text-zinc-400" />
+                    <PhoneIcon weight="fill" className="h-4 w-4 text-steel-gray/60" />
                     <span className="underline decoration-zinc-300 underline-offset-2 hover:decoration-zinc-500">
                       {profile?.phoneNumber || profile?.phone}
                     </span>
@@ -800,8 +800,8 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                 )}
 
                 {profile?.businessName && (
-                  <div className="flex items-center gap-2.5 text-sm text-zinc-600">
-                    <BuildingsIcon weight="fill" className="h-4 w-4 text-zinc-400" />
+                  <div className="flex items-center gap-2.5 text-sm text-steel-gray">
+                    <BuildingsIcon weight="fill" className="h-4 w-4 text-steel-gray/60" />
                     <span>{profile.businessName}</span>
                   </div>
                 )}
@@ -810,7 +810,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
 
             {/* Activity Timeline */}
             <div className="mb-6">
-              <h2 className="mb-4 text-base font-medium text-zinc-900">Activity</h2>
+              <h2 className="mb-4 text-base font-medium text-soft-white">Activity</h2>
               <div className="relative pl-6">
                 <div className="flex flex-col gap-0">
                   {/* Step 1: Account Created */}
@@ -818,15 +818,15 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                     <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
                       <div className="h-2 w-2 rounded-full bg-emerald-500" />
                     </div>
-                    <div className="absolute top-5 bottom-2 -left-[19px] w-[2px] bg-emerald-200" />
+                    <div className="absolute top-5 bottom-2 -left-[19px] w-[2px] bg-emerald-500/30" />
                     <div className="flex flex-1 flex-col">
-                      <span className="font-medium text-zinc-900">
+                      <span className="font-medium text-soft-white">
                         Account created for {profile?.businessName || clientName}
                       </span>
-                      <span className="text-sm text-zinc-500">
+                      <span className="text-sm text-steel-gray">
                         Client onboarding initiated by strategist
                       </span>
-                      <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                      <span className="mt-1 text-xs font-medium tracking-wide text-steel-gray/60 uppercase">
                         {formatDate(client.createdAt)}
                       </span>
                     </div>
@@ -836,28 +836,28 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                   <div className="relative flex gap-4 pb-6">
                     <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
                       <div
-                        className={`h-2 w-2 rounded-full ${step2Sent || step2Complete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                        className={`h-2 w-2 rounded-full ${step2Sent || step2Complete ? 'bg-emerald-500' : 'bg-white/20'}`}
                       />
                     </div>
                     <div
-                      className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${step2Complete ? 'bg-emerald-200' : 'bg-zinc-200'}`}
+                      className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${step2Complete ? 'bg-emerald-500/30' : 'bg-white/12'}`}
                     />
                     <div className="flex flex-1 flex-col">
-                      <span className="font-medium text-zinc-900">
+                      <span className="font-medium text-soft-white">
                         {step2Complete
                           ? 'Service agreement signed'
                           : step2Sent
                             ? 'Agreement sent for signature'
                             : 'Agreement pending'}
                       </span>
-                      <span className="text-sm text-zinc-500">
+                      <span className="text-sm text-steel-gray">
                         {step2Complete
                           ? (agreement?.name || 'Ariex Service Agreement') + ' was signed'
                           : step2Sent
                             ? 'Waiting for client to review and sign'
                             : 'Send service agreement to client'}
                       </span>
-                      <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                      <span className="mt-1 text-xs font-medium tracking-wide text-steel-gray/60 uppercase">
                         {step2Complete
                           ? formatDate(agreement?.updatedAt)
                           : formatDate(agreement?.createdAt || client.createdAt)}
@@ -869,28 +869,28 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                   <div className="relative flex gap-4 pb-6">
                     <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
                       <div
-                        className={`h-2 w-2 rounded-full ${step3Sent || step3Complete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                        className={`h-2 w-2 rounded-full ${step3Sent || step3Complete ? 'bg-emerald-500' : 'bg-white/20'}`}
                       />
                     </div>
                     <div
-                      className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${step3Complete ? 'bg-emerald-200' : 'bg-zinc-200'}`}
+                      className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${step3Complete ? 'bg-emerald-500/30' : 'bg-white/12'}`}
                     />
                     <div className="flex flex-1 flex-col">
-                      <span className="font-medium text-zinc-900">
+                      <span className="font-medium text-soft-white">
                         {step3Complete
                           ? `Payment received · ${formatCurrency(agreementPrice)}`
                           : step3Sent
                             ? `Payment pending · ${formatCurrency(agreementPrice)}`
                             : 'Payment link pending'}
                       </span>
-                      <span className="text-sm text-zinc-500">
+                      <span className="text-sm text-steel-gray">
                         {step3Complete
                           ? 'Onboarding Fee via Stripe'
                           : step3Sent
                             ? 'Awaiting payment via Stripe link'
                             : 'Send payment link to client'}
                       </span>
-                      <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                      <span className="mt-1 text-xs font-medium tracking-wide text-steel-gray/60 uppercase">
                         {step3Complete
                           ? formatDate(agreement?.updatedAt)
                           : step3Sent
@@ -904,28 +904,28 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                   <div className="relative flex gap-4 pb-6">
                     <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
                       <div
-                        className={`h-2 w-2 rounded-full ${step4Sent || step4Complete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                        className={`h-2 w-2 rounded-full ${step4Sent || step4Complete ? 'bg-emerald-500' : 'bg-white/20'}`}
                       />
                     </div>
                     <div
-                      className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${step4Complete ? 'bg-emerald-200' : 'bg-zinc-200'}`}
+                      className={`absolute top-5 bottom-2 -left-[19px] w-[2px] ${step4Complete ? 'bg-emerald-500/30' : 'bg-white/12'}`}
                     />
                     <div className="flex flex-1 flex-col">
-                      <span className="font-medium text-zinc-900">
+                      <span className="font-medium text-soft-white">
                         {step4Complete
                           ? `Initial documents uploaded · ${uploadedCount} files`
                           : step4Sent
                             ? 'Waiting for document upload'
                             : 'Documents'}
                       </span>
-                      <span className="text-sm text-zinc-500">
+                      <span className="text-sm text-steel-gray">
                         {step4Complete
                           ? 'W-2s, 1099s, and tax documents received'
                           : step4Sent
                             ? 'Client needs to upload W-2s, 1099s, and relevant tax documents'
                             : 'Request documents from client'}
                       </span>
-                      <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                      <span className="mt-1 text-xs font-medium tracking-wide text-steel-gray/60 uppercase">
                         {step4Complete && nonStrategyDocs.length > 0
                           ? formatDate(nonStrategyDocs[nonStrategyDocs.length - 1]?.createdAt)
                           : step4Sent
@@ -939,11 +939,11 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                   <div className="relative flex gap-4">
                     <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
                       <div
-                        className={`h-2 w-2 rounded-full ${step5State.strategySent || step5State.isComplete ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                        className={`h-2 w-2 rounded-full ${step5State.strategySent || step5State.isComplete ? 'bg-emerald-500' : 'bg-white/20'}`}
                       />
                     </div>
                     <div className="flex flex-1 flex-col">
-                      <span className="font-medium text-zinc-900">
+                      <span className="font-medium text-soft-white">
                         {step5State.isComplete
                           ? 'Tax strategy approved'
                           : step5State.phase === 'client_review'
@@ -958,7 +958,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                     ? 'Strategy sent for review'
                                     : 'Tax strategy pending'}
                       </span>
-                      <span className="text-sm text-zinc-500">
+                      <span className="text-sm text-steel-gray">
                         {step5State.isComplete
                           ? 'Both compliance and client have approved'
                           : step5State.phase === 'client_review'
@@ -971,7 +971,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                   ? 'Compliance has rejected the strategy. Strategist must revise.'
                                   : 'Ready to create personalized tax strategy'}
                       </span>
-                      <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                      <span className="mt-1 text-xs font-medium tracking-wide text-steel-gray/60 uppercase">
                         {strategyDocument?.createdAt
                           ? formatDate(strategyDocument.createdAt)
                           : 'Not started'}
@@ -983,10 +983,10 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                           <div
                             className={`rounded-lg border p-2.5 ${
                               step5State.complianceRejected
-                                ? 'border-red-200 bg-red-50'
+                                ? 'border-red-500/30 bg-red-500/10'
                                 : step5State.complianceApproved
-                                  ? 'border-emerald-200 bg-emerald-50'
-                                  : 'border-amber-200 bg-amber-50'
+                                  ? 'border-emerald-500/30 bg-emerald-500/15'
+                                  : 'border-amber-500/30 bg-amber-500/10'
                             }`}
                           >
                             <div className="flex items-center gap-2">
@@ -1003,10 +1003,10 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                               <span
                                 className={`text-sm font-medium ${
                                   step5State.complianceRejected
-                                    ? 'text-red-700'
+                                    ? 'text-red-300'
                                     : step5State.complianceApproved
-                                      ? 'text-emerald-700'
-                                      : 'text-amber-700'
+                                      ? 'text-emerald-300'
+                                      : 'text-amber-300'
                                 }`}
                               >
                                 Compliance review
@@ -1014,10 +1014,10 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                               <span
                                 className={`rounded px-1.5 py-0.5 text-xs font-medium ${
                                   step5State.complianceRejected
-                                    ? 'bg-red-100 text-red-600'
+                                    ? 'bg-red-500/15 text-red-400'
                                     : step5State.complianceApproved
-                                      ? 'bg-emerald-100 text-emerald-600'
-                                      : 'bg-amber-100 text-amber-600'
+                                      ? 'bg-emerald-500/15 text-emerald-400'
+                                      : 'bg-amber-500/15 text-amber-400'
                                 }`}
                               >
                                 {step5State.complianceRejected
@@ -1033,10 +1033,10 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                             <div
                               className={`rounded-lg border p-2.5 ${
                                 step5State.clientDeclined
-                                  ? 'border-red-200 bg-red-50'
+                                  ? 'border-red-500/30 bg-red-500/10'
                                   : step5State.clientApproved
-                                    ? 'border-emerald-200 bg-emerald-50'
-                                    : 'border-teal-200 bg-teal-50'
+                                    ? 'border-emerald-500/30 bg-emerald-500/15'
+                                    : 'border-teal-500/30 bg-teal-500/10'
                               }`}
                             >
                               <div className="flex items-center gap-2">
@@ -1056,10 +1056,10 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                 <span
                                   className={`text-sm font-medium ${
                                     step5State.clientDeclined
-                                      ? 'text-red-700'
+                                      ? 'text-red-300'
                                       : step5State.clientApproved
-                                        ? 'text-emerald-700'
-                                        : 'text-teal-700'
+                                        ? 'text-emerald-300'
+                                        : 'text-teal-300'
                                   }`}
                                 >
                                   Client review
@@ -1067,10 +1067,10 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                 <span
                                   className={`rounded px-1.5 py-0.5 text-xs font-medium ${
                                     step5State.clientDeclined
-                                      ? 'bg-red-100 text-red-600'
+                                      ? 'bg-red-500/15 text-red-400'
                                       : step5State.clientApproved
-                                        ? 'bg-emerald-100 text-emerald-600'
-                                        : 'bg-teal-100 text-teal-600'
+                                        ? 'bg-emerald-500/15 text-emerald-400'
+                                        : 'bg-teal-500/15 text-teal-400'
                                   }`}
                                 >
                                   {step5State.clientDeclined
@@ -1088,7 +1088,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                       {strategyPdfUrl && (
                         <button
                           onClick={() => setIsStrategySheetOpen(true)}
-                          className="mt-2 w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-200"
+                          className="mt-2 w-fit rounded bg-white/8 px-2 py-1 text-xs font-semibold text-steel-gray hover:bg-white/12"
                         >
                           View strategy document
                         </button>
@@ -1102,33 +1102,33 @@ export default function ComplianceClientDetailPage({ params }: Props) {
             {/* Documents Section */}
             <div>
               <div className="flex w-full items-center justify-between">
-                <h2 className="mb-8 text-base font-medium text-zinc-900">Documents</h2>
+                <h2 className="mb-8 text-base font-medium text-soft-white">Documents</h2>
               </div>
 
               {nonStrategyDocs.length === 0 && !documentsError && (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <div className="relative mb-6 h-28 w-28">
-                    <div className="absolute top-2 left-2 h-20 w-16 -rotate-6 rounded-lg border border-zinc-200 bg-white shadow-sm">
+                    <div className="absolute top-2 left-2 h-20 w-16 -rotate-6 rounded-lg border border-white/10 bg-deep-navy shadow-sm">
                       <div className="mt-4 space-y-1.5 px-2.5">
-                        <div className="h-1.5 w-full rounded-full bg-zinc-200" />
-                        <div className="h-1.5 w-3/4 rounded-full bg-zinc-200" />
-                        <div className="h-1.5 w-full rounded-full bg-zinc-200" />
+                        <div className="h-1.5 w-full rounded-full bg-white/12" />
+                        <div className="h-1.5 w-3/4 rounded-full bg-white/12" />
+                        <div className="h-1.5 w-full rounded-full bg-white/12" />
                       </div>
                     </div>
-                    <div className="absolute top-0 right-2 h-20 w-16 rotate-6 rounded-lg border border-zinc-200 bg-white shadow-sm">
+                    <div className="absolute top-0 right-2 h-20 w-16 rotate-6 rounded-lg border border-white/10 bg-deep-navy shadow-sm">
                       <div className="mt-4 space-y-1.5 px-2.5">
-                        <div className="h-1.5 w-full rounded-full bg-zinc-200" />
-                        <div className="h-1.5 w-2/3 rounded-full bg-zinc-200" />
-                        <div className="h-1.5 w-full rounded-full bg-zinc-200" />
-                        <div className="h-1.5 w-1/2 rounded-full bg-zinc-200" />
+                        <div className="h-1.5 w-full rounded-full bg-white/12" />
+                        <div className="h-1.5 w-2/3 rounded-full bg-white/12" />
+                        <div className="h-1.5 w-full rounded-full bg-white/12" />
+                        <div className="h-1.5 w-1/2 rounded-full bg-white/12" />
                       </div>
-                      <div className="absolute right-2 bottom-1 text-xs font-medium text-zinc-300">
+                      <div className="absolute right-2 bottom-1 text-xs font-medium text-steel-gray/40">
                         ariex
                       </div>
                     </div>
                   </div>
-                  <p className="mb-1.5 text-lg font-semibold text-zinc-800">No documents yet</p>
-                  <p className="text-sm text-zinc-400">
+                  <p className="mb-1.5 text-lg font-semibold text-soft-white">No documents yet</p>
+                  <p className="text-sm text-steel-gray/60">
                     When this client uploads a document, it will show up here
                   </p>
                 </div>
@@ -1137,8 +1137,8 @@ export default function ComplianceClientDetailPage({ params }: Props) {
               {documentsError && (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <WarningCircle className="mb-4 h-10 w-10 text-red-400" weight="duotone" />
-                  <p className="mb-1.5 text-sm font-medium text-zinc-800">Failed to load documents</p>
-                  <p className="mb-4 text-xs text-zinc-400">{documentsError}</p>
+                  <p className="mb-1.5 text-sm font-medium text-soft-white">Failed to load documents</p>
+                  <p className="mb-4 text-xs text-steel-gray/60">{documentsError}</p>
                   <Button size="sm" variant="outline" onClick={refresh}>
                     Retry
                   </Button>
@@ -1154,7 +1154,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                   )
                     .map(group => (
                       <div key={group.label} className="mb-6">
-                        <p className="mb-3 text-sm font-medium text-zinc-400">{group.label}</p>
+                        <p className="mb-3 text-sm font-medium text-steel-gray/60">{group.label}</p>
                         <div className="flex flex-col">
                           {group.documents.map(doc => {
                             const isSelected = selectedDocs.has(doc.id);
@@ -1173,21 +1173,21 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                       <CheckIcon weight="bold" className="h-3 w-3 text-white" />
                                     </div>
                                   ) : (
-                                    <div className="h-4 w-4 rounded border-2 border-zinc-300 bg-white transition-colors group-hover:border-teal-400" />
+                                    <div className="h-4 w-4 rounded border-2 border-white/15 bg-deep-navy transition-colors group-hover:border-teal-400" />
                                   )}
                                 </div>
                                 <div
                                   onClick={() => toggleDocSelection(doc.id)}
-                                  className={`flex cursor-pointer items-center gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-zinc-50 ${
-                                    isSelected ? 'bg-zinc-50' : ''
+                                  className={`flex cursor-pointer items-center gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-white/3 ${
+                                    isSelected ? 'bg-white/3' : ''
                                   }`}
                                 >
-                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-                                    <FileIcon className="h-5 w-5 text-zinc-400" />
+                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/8">
+                                    <FileIcon className="h-5 w-5 text-steel-gray/60" />
                                   </div>
                                   <div className="flex flex-1 flex-col gap-0.5">
                                     <div className="flex items-center gap-2">
-                                      <span className="font-medium text-zinc-900">
+                                      <span className="font-medium text-soft-white">
                                         {(
                                           doc.name ||
                                           (doc.todoId && todoTitles.get(doc.todoId)) ||
@@ -1196,12 +1196,12 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                         ).replace(/\.[^/.]+$/, '')}
                                       </span>
                                       {isContractDoc && (
-                                        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-700">
+                                        <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-xs font-medium text-emerald-300">
                                           Signed
                                         </span>
                                       )}
                                     </div>
-                                    <span className="text-sm text-zinc-500">
+                                    <span className="text-sm text-steel-gray">
                                       {doc.uploadedByName || 'Client'}
                                     </span>
                                   </div>
@@ -1211,7 +1211,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={e => e.stopPropagation()}
-                                      className="flex h-8 shrink-0 items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
+                                      className="flex h-8 shrink-0 items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-2 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/15"
                                       title="Download signed copy"
                                     >
                                       <SealIcon weight="fill" className="h-3.5 w-3.5" />
@@ -1233,7 +1233,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                       }
                                     }}
                                     disabled={openingDocId === doc.id}
-                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 opacity-0 transition-all group-hover:opacity-100 hover:bg-zinc-50 hover:text-zinc-700 disabled:opacity-50"
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-deep-navy text-steel-gray opacity-0 transition-all group-hover:opacity-100 hover:bg-white/3 hover:text-soft-white disabled:opacity-50"
                                     title="Open document"
                                   >
                                     {openingDocId === doc.id ? (
@@ -1242,7 +1242,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                       <Eye weight="bold" className="h-4 w-4" />
                                     )}
                                   </button>
-                                  <span className="shrink-0 text-sm text-zinc-400">
+                                  <span className="shrink-0 text-sm text-steel-gray/60">
                                     {formatRelativeTime(doc.createdAt)}
                                   </span>
                                 </div>

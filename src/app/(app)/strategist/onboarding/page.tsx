@@ -71,36 +71,36 @@ export default function StrategistOnboardingPage() {
 
   if (isChecking) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <p className="text-sm text-zinc-400 uppercase font-semibold">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-deep-navy">
+        <p className="text-sm text-steel-gray/60 uppercase font-semibold">Loading...</p>
       </div>
     );
   }
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="flex min-h-screen items-center justify-center bg-deep-navy">
         <div className="text-center">
-          <h1 className="mb-2 text-xl font-semibold uppercase text-zinc-900">Setup Complete</h1>
-          <p className="text-sm text-zinc-500 uppercase font-medium">Redirecting to your dashboard...</p>
+          <h1 className="mb-2 text-xl font-semibold uppercase text-soft-white">Setup Complete</h1>
+          <p className="text-sm text-steel-gray uppercase font-medium">Redirecting to your dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen flex-col bg-white overflow-hidden md:overflow-hidden overflow-y-auto">
+    <div className="flex h-screen flex-col bg-deep-navy overflow-hidden md:overflow-hidden overflow-y-auto">
       {/* Header */}
       <header className="flex shrink-0 items-center justify-between px-6 py-4">
         <div className="flex w-full items-center gap-2">
           <div className="mb-8 flex items-center gap-2 pl-2">
-            <span className="font-mono text-sm font-medium text-zinc-500 uppercase">ARIEX AI</span>
+            <span className="font-mono text-sm font-medium text-steel-gray uppercase">ARIEX AI</span>
           </div>
         </div>
         <div className="flex w-full items-center justify-end gap-4">
-          <div className="flex items-center gap-2 text-sm text-zinc-500">
+          <div className="flex items-center gap-2 text-sm text-steel-gray">
             {user.user?.email}
-            <div onClick={user.logout} className="font-semibold text-zinc-600">
+            <div onClick={user.logout} className="font-semibold text-steel-gray">
               Logout
             </div>{' '}
           </div>
@@ -113,14 +113,14 @@ export default function StrategistOnboardingPage() {
           <div className="mb-8 flex flex-col justify-start items-start">
             <div className="relative h-6 w-6 mb-4">
               <Image
-                className="object-contain text-black"
+                className="object-contain text-soft-white"
                 src={'/Icon.jpeg'}
                 fill
                 alt="stripe logo"
               />
             </div>
-            <h1 className="mb-2 text-xl font-medium text-zinc-900">To receive payment clients, please connect your Stripe account</h1>
-            <p className="text-sm text-zinc-500">
+            <h1 className="mb-2 text-xl font-medium text-soft-white">To receive payment clients, please connect your Stripe account</h1>
+            <p className="text-sm text-steel-gray">
               Enter your Stripe secret key to enable payment processing for your clients.
             </p>
           </div>
@@ -135,28 +135,28 @@ export default function StrategistOnboardingPage() {
                   setError(null);
                 }}
                 placeholder="sk_live_..."
-                className="w-full border-b border-zinc-200 bg-transparent py-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none"
+                className="w-full border-b border-white/10 bg-transparent py-3 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
               />
             </div>
 
-            {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+            {error && <p className="mb-4 text-sm text-red-400">{error}</p>}
 
             <button
               type="submit"
               disabled={!isValidStripeKey || isSubmitting}
-              className="w-full rounded-md border border-zinc-200 bg-white py-3 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-full rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isSubmitting ? 'Connecting...' : 'Continue'}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-xs text-zinc-400">
+          <p className="mt-6 text-center text-xs text-steel-gray/60">
             Find your key at{' '}
             <a
               href="https://dashboard.stripe.com/apikeys"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-zinc-500 underline hover:text-zinc-700"
+              className="text-steel-gray underline hover:text-soft-white"
             >
               dashboard.stripe.com/apikeys
             </a>
@@ -165,7 +165,7 @@ export default function StrategistOnboardingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="flex shrink-0 items-center justify-between bg-zinc-900 px-6 py-4">
+      <footer className="flex shrink-0 items-center justify-between bg-electric-blue px-6 py-4">
         <div className="flex items-center gap-2">
           <div className="relative h-12 w-25">
             <Image
