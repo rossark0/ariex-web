@@ -1,10 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Plus, Sparkle, Trash } from '@phosphor-icons/react';
+import { useQuery } from '@tanstack/react-query';
+import { Plus, Sparkle, Trash, User } from '@phosphor-icons/react';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
 import { Reveal } from '@/components/ui/reveal';
 import { computeScenario, useScenarios } from '@/lib/tax/scenarios';
+import { listClients, type ApiClient } from '@/lib/api/strategist.api';
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -26,6 +28,13 @@ export default function ScenarioListPage() {
   useRoleRedirect('STRATEGIST');
   const router = useRouter();
   const { scenarios, hydrated, createScenario, deleteScenario } = useScenarios();
+  const { data: clients } = useQuery<ApiClient[]>({
+    queryKey: ['strategist-clients'],
+    queryFn: listClients,
+  });
+  const clientById = new Map(
+    (clients || []).map(c => [c.id, c.name || c.email] as const)
+  );
 
   const handleCreate = () => {
     const scenario = createScenario('New scenario');
@@ -86,6 +95,9 @@ export default function ScenarioListPage() {
               {scenarios.map(scenario => {
                 const computation = computeScenario(scenario);
                 const enabledCount = scenario.enabledStrategies.length;
+                const linkedClientName = scenario.clientId
+                  ? clientById.get(scenario.clientId)
+                  : undefined;
                 return (
                   <li
                     key={scenario.id}
@@ -94,9 +106,17 @@ export default function ScenarioListPage() {
                     className="group flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-white/8 bg-white/3 px-4 py-3 transition-colors duration-150 ease-linear hover:border-white/15 hover:bg-white/5"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-soft-white">
-                        {scenario.name}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-medium text-soft-white">
+                          {scenario.name}
+                        </p>
+                        {linkedClientName && (
+                          <span className="flex shrink-0 items-center gap-1 rounded-full border border-electric-blue/30 bg-electric-blue/10 px-2 py-0.5 text-[10px] font-medium text-electric-blue">
+                            <User weight="fill" className="h-2.5 w-2.5" />
+                            {linkedClientName}
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-0.5 text-[11px] text-steel-gray">
                         {enabledCount} {enabledCount === 1 ? 'strategy' : 'strategies'} enabled
                         {' · '}
