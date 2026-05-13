@@ -1,7 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
 import { Plus, Sparkle, Trash, User } from '@phosphor-icons/react';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
 import { Reveal } from '@/components/ui/reveal';
@@ -28,12 +28,24 @@ export default function ScenarioListPage() {
   useRoleRedirect('STRATEGIST');
   const router = useRouter();
   const { scenarios, hydrated, createScenario, deleteScenario } = useScenarios();
-  const { data: clients } = useQuery<ApiClient[]>({
-    queryKey: ['strategist-clients'],
-    queryFn: listClients,
-  });
+  const [clients, setClients] = useState<ApiClient[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listClients()
+      .then(list => {
+        if (!cancelled) setClients(list);
+      })
+      .catch(err => {
+        console.error('[ScenarioList] Failed to load clients:', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const clientById = new Map(
-    (clients || []).map(c => [c.id, c.name || c.email] as const)
+    clients.map(c => [c.id, c.name || c.email] as const)
   );
 
   const handleCreate = () => {

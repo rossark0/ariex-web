@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { CaretDown, MagnifyingGlass, User, X } from '@phosphor-icons/react';
+import { CaretDown, MagnifyingGlass, SpinnerGap, User, X } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { listClients, type ApiClient } from '@/lib/api/strategist.api';
 
@@ -11,23 +10,66 @@ interface ScenarioClientPickerProps {
   onSelect: (clientId: string | undefined, clientName: string | undefined) => void;
 }
 
+// Module-level cache so multiple picker instances share one fetch within the
+// same page lifecycle. Refreshes when the page reloads.
+let cachedClients: ApiClient[] | null = null;
+let inflight: Promise<ApiClient[]> | null = null;
+
+async function loadStrategistClients(force = false): Promise<ApiClient[]> {
+  if (!force && cachedClients) return cachedClients;
+  if (!force && inflight) return inflight;
+  inflight = listClients()
+    .then(list => {
+      cachedClients = list;
+      return list;
+    })
+    .finally(() => {
+      inflight = null;
+    });
+  return inflight;
+}
+
 /**
  * Compact strategist↔client picker shown in the scenario workspace header.
- * Lets the strategist tag a scenario with the client it's being built for,
- * so the scenarios list page can group / filter by client.
+ * Lets the strategist tag a scenario with the client it's being built for.
  *
- * Uses react-query (1-min stale, shared with other pages) so the client
- * list loads instantly once cached.
+ * Uses a plain async fetch (the existing listClients server action). The
+ * earlier react-query implementation failed silently on some setups; a
+ * direct call mirrors the pattern already proven in /strategist/clients.
  */
 export function ScenarioClientPicker({ selectedClientId, onSelect }: ScenarioClientPickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [clients, setClients] = useState<ApiClient[] | null>(cachedClients);
+  const [isLoading, setIsLoading] = useState(cachedClients === null);
+  const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
-  const { data: clients } = useQuery<ApiClient[]>({
-    queryKey: ['strategist-clients'],
-    queryFn: listClients,
-  });
+  useEffect(() => {
+    let cancelled = false;
+    setError(null);
+    if (cachedClients) {
+      setClients(cachedClients);
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    loadStrategistClients()
+      .then(list => {
+        if (cancelled) return;
+        setClients(list);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        if (cancelled) return;
+        console.error('[ClientPicker] Failed to load clients:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load clients');
+        setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -108,8 +150,19 @@ export function ScenarioClientPicker({ selectedClientId, onSelect }: ScenarioCli
               </button>
             )}
 
-            {!clients ? (
-              <div className="px-3 py-3 text-center text-xs text-steel-gray">Loading…</div>
+            {isLoading ? (
+              <div className="flex items-center justify-center gap-1.5 px-3 py-4 text-xs text-steel-gray">
+                <SpinnerGap weight="bold" className="h-3 w-3 animate-spin" />
+                Loading clients…
+              </div>
+            ) : error ? (
+              <div className="px-3 py-3 text-center text-xs text-red-300">
+                {error}
+              </div>
+            ) : (clients?.length ?? 0) === 0 ? (
+              <div className="px-3 py-3 text-center text-xs text-steel-gray">
+                No clients yet. Invite one from /strategist/clients.
+              </div>
             ) : filtered?.length === 0 ? (
               <div className="px-3 py-3 text-center text-xs text-steel-gray">No matches</div>
             ) : (
