@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Check, Copy, Sparkle, Trash } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowsClockwise, Check, Copy, Info, Sparkle, Trash } from '@phosphor-icons/react';
 import { Reveal } from '@/components/ui/reveal';
 import {
   computeScenario,
@@ -11,6 +11,8 @@ import {
   type StrategyId,
 } from '@/lib/tax/scenarios';
 import type { ScenarioInputs } from '@/lib/tax/calculator';
+import { getClientById } from '@/lib/api/strategist.api';
+import { clientProfileToScenarioInputs } from '@/lib/tax/from-client-profile';
 import { ScenarioTree } from '../components/scenario-tree';
 import { ScenarioImpactPanel } from '../components/scenario-impact-panel';
 import { ScenarioInputsEditor } from '../components/scenario-inputs-editor';
@@ -28,6 +30,16 @@ export default function ScenarioWorkspacePage() {
   const [animateTree, setAnimateTree] = useState(true);
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Client-profile sync state: when the strategist links a scenario to a
+  // client, we pull that client's stored profile and merge baseline values
+  // (filing status, state, income split) into the scenario inputs.
+  const [profileSync, setProfileSync] = useState<{
+    clientId: string;
+    clientName: string;
+    filledFields: string[];
+  } | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => () => {
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
@@ -116,8 +128,48 @@ export default function ScenarioWorkspacePage() {
     });
   };
 
-  const handleClientChange = (clientId: string | undefined) => {
+  const handleClientChange = async (clientId: string | undefined) => {
     setDraft(prev => (prev ? { ...prev, clientId } : prev));
+
+    if (!clientId) {
+      setProfileSync(null);
+      return;
+    }
+
+    // Fetch the client's profile + merge the derivable baseline values into
+    // the scenario inputs. Fields the profile doesn't supply are left alone
+    // so any manual edits the strategist already made are preserved.
+    setIsSyncing(true);
+    try {
+      const client = await getClientById(clientId);
+      if (!client) return;
+      const { patch, filledFields } = clientProfileToScenarioInputs(client);
+      if (filledFields.length > 0) {
+        setDraft(prev =>
+          prev ? { ...prev, inputs: { ...prev.inputs, ...patch } } : prev
+        );
+        setProfileSync({
+          clientId,
+          clientName: client.name || client.email,
+          filledFields,
+        });
+      } else {
+        setProfileSync({
+          clientId,
+          clientName: client.name || client.email,
+          filledFields: [],
+        });
+      }
+    } catch (err) {
+      console.error('[Scenario] Failed to load client profile:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleResyncFromClient = async () => {
+    if (!draft?.clientId) return;
+    await handleClientChange(draft.clientId);
   };
 
   const handleDelete = () => {
@@ -220,6 +272,50 @@ export default function ScenarioWorkspacePage() {
       {/* Body: tree on left, impact panel on right */}
       <div className="flex flex-1 min-h-0 gap-4 overflow-hidden p-6">
         <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-y-auto">
+          {draft.clientId && (
+            <Reveal>
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-electric-blue/25 bg-electric-blue/8 px-3 py-2">
+                <div className="flex items-start gap-2">
+                  <Info weight="fill" className="mt-0.5 h-4 w-4 shrink-0 text-electric-blue" />
+                  <div>
+                    <p className="text-xs font-medium text-soft-white">
+                      {profileSync
+                        ? `Synced from ${profileSync.clientName}'s profile`
+                        : 'Linked to a client'}
+                    </p>
+                    {profileSync && profileSync.filledFields.length > 0 ? (
+                      <p className="mt-0.5 text-[11px] text-steel-gray">
+                        Pre-filled: {profileSync.filledFields.join(' · ')}. Edit any field to
+                        override.
+                      </p>
+                    ) : profileSync ? (
+                      <p className="mt-0.5 text-[11px] text-steel-gray">
+                        Client&apos;s profile has no tax-planning fields filled yet. Edit inputs
+                        manually below.
+                      </p>
+                    ) : (
+                      <p className="mt-0.5 text-[11px] text-steel-gray">
+                        Hit Re-sync to pull the latest profile values from this client.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleResyncFromClient}
+                  disabled={isSyncing}
+                  title="Re-pull the latest profile values from this client"
+                  className="flex shrink-0 items-center gap-1 rounded-md border border-white/10 bg-deep-navy/40 px-2 py-1 text-[11px] font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white disabled:opacity-40"
+                >
+                  <ArrowsClockwise
+                    weight="bold"
+                    className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`}
+                  />
+                  Re-sync
+                </button>
+              </div>
+            </Reveal>
+          )}
           <Reveal>
             <ScenarioInputsEditor inputs={draft.inputs} onChange={handleInputsChange} />
           </Reveal>
