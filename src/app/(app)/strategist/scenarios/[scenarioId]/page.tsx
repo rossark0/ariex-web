@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowsClockwise, Check, Copy, Info, MagicWand, Sparkle, Trash } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowsClockwise, Check, Copy, Info, MagicWand, Trash } from '@phosphor-icons/react';
 import { Reveal } from '@/components/ui/reveal';
 import {
   computeScenario,
@@ -325,64 +325,85 @@ export default function ScenarioWorkspacePage() {
   // ─── Render ──────────────────────────────────────────────────────────
   return (
     <div className="flex h-full flex-col">
-      {/* Top toolbar */}
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-white/8 px-6 py-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <button
-            onClick={() => router.push('/strategist/scenarios')}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white"
-            title="Back to scenarios"
-          >
-            <ArrowLeft weight="bold" className="h-4 w-4" />
-          </button>
-          <Sparkle weight="fill" className="h-4 w-4 shrink-0 text-electric-blue" />
+      {/* Top toolbar — three regions: nav · identity · actions */}
+      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/8 px-4">
+        {/* ── Region 1: Nav ─────────────────────────────────────────── */}
+        <button
+          type="button"
+          onClick={() => router.push('/strategist/scenarios')}
+          className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white"
+        >
+          <ArrowLeft weight="bold" className="h-3.5 w-3.5" />
+          Scenarios
+        </button>
+
+        <span aria-hidden="true" className="h-5 w-px shrink-0 bg-white/10" />
+
+        {/* ── Region 2: Identity (editable title) ───────────────────── */}
+        <div className="flex min-w-0 flex-1 items-center">
           <input
             value={draft.name}
             onChange={e => setDraft({ ...draft, name: e.target.value })}
-            className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-base font-medium text-soft-white focus:border-white/15 focus:bg-white/3 focus:outline-none"
+            placeholder="Untitled scenario"
+            aria-label="Scenario name"
+            className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-soft-white placeholder:text-steel-gray/50 transition-colors duration-150 ease-linear hover:border-white/10 hover:bg-white/3 focus:border-electric-blue/40 focus:bg-white/3 focus:outline-none"
           />
         </div>
+
+        {/* ── Region 3: Actions (client · primary · secondary · destr.) */}
         <div className="flex shrink-0 items-center gap-2">
           <ScenarioClientPicker
             selectedClientId={draft.clientId}
             onSelect={clientId => handleClientChange(clientId)}
           />
+
+          <span aria-hidden="true" className="h-5 w-px shrink-0 bg-white/10" />
+
+          {/* Primary action — filled, prominent */}
           <button
+            type="button"
             onClick={handleGenerateFromClient}
             disabled={!draft.clientId || isGenerating}
             title={
               draft.clientId
-                ? 'Pull this client\'s profile, documents, and agreements, then ask ARIEX to propose a tailored scenario.'
+                ? "Pull this client's profile, documents, and agreements, then ask ARIEX to propose a tailored scenario."
                 : 'Link a client first to generate a scenario from their data.'
             }
-            className="flex items-center gap-1.5 rounded-md border border-electric-blue/40 bg-electric-blue/10 px-2.5 py-1 text-xs font-medium text-electric-blue transition-colors duration-150 ease-linear hover:bg-electric-blue/20 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-7 items-center gap-1.5 rounded-md bg-electric-blue px-3 text-xs font-medium text-soft-white shadow-sm transition-colors duration-150 ease-linear hover:bg-electric-blue/85 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isGenerating ? (
               <ArrowsClockwise weight="bold" className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <MagicWand weight="fill" className="h-3.5 w-3.5" />
             )}
-            {isGenerating ? 'Generating…' : 'Generate from client'}
+            <span>{isGenerating ? 'Generating' : 'Generate'}</span>
           </button>
+
+          {/* Secondary action — ghost */}
           <button
+            type="button"
             onClick={handleCopySummary}
             disabled={!computation}
-            className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/3 px-2.5 py-1 text-xs font-medium text-soft-white transition-colors duration-150 ease-linear hover:bg-white/8 disabled:opacity-40"
             title="Copy a paste-ready summary to your clipboard — useful when drafting the strategy document for this client."
+            className="flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white disabled:opacity-40"
           >
             {copied ? (
               <Check weight="bold" className="h-3.5 w-3.5 text-emerald-300" />
             ) : (
               <Copy weight="bold" className="h-3.5 w-3.5" />
             )}
-            {copied ? 'Copied' : 'Copy summary'}
+            <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
+
+          {/* Destructive action — icon-only, isolated by border */}
           <button
+            type="button"
             onClick={handleDelete}
-            className="flex items-center gap-1.5 rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-300 transition-colors duration-150 ease-linear hover:bg-red-500/15"
+            title="Delete this scenario"
+            aria-label="Delete scenario"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-steel-gray transition-colors duration-150 ease-linear hover:bg-red-500/15 hover:text-red-300"
           >
             <Trash weight="bold" className="h-3.5 w-3.5" />
-            Delete
           </button>
         </div>
       </header>
