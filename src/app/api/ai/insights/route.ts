@@ -197,10 +197,56 @@ function sanitizeResponse(raw: unknown): AiInsightsResponse {
   };
 }
 
+// ─── Per-IP rate limit (token bucket) ─────────────────────────────────────
+// In-memory bucket — sufficient at SLC scale (single Next process / low QPS).
+// For multi-region / horizontally-scaled deployments swap to Redis.
+
+const RATE_LIMIT_PER_MINUTE = 20;
+const rateLimitBuckets = new Map<string, { tokens: number; lastRefill: number }>();
+const RATE_BUCKET_MAX_SIZE = 1024;
+
+function getClientKey(request: NextRequest): string {
+  // Prefer x-forwarded-for, then x-real-ip, then a sentinel.
+  const fwd = request.headers.get('x-forwarded-for');
+  if (fwd) return fwd.split(',')[0].trim();
+  const real = request.headers.get('x-real-ip');
+  if (real) return real.trim();
+  return 'unknown';
+}
+
+function takeToken(key: string): boolean {
+  const now = Date.now();
+  let bucket = rateLimitBuckets.get(key);
+  if (!bucket) {
+    if (rateLimitBuckets.size >= RATE_BUCKET_MAX_SIZE) {
+      const oldest = rateLimitBuckets.keys().next().value;
+      if (oldest) rateLimitBuckets.delete(oldest);
+    }
+    bucket = { tokens: RATE_LIMIT_PER_MINUTE, lastRefill: now };
+    rateLimitBuckets.set(key, bucket);
+  }
+  // Refill: replenish tokens proportionally to elapsed time.
+  const elapsedMs = now - bucket.lastRefill;
+  const refill = (elapsedMs / 60000) * RATE_LIMIT_PER_MINUTE;
+  bucket.tokens = Math.min(RATE_LIMIT_PER_MINUTE, bucket.tokens + refill);
+  bucket.lastRefill = now;
+  if (bucket.tokens < 1) return false;
+  bucket.tokens -= 1;
+  return true;
+}
+
 // ─── Route handler ────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   try {
+    const ipKey = getClientKey(request);
+    if (!takeToken(ipKey)) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please slow down.' },
+        { status: 429, headers: { 'Retry-After': '5' } }
+      );
+    }
+
     const body = (await request.json()) as InsightsRequestBody;
 
     if (!body.pageContext) {
@@ -217,7 +263,10 @@ export async function POST(request: NextRequest) {
 
     const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      // gpt-4o-mini is ~6× cheaper than gpt-4o and equally strong at
+      // producing structured JSON in this schema. Swap back to gpt-4o
+      // (or override via env var) if richer reasoning becomes worth the cost.
+      model: process.env.OPENAI_INSIGHTS_MODEL || 'gpt-4o-mini',
       max_tokens: 900,
       temperature: 0.3,
       response_format: { type: 'json_object' },

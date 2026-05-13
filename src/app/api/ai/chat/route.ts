@@ -185,10 +185,54 @@ The user has selected ${selectedItems.count} ${selectedItems.type}(s) on the pag
   return sections.join('\n');
 }
 
+// ─── Per-IP rate limit (token bucket) ─────────────────────────────────────
+// Chat requests get a slightly more generous bucket than insights since each
+// user action is a deliberate send.
+
+const RATE_LIMIT_PER_MINUTE = 30;
+const rateLimitBuckets = new Map<string, { tokens: number; lastRefill: number }>();
+const RATE_BUCKET_MAX_SIZE = 1024;
+
+function getClientKey(request: NextRequest): string {
+  const fwd = request.headers.get('x-forwarded-for');
+  if (fwd) return fwd.split(',')[0].trim();
+  const real = request.headers.get('x-real-ip');
+  if (real) return real.trim();
+  return 'unknown';
+}
+
+function takeToken(key: string): boolean {
+  const now = Date.now();
+  let bucket = rateLimitBuckets.get(key);
+  if (!bucket) {
+    if (rateLimitBuckets.size >= RATE_BUCKET_MAX_SIZE) {
+      const oldest = rateLimitBuckets.keys().next().value;
+      if (oldest) rateLimitBuckets.delete(oldest);
+    }
+    bucket = { tokens: RATE_LIMIT_PER_MINUTE, lastRefill: now };
+    rateLimitBuckets.set(key, bucket);
+  }
+  const elapsedMs = now - bucket.lastRefill;
+  const refill = (elapsedMs / 60000) * RATE_LIMIT_PER_MINUTE;
+  bucket.tokens = Math.min(RATE_LIMIT_PER_MINUTE, bucket.tokens + refill);
+  bucket.lastRefill = now;
+  if (bucket.tokens < 1) return false;
+  bucket.tokens -= 1;
+  return true;
+}
+
 // ─── Route handler ────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   try {
+    const ipKey = getClientKey(request);
+    if (!takeToken(ipKey)) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please slow down.' },
+        { status: 429, headers: { 'Retry-After': '5' } }
+      );
+    }
+
     const body: ChatRequestBody = await request.json();
     const { messages, pageContext, selectedItems } = body;
 
@@ -210,9 +254,11 @@ export async function POST(request: NextRequest) {
       })),
     ];
 
-    // Stream the response
+    // Stream the response. gpt-4o-mini handles conversational tax-strategy
+    // exchange well at ~6× lower cost than gpt-4o. Override via env var if
+    // you want richer reasoning per call.
     const stream = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini',
       max_tokens: 2048,
       temperature: 0.7,
       messages: chatMessages,
