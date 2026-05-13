@@ -13,6 +13,7 @@
  * emails, taxIds) from the OpenAI request stream.
  */
 
+/** Keys whose values are dropped from the payload entirely. */
 const PII_KEY_BLOCKLIST = new Set([
   'email',
   'phone',
@@ -21,9 +22,18 @@ const PII_KEY_BLOCKLIST = new Set([
   'taxId',
   'ssn',
   'einMasked',
+]);
+
+/** Keys whose values are replaced with an anonymized handle. */
+const NAME_KEYS = new Set([
+  'name',
   'fullName',
   'firstName',
   'lastName',
+  'clientName',
+  'userName',
+  'strategistName',
+  'displayName',
 ]);
 
 /** Coarse income tiers used in place of exact dollar figures. */
@@ -66,7 +76,7 @@ function sanitizeValue(value: unknown, depth = 0): unknown {
     for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
       if (PII_KEY_BLOCKLIST.has(key)) continue; // drop entirely
 
-      if (key === 'name') {
+      if (NAME_KEYS.has(key)) {
         out[key] = anonymizeName(typeof val === 'string' ? val : null);
         continue;
       }

@@ -4,11 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
 import { useAuth } from '@/contexts/auth/AuthStore';
-import { listClients, type ApiClient } from '@/lib/api/strategist.api';
+import { listClients, listAgreements, type ApiAgreement, type ApiClient } from '@/lib/api/strategist.api';
 import { useCountUp } from '@/hooks/use-count-up';
 import { Reveal } from '@/components/ui/reveal';
 import { ArrowRight, Warning } from '@phosphor-icons/react';
 import { useAiPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
+import { computeClientPriority } from '@/lib/client-priority';
 
 // ============================================================================
 // TYPES
@@ -136,29 +137,11 @@ function EmptyState() {
 // ============================================================================
 // PRIORITY HEURISTICS
 // ============================================================================
-
-/**
- * Compute priority for an activity. Higher = more urgent. Currently a heuristic
- * based on account age — newer accounts and accounts that have been sitting for
- * 3–14 days without follow-up score higher. Replace with real signals (unsigned
- * agreements, overdue payments, missing documents) when available from the API.
- */
-function computePriority(client: ApiClient): { score: number; atRisk: boolean } {
-  const ageMs = Date.now() - new Date(client.createdAt).getTime();
-  const ageDays = ageMs / (1000 * 60 * 60 * 24);
-  const hasProfile = !!client.clientProfile?.onboardingComplete;
-
-  let score = 0;
-  // Brand-new clients get a small boost (welcome flow).
-  if (ageDays < 1) score += 50;
-  // 3–14 day window without onboarding complete is the risk band.
-  if (!hasProfile && ageDays >= 3 && ageDays <= 14) score += 100;
-  // Older accounts decay.
-  score -= Math.max(0, ageDays - 14) * 2;
-
-  const atRisk = !hasProfile && ageDays >= 3;
-  return { score, atRisk };
-}
+//
+// Priority + risk for strategist home reuses computeClientPriority from
+// lib/client-priority.ts — same engine that drives the matrix view and the
+// urgent-alerts badge. Single source of truth ensures the orderings are
+// consistent everywhere a strategist looks.
 
 // ============================================================================
 // MAIN COMPONENT
@@ -172,27 +155,35 @@ export default function StrategistDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activities, setActivities] = useState<ClientActivity[]>([]);
   const [clients, setClients] = useState<ApiClient[]>([]);
+  const [agreements, setAgreements] = useState<ApiAgreement[]>([]);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const clientsData = await listClients();
+        // Fetch clients + agreements in parallel so the shared priority engine
+        // has the agreement data it needs to compute accurate scores.
+        const [clientsData, agreementsData] = await Promise.all([
+          listClients(),
+          listAgreements(),
+        ]);
         setClients(clientsData);
+        setAgreements(agreementsData || []);
 
         const generatedActivities: ClientActivity[] = clientsData.map(client => {
-          const { score, atRisk } = computePriority(client);
+          const priority = computeClientPriority(client, agreementsData || []);
+          const clientName = client.name || client.email;
           return {
-            id: `${client.id}-created`,
+            id: `${client.id}-priority`,
             clientId: client.id,
-            clientName: client.name || client.email,
+            clientName,
             type: 'account_created',
-            description: atRisk
-              ? `${client.name || 'New client'} hasn't completed onboarding`
-              : `${client.name || 'New client'} account was created`,
-            actionLabel: atRisk ? 'See' : 'View',
+            description: priority.atRisk
+              ? `${clientName} — ${priority.signal}`
+              : `${clientName} · ${priority.signal}`,
+            actionLabel: priority.atRisk ? 'See' : 'View',
             date: new Date(client.createdAt),
-            priority: score,
-            atRisk,
+            priority: priority.score,
+            atRisk: priority.atRisk,
           };
         });
 
