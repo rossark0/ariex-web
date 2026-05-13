@@ -19,7 +19,35 @@ import {
   type FilingStatus,
   type ScenarioInputs,
   type TaxResult,
+  type TaxYear,
 } from './calculator';
+
+// ─── Per-year contribution limits (sourced from IRS Notices) ──────────────
+
+const SOLO_401K_DEFERRAL_LIMIT: Record<TaxYear, number> = {
+  2024: 23000,
+  2025: 23500,
+  2026: 24500,
+  2027: 25500, // projected
+};
+
+const HSA_LIMIT_SELF: Record<TaxYear, number> = {
+  2024: 4150,
+  2025: 4300,
+  2026: 4400,
+  2027: 4500, // projected
+};
+
+const HSA_LIMIT_FAMILY: Record<TaxYear, number> = {
+  2024: 8300,
+  2025: 8550,
+  2026: 8750,
+  2027: 9000, // projected
+};
+
+function resolveYear(year: TaxYear | undefined): TaxYear {
+  return year && SOLO_401K_DEFERRAL_LIMIT[year] ? year : DEFAULT_TAX_YEAR;
+}
 
 // ─── Strategy registry ─────────────────────────────────────────────────────
 
@@ -92,27 +120,27 @@ const sCorpElection: Strategy = {
 };
 
 /**
- * Solo 401(k) contribution — employee deferral up to $23,000 (2024).
+ * Solo 401(k) contribution — employee deferral up to the year's limit.
  * Reduces wages (W-2) or SE income (sole prop) on a pre-tax basis.
  */
-const SOLO_401K_LIMIT_2024 = 23000;
-
 const solo401k: Strategy = {
   id: 'solo_401k',
   title: 'Solo 401(k) deferral',
   category: 'Retirement',
   blurb:
-    'Defer up to $23,000 of earned income into a Solo 401(k). Reduces this year\'s taxable income at your marginal rate.',
+    "Defer the year's max employee contribution into a Solo 401(k). Reduces this year's taxable income at your marginal rate.",
   assumptions: [
     'Models employee deferral only (employer profit-sharing contribution excluded).',
-    '$23,000 limit applies for filers under age 50.',
+    'Year-specific limit applied (under age 50; catch-up not modeled).',
     'Contribution comes from SE income first, then W-2 wages if available.',
   ],
   confidence: 0.92,
   isApplicable: inputs => inputs.selfEmploymentIncome + inputs.wages >= 30000,
   apply: inputs => {
-    const fromSe = Math.min(inputs.selfEmploymentIncome, SOLO_401K_LIMIT_2024);
-    const remainder = SOLO_401K_LIMIT_2024 - fromSe;
+    const year = resolveYear(inputs.year);
+    const limit = SOLO_401K_DEFERRAL_LIMIT[year];
+    const fromSe = Math.min(inputs.selfEmploymentIncome, limit);
+    const remainder = limit - fromSe;
     const fromWages = Math.min(inputs.wages, remainder);
     return {
       inputs: {
@@ -121,9 +149,11 @@ const solo401k: Strategy = {
         selfEmploymentIncome: inputs.selfEmploymentIncome - fromSe,
       },
       dynamicAssumptions: [
-        `$${(fromSe + fromWages).toLocaleString()} total deferral (${fromSe ? `$${fromSe.toLocaleString()} from SE income` : ''}${
-          fromSe && fromWages ? ' + ' : ''
-        }${fromWages ? `$${fromWages.toLocaleString()} from W-2 wages` : ''}).`,
+        `$${(fromSe + fromWages).toLocaleString()} total deferral toward the ${year} limit of $${limit.toLocaleString()} (${
+          fromSe ? `$${fromSe.toLocaleString()} from SE income` : ''
+        }${fromSe && fromWages ? ' + ' : ''}${
+          fromWages ? `$${fromWages.toLocaleString()} from W-2 wages` : ''
+        }).`,
       ],
     };
   },
@@ -158,11 +188,6 @@ const section179Vehicle: Strategy = {
 /**
  * HSA contribution — pre-tax health-savings contribution.
  */
-const HSA_LIMITS_2024 = {
-  self: 4150,
-  family: 8300,
-};
-
 const hsaContribution: Strategy = {
   id: 'hsa_contribution',
   title: 'HSA contribution',
@@ -171,16 +196,17 @@ const hsaContribution: Strategy = {
     'Contribute pre-tax to an HSA. Triple-advantaged: deductible going in, grows tax-free, and tax-free for qualified medical expenses.',
   assumptions: [
     'Assumes you are enrolled in a qualifying high-deductible health plan (HDHP).',
-    'Family limit ($8,300) applied for MFJ; self-only ($4,150) for all other filing statuses.',
+    'Year-specific family limit applied for MFJ; self-only limit otherwise.',
     'Contribution reduces SE income first, then W-2 wages.',
   ],
   confidence: 0.95,
   isApplicable: () => true,
   apply: inputs => {
+    const year = resolveYear(inputs.year);
     const limit =
       inputs.filingStatus === 'married_filing_jointly'
-        ? HSA_LIMITS_2024.family
-        : HSA_LIMITS_2024.self;
+        ? HSA_LIMIT_FAMILY[year]
+        : HSA_LIMIT_SELF[year];
     const fromSe = Math.min(inputs.selfEmploymentIncome, limit);
     const remainder = limit - fromSe;
     const fromWages = Math.min(inputs.wages, remainder);
@@ -191,7 +217,7 @@ const hsaContribution: Strategy = {
         selfEmploymentIncome: inputs.selfEmploymentIncome - fromSe,
       },
       dynamicAssumptions: [
-        `$${(fromSe + fromWages).toLocaleString()} contributed pre-tax to HSA.`,
+        `$${(fromSe + fromWages).toLocaleString()} contributed pre-tax to HSA (${year} limit: $${limit.toLocaleString()}).`,
       ],
     };
   },
@@ -366,6 +392,7 @@ function defaultInputs(filingStatus: FilingStatus = 'single'): ScenarioInputs {
     selfEmploymentIncome: 120000,
     otherIncome: 0,
     year: DEFAULT_TAX_YEAR,
+    state: 'none',
   };
 }
 

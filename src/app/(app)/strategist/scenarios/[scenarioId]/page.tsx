@@ -131,8 +131,14 @@ export default function ScenarioWorkspacePage() {
     const lines: string[] = [];
     lines.push(`Tax Scenario: ${draft.name}`);
     lines.push(`Tax year: ${computation.baseline.year}`);
+    if (computation.baseline.state !== 'none') {
+      lines.push(`State: ${computation.baseline.state}`);
+    }
     lines.push('');
     lines.push(`Baseline tax: $${computation.baseline.totalTax.toLocaleString()}/yr (${(computation.baseline.effectiveRate * 100).toFixed(1)}% effective)`);
+    if (computation.baseline.stateTax > 0) {
+      lines.push(`  • Federal: $${computation.baseline.federalIncomeTax.toLocaleString()} · SE: $${computation.baseline.selfEmploymentTax.toLocaleString()} · State: $${computation.baseline.stateTax.toLocaleString()}`);
+    }
     lines.push(`Projected tax: $${computation.projected.totalTax.toLocaleString()}/yr (${(computation.projected.effectiveRate * 100).toFixed(1)}% effective)`);
     lines.push(`Estimated annual savings: $${Math.max(0, computation.totalAnnualSavings).toLocaleString()}`);
     lines.push(`Overall confidence: ${Math.round(computation.overallConfidence * 100)}%`);

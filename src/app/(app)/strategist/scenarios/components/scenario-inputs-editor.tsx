@@ -3,11 +3,14 @@
 import { useEffect, useState } from 'react';
 import {
   DEFAULT_TAX_YEAR,
+  STATE_TAX,
   SUPPORTED_TAX_YEARS,
   TAX_YEAR_IS_PROJECTED,
+  US_STATES,
   type FilingStatus,
   type ScenarioInputs,
   type TaxYear,
+  type UsState,
 } from '@/lib/tax/calculator';
 
 interface ScenarioInputsEditorProps {
@@ -33,6 +36,7 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
   const [draft, setDraft] = useState({
     filingStatus: inputs.filingStatus,
     year: resolvedYear,
+    state: (inputs.state ?? 'none') as UsState,
     wages: String(inputs.wages || ''),
     selfEmploymentIncome: String(inputs.selfEmploymentIncome || ''),
     otherIncome: String(inputs.otherIncome || ''),
@@ -43,6 +47,7 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
     setDraft({
       filingStatus: inputs.filingStatus,
       year: inputs.year ?? DEFAULT_TAX_YEAR,
+      state: (inputs.state ?? 'none') as UsState,
       wages: String(inputs.wages || ''),
       selfEmploymentIncome: String(inputs.selfEmploymentIncome || ''),
       otherIncome: String(inputs.otherIncome || ''),
@@ -55,6 +60,7 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
       const parsed: ScenarioInputs = {
         filingStatus: draft.filingStatus,
         year: draft.year,
+        state: draft.state,
         wages: parseFloat(draft.wages.replace(/[,$]/g, '')) || 0,
         selfEmploymentIncome:
           parseFloat(draft.selfEmploymentIncome.replace(/[,$]/g, '')) || 0,
@@ -63,6 +69,7 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
       if (
         parsed.filingStatus !== inputs.filingStatus ||
         parsed.year !== (inputs.year ?? DEFAULT_TAX_YEAR) ||
+        parsed.state !== (inputs.state ?? 'none') ||
         parsed.wages !== inputs.wages ||
         parsed.selfEmploymentIncome !== inputs.selfEmploymentIncome ||
         parsed.otherIncome !== inputs.otherIncome
@@ -79,10 +86,11 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
   };
 
   const projected = TAX_YEAR_IS_PROJECTED[draft.year];
+  const stateInfo = STATE_TAX[draft.state];
 
   return (
     <section className="rounded-lg border border-white/8 bg-deep-navy p-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <div>
           <label className="mb-1 block text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
             Tax year
@@ -118,6 +126,30 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
           </select>
         </div>
 
+        <div>
+          <label className="mb-1 block text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
+            State
+          </label>
+          <select
+            value={draft.state}
+            onChange={e => setField('state', e.target.value as UsState)}
+            className="w-full rounded-md border border-white/10 bg-deep-navy px-2.5 py-1.5 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
+          >
+            {US_STATES.map(s => {
+              const info = STATE_TAX[s];
+              const label =
+                s === 'none'
+                  ? '— None —'
+                  : `${s} · ${info.noTax ? 'no tax' : `${(info.topMarginalRate * 100).toFixed(2)}%`}`;
+              return (
+                <option key={s} value={s}>
+                  {label}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
         <Field
           label="W-2 wages"
           value={draft.wages}
@@ -138,13 +170,26 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
         />
       </div>
 
-      {projected && (
-        <p className="mt-3 text-[10px] leading-relaxed text-amber-300/85">
-          Using projected {draft.year} brackets (inflation-extrapolated from
-          {' '}{draft.year - 1}). Replace with final IRS values when Rev. Proc.
-          {' '}{draft.year - 1}-XX is loaded.
-        </p>
-      )}
+      <div className="mt-3 flex flex-col gap-1">
+        {projected && (
+          <p className="text-[10px] leading-relaxed text-amber-300/85">
+            Using projected {draft.year} brackets (inflation-extrapolated from
+            {' '}{draft.year - 1}). Replace with final IRS values when Rev. Proc.
+            {' '}{draft.year - 1}-XX is loaded.
+          </p>
+        )}
+        {draft.state !== 'none' && stateInfo.note && (
+          <p className="text-[10px] leading-relaxed text-steel-gray/80">
+            {stateInfo.name}: {stateInfo.note}
+          </p>
+        )}
+        {draft.state !== 'none' && (
+          <p className="text-[10px] leading-relaxed text-steel-gray/60">
+            State tax estimated at top marginal rate × AGI. Doesn&apos;t model
+            per-state deductions, credits, or city add-ons.
+          </p>
+        )}
+      </div>
     </section>
   );
 }

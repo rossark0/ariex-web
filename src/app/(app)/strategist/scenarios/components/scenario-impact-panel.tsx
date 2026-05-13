@@ -71,6 +71,24 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
         <MetricCountUp label="Projected tax" value={projected.totalTax} tone="projected" />
       </div>
 
+      {/* Tax composition breakdown (baseline → projected) */}
+      <div className="rounded-lg border border-white/8 bg-white/3 p-3">
+        <p className="mb-2 text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
+          Tax composition
+        </p>
+        <CompositionRow label="Federal income" before={baseline.federalIncomeTax} after={projected.federalIncomeTax} />
+        <CompositionRow label="Self-employment" before={baseline.selfEmploymentTax} after={projected.selfEmploymentTax} />
+        {(baseline.stateTax > 0 || projected.stateTax > 0) && (
+          <CompositionRow label="State income" before={baseline.stateTax} after={projected.stateTax} />
+        )}
+        {(baseline.niit > 0 || projected.niit > 0) && (
+          <CompositionRow label="NIIT (3.8%)" before={baseline.niit} after={projected.niit} />
+        )}
+        {(baseline.additionalMedicare > 0 || projected.additionalMedicare > 0) && (
+          <CompositionRow label="Addl. Medicare (0.9%)" before={baseline.additionalMedicare} after={projected.additionalMedicare} />
+        )}
+      </div>
+
       {/* Confidence */}
       <div className="rounded-lg border border-white/8 bg-white/3 p-3">
         <div className="mb-1.5 flex items-center justify-between">
@@ -143,8 +161,14 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
       <p className="mt-auto text-[10px] leading-relaxed text-steel-gray/60">
         Estimates use{' '}
         {TAX_YEAR_IS_PROJECTED[baseline.year] ? `projected ${baseline.year}` : `${baseline.year}`}
-        {' '}federal brackets, the standard deduction, and a flat 20% Section 199A QBI deduction.
-        State tax and credits are not modeled. Final advice should come from a CPA or EA.
+        {' '}federal brackets, standard deduction, flat 20% §199A QBI, SE tax, NIIT (3.8%), and
+        Additional Medicare (0.9%).
+        {baseline.state !== 'none' && (
+          <> State tax for {baseline.state} approximated at top marginal rate × AGI; per-state
+          deductions, credits, and city add-ons are not modeled.</>
+        )}
+        {baseline.state === 'none' && <> State tax is not modeled (state set to none).</>}
+        {' '}Final advice should come from a CPA or EA.
       </p>
     </div>
   );
@@ -157,5 +181,34 @@ function MetricCountUpInline({ value }: { value: number }) {
     <p className="mt-1 text-3xl font-medium tabular-nums text-soft-white">
       {formatCurrency(Math.max(0, Math.round(animated)))}
     </p>
+  );
+}
+
+// Row in the composition breakdown — shows baseline → projected with delta.
+function CompositionRow({
+  label,
+  before,
+  after,
+}: {
+  label: string;
+  before: number;
+  after: number;
+}) {
+  const delta = before - after;
+  const animatedAfter = useCountUp(after, 300);
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-0.5 text-xs">
+      <span className="text-steel-gray">{label}</span>
+      <span className="flex items-baseline gap-2 tabular-nums">
+        <span className="text-steel-gray/60 line-through">{formatCurrency(before)}</span>
+        <span className="text-soft-white">{formatCurrency(Math.round(animatedAfter))}</span>
+        {delta !== 0 && (
+          <span className={cn('text-[10px]', delta > 0 ? 'text-emerald-300' : 'text-amber-300')}>
+            {delta > 0 ? '−' : '+'}
+            {formatCurrency(Math.abs(delta))}
+          </span>
+        )}
+      </span>
+    </div>
   );
 }
