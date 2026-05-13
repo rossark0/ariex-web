@@ -24,12 +24,12 @@ export default function ForgotPasswordPage() {
   }, [isHydrated, isAuthenticated, user, router]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="flex min-h-screen flex-col bg-graphite">
       {/* Header */}
       <div className="flex items-center gap-2 p-6">
         <Link
           href="/"
-          className="font-mono text-sm font-medium text-zinc-500 uppercase hover:text-zinc-700"
+          className="font-mono text-sm font-medium text-steel-gray uppercase hover:text-soft-white"
         >
           ARIEX AI
         </Link>
@@ -40,10 +40,10 @@ export default function ForgotPasswordPage() {
         <div className="w-full max-w-md">
           {/* Title */}
           <div className="mb-8">
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+            <h1 className="text-2xl font-semibold tracking-tight text-soft-white">
               Reset your password
             </h1>
-            <p className="text-zinc-400">We&apos;ll help you get back in</p>
+            <p className="text-steel-gray">We&apos;ll help you get back in</p>
           </div>
 
           {/* Forgot Password Form */}

@@ -26,21 +26,21 @@ export default function RegisterPage() {
   // Don't render form if already authenticated
   if (isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="flex min-h-screen items-center justify-center bg-graphite">
         <div className="text-center">
-          <div className="mb-4 text-lg text-zinc-600">Redirecting to your dashboard...</div>
+          <div className="mb-4 text-lg text-steel-gray">Redirecting to your dashboard...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="flex min-h-screen flex-col bg-graphite">
       {/* Header */}
       <div className="flex items-center gap-2 p-6">
         <Link
           href="/"
-          className="font-mono text-sm font-medium text-zinc-500 uppercase hover:text-zinc-700"
+          className="font-mono text-sm font-medium text-steel-gray uppercase hover:text-soft-white"
         >
           ARIEX AI
         </Link>
@@ -51,23 +51,23 @@ export default function RegisterPage() {
         <div className="w-full max-w-md">
           {/* Title */}
           <div className="mb-8">
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+            <h1 className="text-2xl font-semibold tracking-tight text-soft-white">
               Create your account
             </h1>
-            <p className="text-2xl tracking-tight text-zinc-400">Get started with Ariex</p>
+            <p className="text-2xl tracking-tight text-steel-gray">Get started with Ariex</p>
           </div>
 
           {/* Register Form */}
           <RegisterForm />
 
           {/* Terms */}
-          <p className="mt-6 text-center text-xs text-zinc-500">
+          <p className="mt-6 text-center text-xs text-steel-gray">
             By creating an account, you agree to the{' '}
-            <Link href="/terms" className="text-zinc-600 underline">
+            <Link href="/terms" className="text-steel-gray underline hover:text-soft-white">
               Terms & Conditions
             </Link>{' '}
             and{' '}
-            <Link href="/privacy" className="text-zinc-600 underline">
+            <Link href="/privacy" className="text-steel-gray underline hover:text-soft-white">
               Privacy Policy
             </Link>
           </p>

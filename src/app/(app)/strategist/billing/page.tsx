@@ -91,7 +91,7 @@ export default function StrategistBillingPage() {
   return (
     <div className="flex min-h-full flex-col">
       <div className="flex-1">
-        <div className="shrink-0 bg-white pt-6 pb-6">
+        <div className="shrink-0 pt-6 pb-6">
           <div className="mx-auto w-full max-w-[1200px] px-6">
             <BillingHeader onCreatePaymentLink={() => setIsModalOpen(true)} />
 
@@ -104,7 +104,7 @@ export default function StrategistBillingPage() {
           </div>
         </div>
 
-        <div className="bg-zinc-50 py-8">
+        <div className="py-8">
           <div className="mx-auto w-full max-w-[1200px] px-6">
             {chargesError && <ErrorMessage message={chargesError} />}
 

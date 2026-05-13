@@ -64,19 +64,19 @@ export default function LoginPage() {
   // Don't render login form if already authenticated
   if (isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="flex min-h-screen items-center justify-center bg-graphite">
         <div className="text-center">
-          <div className="mb-4 text-lg text-zinc-600">Redirecting to your dashboard...</div>
+          <div className="mb-4 text-lg text-steel-gray">Redirecting to your dashboard...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="flex min-h-screen flex-col bg-graphite">
       {/* Header */}
       <div className="flex items-center gap-2 p-6">
-        <span className="font-mono text-sm font-medium text-zinc-500 uppercase">ARIEX AI</span>
+        <span className="font-mono text-sm font-medium text-steel-gray uppercase">ARIEX AI</span>
       </div>
 
       {/* Main Content */}
@@ -84,10 +84,10 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Title */}
           <div className="mb-8">
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+            <h1 className="text-2xl font-semibold tracking-tight text-soft-white">
               Your tax workspace.
             </h1>
-            <p className="text-2xl tracking-tight text-zinc-400">Sign in to your account</p>
+            <p className="text-2xl tracking-tight text-steel-gray">Sign in to your account</p>
           </div>
 
           {/* Quick Login Options (only in mock auth mode) */}
@@ -99,7 +99,7 @@ export default function LoginPage() {
                     key={mockUser.user.id}
                     onClick={() => handleQuickLogin(mockUser.user.email, mockUser.password)}
                     disabled={isLoading}
-                    className="flex w-full cursor-pointer items-center gap-3 rounded-md border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+                    className="flex w-full cursor-pointer items-center gap-3 rounded-md border border-white/10 px-4 py-2.5 text-sm font-medium text-soft-white transition-colors hover:bg-white/4 disabled:opacity-50"
                   >
                     <span
                       className={`flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold ${getRoleBadgeColor(mockUser.user.role)}`}
@@ -113,9 +113,9 @@ export default function LoginPage() {
 
               {/* Divider */}
               <div className="my-6 flex items-center gap-4">
-                <div className="h-px flex-1 bg-zinc-200" />
-                <span className="text-xs text-zinc-400">or sign in manually</span>
-                <div className="h-px flex-1 bg-zinc-200" />
+                <div className="h-px flex-1 bg-white/10" />
+                <span className="text-xs text-steel-gray">or sign in manually</span>
+                <div className="h-px flex-1 bg-white/10" />
               </div>
             </>
           )}
@@ -123,7 +123,7 @@ export default function LoginPage() {
           {/* Email Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-zinc-700">
+              <label htmlFor="email" className="block text-sm font-medium text-soft-white">
                 Email
               </label>
               <input
@@ -131,7 +131,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-zinc-300 px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                className="mt-1 block w-full rounded-lg border border-white/10 bg-deep-navy px-4 py-2.5 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue focus:ring-2 focus:ring-electric-blue/20 focus:outline-none"
                 placeholder="you@example.com"
                 required
                 autoComplete="email"
@@ -140,12 +140,12 @@ export default function LoginPage() {
 
             <div>
               <div className="flex items-center justify-between">
-                <label htmlFor="password" className="block text-sm font-medium text-zinc-700">
+                <label htmlFor="password" className="block text-sm font-medium text-soft-white">
                   Password
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-emerald-600 hover:text-emerald-700"
+                  className="text-sm text-electric-blue hover:text-electric-blue/80"
                 >
                   Forgot password?
                 </Link>
@@ -156,7 +156,7 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="block w-full rounded-lg border border-zinc-300 px-4 py-2.5 pr-10 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                  className="block w-full rounded-lg border border-white/10 bg-deep-navy px-4 py-2.5 pr-10 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue focus:ring-2 focus:ring-electric-blue/20 focus:outline-none"
                   placeholder="••••••••"
                   required
                   autoComplete="current-password"
@@ -164,40 +164,40 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute top-1/2 right-3 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                  className="absolute top-1/2 right-3 -translate-y-1/2 text-steel-gray hover:text-soft-white"
                 >
                   {showPassword ? <EyeSlash className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
 
-            {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+            {error && <div className="rounded-lg bg-red-500/15 p-3 text-sm text-red-400">{error}</div>}
 
             <Button
               type="submit"
               disabled={isLoading}
-              className="h-11 w-full rounded-lg bg-emerald-600 text-sm font-medium text-white hover:bg-emerald-700"
+              className="h-11 w-full rounded-lg bg-electric-blue text-sm font-medium text-soft-white hover:bg-electric-blue/80"
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
 
           {/* Register Link */}
-          <p className="mt-6 text-center text-sm text-zinc-600">
+          <p className="mt-6 text-center text-sm text-steel-gray">
             Don&apos;t have an account?{' '}
-            <Link href="/register" className="font-medium text-emerald-600 hover:text-emerald-700">
+            <Link href="/register" className="font-medium text-electric-blue hover:text-electric-blue/80">
               Create one
             </Link>
           </p>
 
           {/* Terms */}
-          <p className="mt-6 text-center text-xs text-zinc-500">
+          <p className="mt-6 text-center text-xs text-steel-gray">
             By continuing, you acknowledge that you understand and agree to the{' '}
-            <Link href="/terms" className="text-zinc-600 underline">
+            <Link href="/terms" className="text-steel-gray underline hover:text-soft-white">
               Terms & Conditions
             </Link>{' '}
             and{' '}
-            <Link href="/privacy" className="text-zinc-600 underline">
+            <Link href="/privacy" className="text-steel-gray underline hover:text-soft-white">
               Privacy Policy
             </Link>
           </p>
@@ -218,6 +218,6 @@ function getRoleBadgeColor(role: string): string {
     case 'CLIENT':
       return 'bg-amber-100 text-amber-700';
     default:
-      return 'bg-zinc-100 text-zinc-700';
+      return 'bg-white/8 text-steel-gray';
   }
 }

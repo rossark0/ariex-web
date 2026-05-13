@@ -51,17 +51,17 @@ export function ClientItem({ client, basePath = '/compliance/clients' }: ClientI
       {/* Client Row - clickable area */}
       <div
         onClick={() => router.push(`${basePath}/${client.user.id}`)}
-        className="flex cursor-pointer items-center gap-4 rounded-none py-4 transition-colors hover:bg-zinc-50"
+        className="flex cursor-pointer items-center gap-4 rounded-none py-4 transition-colors hover:bg-white/4"
       >
         {/* Client Avatar */}
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-          <User className="h-5 w-5 text-zinc-400" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/8">
+          <User className="h-5 w-5 text-steel-gray" />
         </div>
 
         {/* Client Info */}
         <div className="flex flex-1 flex-col">
-          <span className="font-medium text-zinc-900">{client.user.name}</span>
-          <span className="text-sm text-zinc-500">{getClientDescription(client)}</span>
+          <span className="font-medium text-soft-white">{client.user.name}</span>
+          <span className="text-sm text-steel-gray">{getClientDescription(client)}</span>
         </div>
 
         {/* Status Badge */}
@@ -72,7 +72,7 @@ export function ClientItem({ client, basePath = '/compliance/clients' }: ClientI
             <div className={`h-1.5 w-1.5 rounded-full ${status.badgeColor}`} />
             {status.label.split(' ')[0]}
           </span>
-          <span className="text-xs text-zinc-400">
+          <span className="text-xs text-steel-gray">
             {formatRelativeTime(client.user.createdAt)}
           </span>
         </div>

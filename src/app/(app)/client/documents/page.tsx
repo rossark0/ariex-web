@@ -79,7 +79,7 @@ function groupDocumentsByDate(documents: ClientDocument[]) {
 function LoadingState() {
   return (
     <div className="flex flex-col items-center justify-center py-16">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-electric-blue border-t-transparent"></div>
     </div>
   );
 }
@@ -178,8 +178,8 @@ export default function ClientDocumentsPage() {
     return (
       <div className="flex min-h-full flex-col items-center justify-center">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-zinc-900">Not authenticated</h1>
-          <p className="text-zinc-500">Please sign in to view your documents.</p>
+          <h1 className="text-xl font-semibold text-soft-white">Not authenticated</h1>
+          <p className="text-steel-gray">Please sign in to view your documents.</p>
         </div>
       </div>
     );
@@ -194,13 +194,13 @@ export default function ClientDocumentsPage() {
   );
 
   return (
-    <div className="bg-white pb-24">
+    <div className="pb-24">
       <div className="mx-auto flex w-full max-w-[642px] flex-col py-6">
         {/* Header */}
         <div className="mb-6">
-          <h2 className="text-2xl font-medium text-zinc-900">Documents</h2>
+          <h2 className="text-2xl font-medium text-soft-white">Documents</h2>
           {!isLoading && filteredDocs.length > 0 && (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-steel-gray">
               {filteredDocs.length} document{filteredDocs.length !== 1 ? 's' : ''}
             </p>
           )}
@@ -213,8 +213,8 @@ export default function ClientDocumentsPage() {
         {!isLoading && filteredDocs.length === 0 && (
           <div className="flex flex-col items-center justify-center pt-24 pb-12 text-center">
             <EmptyDocumentsIllustration />
-            <p className="text-lg font-semibold text-zinc-800">No documents yet</p>
-            <p className="text-sm text-zinc-400">Documents you upload will appear here</p>
+            <p className="text-lg font-semibold text-soft-white">No documents yet</p>
+            <p className="text-sm text-steel-gray">Documents you upload will appear here</p>
           </div>
         )}
 
@@ -223,7 +223,7 @@ export default function ClientDocumentsPage() {
           <div>
             {groupDocumentsByDate(sortedDocuments).map(group => (
               <div key={group.label} className="mb-6">
-                <p className="mb-3 text-sm font-medium text-zinc-400">{group.label}</p>
+                <p className="mb-3 text-sm font-medium text-steel-gray">{group.label}</p>
                 <div className="flex flex-col">
                   {group.documents.map(doc => {
                     const isSelected = selectedDocs.has(doc.id);
@@ -236,36 +236,36 @@ export default function ClientDocumentsPage() {
                           }`}
                         >
                           {isSelected ? (
-                            <div className="flex h-4 w-4 items-center justify-center rounded bg-teal-600">
-                              <CheckIcon weight="bold" className="h-3 w-3 text-white" />
+                            <div className="flex h-4 w-4 items-center justify-center rounded bg-electric-blue">
+                              <CheckIcon weight="bold" className="h-3 w-3 text-soft-white" />
                             </div>
                           ) : (
-                            <div className="h-4 w-4 rounded border-2 border-zinc-300 bg-white transition-colors group-hover:border-teal-400" />
+                            <div className="h-4 w-4 rounded border-2 border-white/20 bg-transparent transition-colors group-hover:border-electric-blue" />
                           )}
                         </div>
 
                         {/* Document Row - clickable */}
                         <div
                           onClick={() => toggleDocSelection(doc.id)}
-                          className={`flex cursor-pointer items-center gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-zinc-50 ${
-                            isSelected ? 'bg-zinc-50' : ''
+                          className={`flex cursor-pointer items-center gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-white/4 ${
+                            isSelected ? 'bg-white/4' : ''
                           }`}
                         >
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-                            <FileIcon className="h-5 w-5 text-zinc-400" />
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/8">
+                            <FileIcon className="h-5 w-5 text-steel-gray" />
                           </div>
                           <div className="flex flex-1 flex-col">
-                            <span className="font-medium text-zinc-900">
+                            <span className="font-medium text-soft-white">
                               {(doc.name || 'Untitled Document').replace(/\.[^/.]+$/, '')}
                             </span>
-                            <span className="text-sm text-zinc-500">
+                            <span className="text-sm text-steel-gray">
                               {/* Show todo title if document is linked to a todo, otherwise fall back to type */}
                               {doc.todoId && todoTitles.get(doc.todoId)
                                 ? todoTitles.get(doc.todoId)
                                 : doc.type || 'Document'}
                             </span>
                           </div>
-                          <span className="text-sm text-zinc-400">
+                          <span className="text-sm text-steel-gray">
                             {formatRelativeTime(new Date(doc.createdAt))}
                           </span>
                         </div>

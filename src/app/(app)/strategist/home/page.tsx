@@ -79,7 +79,7 @@ function PriorityRow({ activity, index }: { activity: ClientActivity; index: num
         onBlur={() => setFocused(false)}
         className="group flex items-center gap-4 rounded-lg px-3 py-3 duration-150 ease-linear transition-colors hover:bg-white/4"
       >
-        <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-medium text-soft-white">
+        <div className="relative  flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-medium text-soft-white">
           {initials}
           {activity.atRisk && (
             <span
@@ -89,10 +89,10 @@ function PriorityRow({ activity, index }: { activity: ClientActivity; index: num
           )}
         </div>
         <div className="flex flex-1 flex-col">
-          <div className="flex items-center gap-2 font-medium text-soft-white">
+          <div className="flex truncate items-center gap-2 font-medium text-soft-white">
             {activity.description}
             {activity.atRisk && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-electric-blue/30 bg-electric-blue/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-electric-blue uppercase">
+              <span className="inline-flex truncate items-center gap-1 rounded-full border border-electric-blue/30 bg-electric-blue/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-electric-blue uppercase">
                 <Warning weight="fill" className="h-3 w-3" />
                 Needs attention
               </span>
@@ -188,7 +188,7 @@ export default function StrategistDashboardPage() {
             description: atRisk
               ? `${client.name || 'New client'} hasn't completed onboarding`
               : `${client.name || 'New client'} account was created`,
-            actionLabel: atRisk ? 'Follow up' : 'View',
+            actionLabel: atRisk ? 'See' : 'View',
             date: new Date(client.createdAt),
             priority: score,
             atRisk,
@@ -282,7 +282,7 @@ export default function StrategistDashboardPage() {
               <div>
                 <h2 className="font-medium text-soft-white">Priorities</h2>
                 <p className="text-xs text-steel-gray">
-                  Sorted by urgency — hover to focus, others dim
+                  Sorted by urgency. Hover to focus, others dim
                 </p>
               </div>
               {clients.length > 0 && (

@@ -114,7 +114,7 @@ export default function ClientBillingPage() {
   return (
     <div className="flex min-h-full flex-col">
       <div className="flex-1">
-        <div className="shrink-0 bg-white pt-6 pb-6">
+        <div className="shrink-0 pt-6 pb-6">
           <div className="mx-auto w-full max-w-[1200px] px-6">
             {/* Header without create payment link button */}
             <BillingHeader hideCreateButton={true} />
@@ -128,24 +128,24 @@ export default function ClientBillingPage() {
           </div>
         </div>
 
-        <div className="bg-zinc-50 py-8">
+        <div className="py-8">
           <div className="mx-auto w-full max-w-[1200px] px-6">
             {chargesError && <ErrorMessage message={chargesError} />}
 
             {/* Generated Payment Link Success Message */}
             {generatedLink && (
-              <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+              <div className="mb-6 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <h3 className="text-sm font-semibold text-emerald-900">Payment Link Generated</h3>
-                    <p className="mt-1 text-sm text-emerald-700">Your payment link is ready to share:</p>
+                    <h3 className="text-sm font-semibold text-emerald-400">Payment Link Generated</h3>
+                    <p className="mt-1 text-sm text-emerald-400/80">Your payment link is ready to share:</p>
                     <div className="mt-3 flex items-center gap-2">
-                      <code className="flex-1 rounded bg-white px-3 py-2 font-mono text-xs text-zinc-600 break-all">
+                      <code className="flex-1 rounded bg-graphite px-3 py-2 font-mono text-xs text-steel-gray break-all">
                         {generatedLink}
                       </code>
                       <button
                         onClick={handleCopyLink}
-                        className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700"
+                        className="rounded-lg bg-electric-blue px-3 py-2 text-xs font-medium text-soft-white hover:bg-electric-blue/80"
                       >
                         {copySuccess ? 'Copied!' : 'Copy'}
                       </button>
@@ -153,7 +153,7 @@ export default function ClientBillingPage() {
                   </div>
                   <button
                     onClick={handleCloseSuccessMessage}
-                    className="text-emerald-400 hover:text-emerald-600"
+                    className="text-steel-gray hover:text-soft-white"
                   >
                     ✕
                   </button>

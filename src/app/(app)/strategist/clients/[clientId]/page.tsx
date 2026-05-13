@@ -293,8 +293,8 @@ export default function StrategistClientDetailPage({ params }: Props) {
     return (
       <section className="flex flex-col items-center justify-center gap-4 p-12">
         <Warning className="h-12 w-12 text-amber-500" weight="duotone" />
-        <h1 className="text-xl font-semibold text-zinc-900">Client Not Found</h1>
-        <p className="text-zinc-500">
+        <h1 className="text-xl font-semibold text-soft-white">Client Not Found</h1>
+        <p className="text-steel-gray">
           The client with ID &quot;{params.clientId}&quot; does not exist.
         </p>
         <Button onClick={() => router.push('/strategist/dashboard')}>Back to Dashboard</Button>
@@ -305,7 +305,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
   // ─── Render ─────────────────────────────────────────────────
 
   return (
-    <div className="flex min-h-full flex-col bg-white">
+    <div className="flex min-h-full flex-col">
       <div className="relative flex-1">
         <ClientHeader
           clientName={clientInfo.user.name}

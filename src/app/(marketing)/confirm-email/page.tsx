@@ -24,12 +24,12 @@ export default function ConfirmEmailPage() {
   }, [isHydrated, isAuthenticated, user, router]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="flex min-h-screen flex-col bg-graphite">
       {/* Header */}
       <div className="flex items-center gap-2 p-6">
         <Link
           href="/"
-          className="font-mono text-sm font-medium text-zinc-500 uppercase hover:text-zinc-700"
+          className="font-mono text-sm font-medium text-steel-gray uppercase hover:text-soft-white"
         >
           ARIEX AI
         </Link>
@@ -40,9 +40,9 @@ export default function ConfirmEmailPage() {
         <div className="w-full max-w-md">
           {/* Title */}
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-electric-blue/15">
               <svg
-                className="h-8 w-8 text-emerald-600"
+                className="h-8 w-8 text-electric-blue"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -55,10 +55,10 @@ export default function ConfirmEmailPage() {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+            <h1 className="text-2xl font-semibold tracking-tight text-soft-white">
               Check your email
             </h1>
-            <p className="mt-2 text-zinc-500">Click the confirmation link we sent you</p>
+            <p className="mt-2 text-steel-gray">Click the confirmation link we sent you</p>
           </div>
 
           {/* Confirm Email Form */}

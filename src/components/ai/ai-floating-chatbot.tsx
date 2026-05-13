@@ -171,7 +171,7 @@ export function AiFloatingChatbot({
         <div className="mb-6 flex justify-center transition-all duration-200 ease-out">
           <div className="flex items-center gap-2 rounded-full px-1 py-1">
             {/* Selected count with clear button */}
-            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-deep-navy py-1.5 pr-1 pl-3 shadow-lg">
+            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black py-1.5 pr-1 pl-3 shadow-lg">
               <span className="text-sm font-medium text-soft-white">{selectedCount} selected</span>
               <button
                 onClick={onClearSelection}
@@ -230,7 +230,7 @@ export function AiFloatingChatbot({
           className="absolute bottom-0 mb-2 w-full transition-all duration-300"
           aria-label="AI Chat Panel"
         >
-          <div className="z-50 flex flex-col gap-3 rounded-[36px] border border-white/10 bg-deep-navy shadow-2xl">
+          <div className="z-50 flex flex-col gap-3 rounded-[36px] border border-white/10 bg-black shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/8 px-4 py-4">
               <div className="flex flex-col pl-2">
                 <span className="text-sm font-medium text-soft-white">

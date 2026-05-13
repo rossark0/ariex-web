@@ -96,7 +96,7 @@ export default function ClientAppLayout({ children }: { children: React.ReactNod
   if (isChecking) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-900" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-electric-blue" />
       </div>
     );
   } 

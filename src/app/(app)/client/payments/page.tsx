@@ -86,8 +86,8 @@ export default function ClientPaymentsPage() {
     return (
       <div className="flex min-h-full flex-col items-center justify-center">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-zinc-900">Not authenticated</h1>
-          <p className="text-zinc-500">Please sign in to view your payments.</p>
+          <h1 className="text-xl font-semibold text-soft-white">Not authenticated</h1>
+          <p className="text-steel-gray">Please sign in to view your payments.</p>
         </div>
       </div>
     );
@@ -96,7 +96,7 @@ export default function ClientPaymentsPage() {
   if (isLoading) {
     return (
       <div className="flex min-h-full flex-col items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-900" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-electric-blue" />
       </div>
     );
   }
@@ -105,8 +105,8 @@ export default function ClientPaymentsPage() {
     return (
       <div className="flex min-h-full flex-col items-center justify-center">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-zinc-900">Profile not found</h1>
-          <p className="text-zinc-500">Could not load your client profile.</p>
+          <h1 className="text-xl font-semibold text-soft-white">Profile not found</h1>
+          <p className="text-steel-gray">Could not load your client profile.</p>
         </div>
       </div>
     );
@@ -155,15 +155,15 @@ export default function ClientPaymentsPage() {
   const totalPaid = paidPayments.reduce((sum, p) => sum + p.amount, 0);
 
   return (
-    <div className="bg-white pb-24">
+    <div className="pb-24">
       <div className="mx-auto flex w-full max-w-160.5 flex-col py-6">
         {/* Header with Title and Buttons */}
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-medium text-zinc-900">Payments</h2>
+          <h2 className="text-xl font-medium text-soft-white">Payments</h2>
           
           <div className="flex items-center gap-2.5">
             {/* Filter Button */}
-            <button className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold text-zinc-500 shadow transition-colors hover:bg-zinc-100">
+            <button className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-2 py-1 text-xs font-semibold text-steel-gray transition-colors hover:bg-white/8">
               <FunnelSimple className="h-3.5 w-3.5" weight="bold" />
               Filter Payments
             </button>
@@ -179,41 +179,41 @@ export default function ClientPaymentsPage() {
         {/* Payment Summary Cards */}
         <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {/* Total Open Card */}
-          <div className="rounded-xl border border-zinc-100 bg-white px-4 py-6 shadow">
-            <div className="mb-2 text-3xl font-semibold text-zinc-500 tabular-nums">
+          <div className="rounded-xl border border-white/10 bg-deep-navy px-4 py-6">
+            <div className="mb-2 text-3xl font-semibold text-soft-white tabular-nums">
               {formatCurrency(totalOpen)}
             </div>
-            <div className="mb-1 flex items-center gap-1.5 text-sm font-medium text-zinc-700">
+            <div className="mb-1 flex items-center gap-1.5 text-sm font-medium text-soft-white">
               Total open
-              <Info className="h-4 w-4 text-zinc-400" weight="fill" />
+              <Info className="h-4 w-4 text-steel-gray" weight="fill" />
             </div>
-            <div className="text-sm text-zinc-500">
+            <div className="text-sm text-steel-gray">
               {totalOpenCount} {totalOpenCount === 1 ? 'invoice' : 'invoices'}
             </div>
           </div>
 
           {/* Overdue Invoices Card */}
-          <div className="rounded-xl border border-zinc-100 bg-white px-4 py-6 shadow">
-           <div className="mb-2 text-3xl font-semibold text-zinc-500 tabular-nums">
+          <div className="rounded-xl border border-white/10 bg-deep-navy px-4 py-6">
+           <div className="mb-2 text-3xl font-semibold text-soft-white tabular-nums">
               {formatCurrency(totalOverdue)}
             </div>
-            <div className="mb-1 text-sm font-medium text-zinc-700">
+            <div className="mb-1 text-sm font-medium text-soft-white">
               Overdue invoices
             </div>
-            <div className="text-sm text-zinc-500">
+            <div className="text-sm text-steel-gray">
               {overduePayments.length} {overduePayments.length === 1 ? 'invoice' : 'invoices'}
             </div>
           </div>
 
           {/* Paid Invoices Card */}
-          <div className="rounded-xl border border-zinc-100 bg-white px-4 py-6 shadow">
-           <div className="mb-2 text-3xl font-semibold text-zinc-500 tabular-nums">
+          <div className="rounded-xl border border-white/10 bg-deep-navy px-4 py-6">
+           <div className="mb-2 text-3xl font-semibold text-soft-white tabular-nums">
               {formatCurrency(totalPaid)}
             </div>
-            <div className="mb-1 text-sm font-medium text-zinc-700">
+            <div className="mb-1 text-sm font-medium text-soft-white">
               Paid invoices
             </div>
-            <div className="text-sm text-zinc-500">
+            <div className="text-sm text-steel-gray">
               {paidPayments.length} {paidPayments.length === 1 ? 'invoice' : 'invoices'}
             </div>
           </div>
@@ -223,20 +223,20 @@ export default function ClientPaymentsPage() {
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {/* Filters Button */}
-            <button className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold text-zinc-500 shadow transition-colors hover:bg-zinc-100">
+            <button className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 px-2 py-1 text-xs font-semibold text-steel-gray transition-colors hover:bg-white/8">
               <FunnelSimple className="h-3.5 w-3.5" weight="bold" />
               Filters
             </button>
             
             {/* Status Dropdown */}
-            <button className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold text-zinc-500 shadow transition-colors hover:bg-zinc-100">
+            <button className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 px-2 py-1 text-xs font-semibold text-steel-gray transition-colors hover:bg-white/8">
               Status
               <CaretDown className="h-3.5 w-3.5" weight="bold" />
             </button>
           </div>
           
           {/* Export Button */}
-          <button className="inline-flex items-center gap-1.5 rounded-lg font-semibold cursor-pointer px-3 py-1.5 text-xs text-zinc-700 transition-colors hover:bg-zinc-100">
+          <button className="inline-flex items-center gap-1.5 rounded-lg font-semibold cursor-pointer px-3 py-1.5 text-xs text-steel-gray transition-colors hover:bg-white/8">
             <DownloadSimple className="h-3.5 w-3.5" weight="bold" />
             Export
           </button>
@@ -246,8 +246,8 @@ export default function ClientPaymentsPage() {
         {clientProfile.payments.length === 0 && (
           <div className="flex flex-col items-center justify-center pt-24 pb-12 text-center">
             <EmptyDocumentsIllustration />
-            <p className="text-lg font-semibold text-zinc-800">No payments yet</p>
-            <p className="text-sm text-zinc-400">Payment history will appear here</p>
+            <p className="text-lg font-semibold text-soft-white">No payments yet</p>
+            <p className="text-sm text-steel-gray">Payment history will appear here</p>
           </div>
         )}
 
@@ -255,7 +255,7 @@ export default function ClientPaymentsPage() {
         {clientProfile.payments.length > 0 && (
           <div className="overflow-hidden rounded-lg">
             <table className="w-full">
-                <thead className="bg-white border-b border-zinc-200">
+                <thead className="border-b border-white/10">
                   <tr>
                     <th className="w-12 px-4 py-3">
                       <div 
@@ -263,35 +263,35 @@ export default function ClientPaymentsPage() {
                         className="flex h-5 w-5 cursor-pointer items-center justify-center"
                       >
                         {selectedPayments.size === clientProfile.payments.length && clientProfile.payments.length > 0 ? (
-                          <div className="flex h-4 w-4 items-center justify-center rounded bg-teal-600">
-                            <CheckIcon weight="bold" className="h-3 w-3 text-white" />
+                          <div className="flex h-4 w-4 items-center justify-center rounded bg-electric-blue">
+                            <CheckIcon weight="bold" className="h-3 w-3 text-soft-white" />
                           </div>
                         ) : (
-                          <div className="h-4 w-4 rounded border-2 border-zinc-300 bg-white transition-colors hover:border-teal-400" />
+                          <div className="h-4 w-4 rounded border-2 border-white/20 bg-transparent transition-colors hover:border-electric-blue" />
                         )}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-steel-gray">
                       Description
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-steel-gray">
                       Due date
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-steel-gray">
                       <button
                         onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-                        className="flex items-center gap-1 hover:text-zinc-700"
+                        className="flex items-center gap-1 hover:text-soft-white"
                       >
                         Status
                         <CaretUp className={`h-3 w-3 transition-transform ${sortDirection === 'desc' ? 'rotate-180' : ''}`} />
                       </button>
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-steel-gray">
                       Amount
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100">
+                <tbody className="divide-y divide-white/5">
                   {sortedPayments.map(payment => {
                     const dueDate = formatDueDate(payment.dueDate || payment.createdAt);
                     const isSelected = selectedPayments.has(payment.id);
@@ -299,7 +299,7 @@ export default function ClientPaymentsPage() {
                     return (
                       <tr
                         key={payment.id}
-                        className={`group transition-colors hover:bg-zinc-50 ${isSelected ? 'bg-zinc-50' : 'bg-white'}`}
+                        className={`group transition-colors hover:bg-white/4 ${isSelected ? 'bg-white/4' : ''}`}
                       >
                         <td className="px-4 py-3">
                           <div
@@ -312,17 +312,17 @@ export default function ClientPaymentsPage() {
                             }`}
                           >
                             {isSelected ? (
-                              <div className="flex h-4 w-4 items-center justify-center rounded bg-teal-600">
-                                <CheckIcon weight="bold" className="h-3 w-3 text-white" />
+                              <div className="flex h-4 w-4 items-center justify-center rounded bg-electric-blue">
+                                <CheckIcon weight="bold" className="h-3 w-3 text-soft-white" />
                               </div>
                             ) : (
-                              <div className="h-4 w-4 rounded border-2 border-zinc-300 bg-white transition-colors group-hover:border-teal-400" />
+                              <div className="h-4 w-4 rounded border-2 border-white/20 bg-transparent transition-colors group-hover:border-electric-blue" />
                             )}
                           </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col">
-                            <span className="text-sm font-medium text-zinc-900">
+                            <span className="text-sm font-medium text-soft-white">
                               {payment.description || (
                                 payment.type === 'onboarding' ? 'Onboarding Fee' : 
                                 payment.type === 'invoice' ? 'Invoice Payment' : 
@@ -330,15 +330,15 @@ export default function ClientPaymentsPage() {
                                 'Payment'
                               )}
                             </span>
-                            <span className="text-xs text-zinc-400">
+                            <span className="text-xs text-steel-gray">
                               {payment.invoiceNumber || `#${payment.id.slice(-6).toUpperCase()}`}
                             </span>
                           </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col">
-                            <span className="text-sm font-medium text-zinc-900">{dueDate.main}</span>
-                            <span className="text-xs text-zinc-400">{dueDate.sub}</span>
+                            <span className="text-sm font-medium text-soft-white">{dueDate.main}</span>
+                            <span className="text-xs text-steel-gray">{dueDate.sub}</span>
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -358,7 +358,7 @@ export default function ClientPaymentsPage() {
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <span className="text-sm font-semibold text-zinc-900">
+                          <span className="text-sm font-semibold text-soft-white">
                             {formatCurrency(payment.amount)}
                           </span>
                         </td>

@@ -105,8 +105,8 @@ function groupAgreementsByDate(agreements: Agreement[]) {
 function LoadingState() {
   return (
     <div className="flex flex-col items-center justify-center py-16">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
-      <p className="mt-4 text-sm text-zinc-500">Loading agreements...</p>
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-electric-blue border-t-transparent"></div>
+      <p className="mt-4 text-sm text-steel-gray">Loading agreements...</p>
     </div>
   );
 }
@@ -174,8 +174,8 @@ export default function StrategistAgreementsPage() {
     return (
       <div className="flex min-h-full flex-col items-center justify-center">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-zinc-900">Not authenticated</h1>
-          <p className="text-zinc-500">Please sign in to view your agreements.</p>
+          <h1 className="text-xl font-semibold text-soft-white">Not authenticated</h1>
+          <p className="text-steel-gray">Please sign in to view your agreements.</p>
         </div>
       </div>
     );
@@ -186,11 +186,11 @@ export default function StrategistAgreementsPage() {
   );
 
   return (
-    <div className="bg-white pb-24">
+    <div className="pb-24">
       <div className="mx-auto flex w-full max-w-160.5 flex-col py-6">
         <div className="mb-6">
-          <h2 className="text-2xl font-medium text-zinc-900">Agreements</h2>
-          <p className="text-sm text-zinc-500">
+          <h2 className="text-2xl font-medium text-soft-white">Agreements</h2>
+          <p className="text-sm text-steel-gray">
             {agreements.length > 0
               ? `${agreements.length} agreement${agreements.length !== 1 ? 's' : ''}`
               : 'Manage your client agreements'}
@@ -204,8 +204,8 @@ export default function StrategistAgreementsPage() {
         {!isLoading && agreements.length === 0 && (
           <div className="flex flex-col items-center justify-center pt-24 pb-12 text-center">
             <EmptyDocumentsIllustration />
-            <p className="text-lg font-semibold text-zinc-800">No agreements yet</p>
-            <p className="text-sm text-zinc-400">Agreements will appear here when created</p>
+            <p className="text-lg font-semibold text-soft-white">No agreements yet</p>
+            <p className="text-sm text-steel-gray">Agreements will appear here when created</p>
           </div>
         )}
 
@@ -214,7 +214,7 @@ export default function StrategistAgreementsPage() {
           <div>
             {groupAgreementsByDate(sortedAgreements).map(group => (
               <div key={group.label} className="mb-6">
-                <p className="mb-3 text-sm font-medium text-zinc-400">{group.label}</p>
+                <p className="mb-3 text-sm font-medium text-steel-gray">{group.label}</p>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {group.agreements.map(agreement => (
                     <AgreementCard

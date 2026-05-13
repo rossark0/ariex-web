@@ -32,13 +32,13 @@ function getPaymentStatusBadge(status: string): { label: string; className: stri
   switch (status.toLowerCase()) {
     case 'completed':
     case 'paid':
-      return { label: 'Paid', className: 'bg-emerald-100 text-emerald-700' };
+      return { label: 'Paid', className: 'bg-emerald-500/15 text-emerald-400' };
     case 'pending':
-      return { label: 'Pending', className: 'bg-amber-100 text-amber-700' };
+      return { label: 'Pending', className: 'bg-amber-500/15 text-amber-400' };
     case 'failed':
-      return { label: 'Failed', className: 'bg-red-100 text-red-700' };
+      return { label: 'Failed', className: 'bg-red-500/15 text-red-400' };
     default:
-      return { label: status, className: 'bg-zinc-100 text-zinc-700' };
+      return { label: status, className: 'bg-white/8 text-steel-gray' };
   }
 }
 
@@ -49,8 +49,8 @@ function getPaymentStatusBadge(status: string): { label: string; className: stri
 function LoadingState() {
   return (
     <div className="flex flex-col items-center justify-center py-16">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
-      <p className="mt-4 text-sm text-zinc-500">Loading payments...</p>
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-electric-blue border-t-transparent"></div>
+      <p className="mt-4 text-sm text-steel-gray">Loading payments...</p>
     </div>
   );
 }
@@ -63,10 +63,10 @@ function PaymentRow({ payment }: { payment: ApiPayment }) {
   const statusBadge = getPaymentStatusBadge(payment.status);
 
   return (
-    <div className="flex items-center justify-between border-b border-zinc-100 py-4 last:border-b-0">
+    <div className="flex items-center justify-between border-b border-white/5 py-4 last:border-b-0">
       <div className="flex flex-col">
-        <span className="font-medium text-zinc-900">{payment.type || 'Payment'}</span>
-        <span className="text-sm text-zinc-500">
+        <span className="font-medium text-soft-white">{payment.type || 'Payment'}</span>
+        <span className="text-sm text-steel-gray">
           {payment.paidAt ? formatDate(payment.paidAt) : formatDate(payment.createdAt)}
         </span>
       </div>
@@ -74,7 +74,7 @@ function PaymentRow({ payment }: { payment: ApiPayment }) {
         <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusBadge.className}`}>
           {statusBadge.label}
         </span>
-        <span className="font-semibold text-zinc-900">{formatCurrency(payment.amount)}</span>
+        <span className="font-semibold text-soft-white">{formatCurrency(payment.amount)}</span>
       </div>
     </div>
   );
@@ -108,8 +108,8 @@ export default function StrategistPaymentsPage() {
     return (
       <div className="flex min-h-full flex-col items-center justify-center">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-zinc-900">Not authenticated</h1>
-          <p className="text-zinc-500">Please sign in to view payments.</p>
+          <h1 className="text-xl font-semibold text-soft-white">Not authenticated</h1>
+          <p className="text-steel-gray">Please sign in to view payments.</p>
         </div>
       </div>
     );
@@ -125,12 +125,12 @@ export default function StrategistPaymentsPage() {
     .reduce((sum, p) => sum + p.amount, 0);
 
   return (
-    <div className="bg-white pb-24">
+    <div className="pb-24">
       <div className="mx-auto flex w-full max-w-160.5 flex-col py-6">
         {/* Header */}
         <div className="mb-6">
-          <h2 className="text-2xl font-medium text-zinc-900">Payments</h2>
-          <p className="text-sm text-zinc-500">
+          <h2 className="text-2xl font-medium text-soft-white">Payments</h2>
+          <p className="text-sm text-steel-gray">
             {payments.length > 0
               ? `${payments.length} payment${payments.length !== 1 ? 's' : ''}`
               : 'Track your client payments'}
@@ -140,15 +140,15 @@ export default function StrategistPaymentsPage() {
         {/* Summary Cards */}
         {!isLoading && payments.length > 0 && (
           <div className="mb-8 grid grid-cols-2 gap-4">
-            <div className="rounded-xl border border-zinc-200 p-4">
-              <p className="text-sm text-zinc-500">Total Received</p>
-              <p className="text-2xl font-semibold text-emerald-600">
+            <div className="rounded-xl border border-white/10 bg-deep-navy p-4">
+              <p className="text-sm text-steel-gray">Total Received</p>
+              <p className="text-2xl font-semibold text-emerald-400">
                 {formatCurrency(totalReceived)}
               </p>
             </div>
-            <div className="rounded-xl border border-zinc-200 p-4">
-              <p className="text-sm text-zinc-500">Pending</p>
-              <p className="text-2xl font-semibold text-amber-600">
+            <div className="rounded-xl border border-white/10 bg-deep-navy p-4">
+              <p className="text-sm text-steel-gray">Pending</p>
+              <p className="text-2xl font-semibold text-amber-400">
                 {formatCurrency(totalPending)}
               </p>
             </div>
@@ -162,14 +162,14 @@ export default function StrategistPaymentsPage() {
         {!isLoading && payments.length === 0 && (
           <div className="flex flex-col items-center justify-center pt-24 pb-12 text-center">
             <EmptyDocumentsIllustration />
-            <p className="text-lg font-semibold text-zinc-800">No payments yet</p>
-            <p className="text-sm text-zinc-400">Payments will appear here when clients pay</p>
+            <p className="text-lg font-semibold text-soft-white">No payments yet</p>
+            <p className="text-sm text-steel-gray">Payments will appear here when clients pay</p>
           </div>
         )}
 
         {/* Payments List */}
         {!isLoading && payments.length > 0 && (
-          <div className="rounded-xl border border-zinc-200">
+          <div className="rounded-xl border border-white/10 bg-deep-navy">
             <div className="px-4">
               {payments.map(payment => (
                 <PaymentRow key={payment.id} payment={payment} />

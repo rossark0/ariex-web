@@ -455,8 +455,8 @@ export default function ClientDashboardPage() {
   if (isLoading) {
     return (
       <div className="flex min-h-full flex-col items-center justify-center">
-        <SpinnerGap className="h-8 w-8 animate-spin text-emerald-600" />
-        <p className="mt-4 text-sm text-zinc-500">Loading your dashboard...</p>
+        <SpinnerGap className="h-8 w-8 animate-spin text-electric-blue" />
+        <p className="mt-4 text-sm text-steel-gray">Loading your dashboard...</p>
       </div>
     );
   }
@@ -466,8 +466,8 @@ export default function ClientDashboardPage() {
     return (
       <div className="flex min-h-full flex-col items-center justify-center">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-zinc-900">Not authenticated</h1>
-          <p className="text-zinc-500">Please sign in to view your dashboard.</p>
+          <h1 className="text-xl font-semibold text-soft-white">Not authenticated</h1>
+          <p className="text-steel-gray">Please sign in to view your dashboard.</p>
         </div>
       </div>
     );
@@ -478,11 +478,11 @@ export default function ClientDashboardPage() {
     return (
       <div className="flex min-h-full flex-col items-center justify-center">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-zinc-900">Welcome to Ariex!</h1>
-          <p className="mt-2 text-zinc-500">
+          <h1 className="text-xl font-semibold text-soft-white">Welcome to Ariex!</h1>
+          <p className="mt-2 text-steel-gray">
             {error || 'Your dashboard is being set up. Please check back shortly.'}
           </p>
-          <p className="mt-4 text-sm text-zinc-400">
+          <p className="mt-4 text-sm text-steel-gray">
             Your tax strategist will reach out soon to get started.
           </p>
         </div>
@@ -682,9 +682,9 @@ export default function ClientDashboardPage() {
         )} */}
 
         {/* Top Section - Onboarding Activity Timeline */}
-        <div className="shrink-0 bg-zinc-50/90 pt-8 pb-6">
+        <div className="shrink-0 pt-8 pb-6">
           <div className="mx-auto w-full max-w-[642px]">
-            <h2 className="mb-6 text-2xl font-medium text-zinc-900">Your to-dos</h2>
+            <h2 className="mb-6 text-2xl font-medium text-soft-white">Your to-dos</h2>
             <div className="relative pl-6">
               <div className="flex flex-col gap-0">
                 {/* Step 1: Account Created - Always complete */}
@@ -693,15 +693,15 @@ export default function ClientDashboardPage() {
                     <Check weight="bold" className="h-3 w-3 text-emerald-500" />
                   </div>
                   {/* Line to next step */}
-                  <div className="absolute top-5 bottom-2 -left-[19px] w-0.5 bg-emerald-200" />
+                  <div className="absolute top-5 bottom-2 -left-[19px] w-0.5 bg-emerald-500/30" />
                   <div className="flex flex-1 flex-col">
-                    <span className="font-medium text-zinc-900">
+                    <span className="font-medium text-soft-white">
                       Account created for {businessName || clientName}
                     </span>
-                    <span className="text-sm text-zinc-500">
+                    <span className="text-sm text-steel-gray">
                       Onboarding initiated by your tax strategist
                     </span>
-                    <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                    <span className="mt-1 text-xs font-medium tracking-wide text-steel-gray uppercase">
                       {formatDate(createdAt)}
                       {strategist && ` · Created by ${strategist.name}`}
                     </span>
@@ -715,17 +715,17 @@ export default function ClientDashboardPage() {
                       <Check weight="bold" className="h-3 w-3 text-emerald-500" />
                     ) : (
                       <div
-                        className={`h-2 w-2 rounded-full ${step2Sent ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                        className={`h-2 w-2 rounded-full ${step2Sent ? 'bg-emerald-500' : 'bg-steel-gray'}`}
                       />
                     )}
                   </div>
                   {/* Line to next step */}
                   <div
-                    className={`absolute top-5 bottom-2 -left-[19px] w-0.5 ${step2Complete ? 'bg-emerald-200' : 'bg-zinc-200'}`}
+                    className={`absolute top-5 bottom-2 -left-[19px] w-0.5 ${step2Complete ? 'bg-emerald-500/30' : 'bg-white/10'}`}
                   />
                   <div className="flex flex-1 flex-col">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-zinc-900">
+                      <span className="font-medium text-soft-white">
                         {step2Complete
                           ? 'Service agreement signed'
                           : step2Sent
@@ -733,21 +733,21 @@ export default function ClientDashboardPage() {
                             : 'Agreement pending'}
                       </span>
                     </div>
-                    <span className="text-sm text-zinc-500">
+                    <span className="text-sm text-steel-gray">
                       {step2Complete
                         ? 'Ariex Service Agreement 2024 was signed '
                         : step2Sent
                           ? 'Please review and sign the service agreement'
                           : 'Your strategist will send the agreement shortly'}
                     </span>
-                    <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                    <span className="mt-1 text-xs font-medium tracking-wide text-steel-gray uppercase">
                       {formatDate(serviceAgreement?.updatedAt || createdAt)}
                     </span>
                     {step2Complete && signedAgreementUrl && (
                       <a
                         href={signedAgreementUrl}
                         download
-                        className="mt-2 flex w-fit items-center gap-1.5 rounded bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+                        className="mt-2 flex w-fit items-center gap-1.5 rounded bg-emerald-500/15 px-2.5 py-1 text-xs font-medium text-emerald-400 hover:bg-emerald-500/25"
                       >
                         <DownloadSimple weight="bold" className="h-3.5 w-3.5" />
                         Download signed agreement
@@ -779,7 +779,7 @@ export default function ClientDashboardPage() {
                             window.location.href = '/client/agreements';
                           }
                         }}
-                        className="mt-2 w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                        className="mt-2 w-fit rounded bg-electric-blue px-2 py-1 text-xs font-semibold text-soft-white hover:bg-electric-blue/80"
                       >
                         {serviceAgreement.signatureCeremonyUrl
                           ? 'Sign agreement'
@@ -796,17 +796,17 @@ export default function ClientDashboardPage() {
                       <Check weight="bold" className="h-3 w-3 text-emerald-500" />
                     ) : (
                       <div
-                        className={`h-2 w-2 rounded-full ${step3Sent ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                        className={`h-2 w-2 rounded-full ${step3Sent ? 'bg-emerald-500' : 'bg-steel-gray'}`}
                       />
                     )}
                   </div>
                   {/* Line to next step */}
                   <div
-                    className={`absolute top-5 bottom-2 -left-[19px] w-0.5 ${step3Complete ? 'bg-emerald-200' : 'bg-zinc-200'}`}
+                    className={`absolute top-5 bottom-2 -left-[19px] w-0.5 ${step3Complete ? 'bg-emerald-500/30' : 'bg-white/10'}`}
                   />
                   <div className="flex flex-1 flex-col">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-zinc-900">
+                      <span className="font-medium text-soft-white">
                         {step3Complete
                           ? `Payment completed · ${formattedPrice}`
                           : step3Sent
@@ -814,14 +814,14 @@ export default function ClientDashboardPage() {
                             : 'Payment link pending'}
                       </span>
                     </div>
-                    <span className="text-sm text-zinc-500">
+                    <span className="text-sm text-steel-gray">
                       {step3Complete
                         ? 'Onboarding Fee - Tax Strategy Setup'
                         : step3Sent
                           ? 'Complete payment to activate your account'
                           : 'Payment link will be sent after agreement is signed'}
                     </span>
-                    <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                    <span className="mt-1 text-xs font-medium tracking-wide text-steel-gray uppercase">
                       {formatDate(serviceAgreement?.updatedAt || createdAt)}
                     </span>
                     {step2Complete && !step3Complete && (
@@ -851,7 +851,7 @@ export default function ClientDashboardPage() {
                             );
                           }
                         }}
-                        className="mt-2 w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                        className="mt-2 w-fit rounded bg-electric-blue px-2 py-1 text-xs font-semibold text-soft-white hover:bg-electric-blue/80"
                       >
                         Complete payment
                       </button>
@@ -866,13 +866,13 @@ export default function ClientDashboardPage() {
                       <Check weight="bold" className="h-3 w-3 text-emerald-500" />
                     ) : (
                       <div
-                        className={`h-2 w-2 rounded-full ${step4Sent ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                        className={`h-2 w-2 rounded-full ${step4Sent ? 'bg-emerald-500' : 'bg-steel-gray'}`}
                       />
                     )}
                   </div>
                   {/* Line to next step */}
                   <div
-                    className={`absolute top-5 bottom-2 -left-[19px] w-0.5 ${step4Complete ? 'bg-emerald-200' : 'bg-zinc-200'}`}
+                    className={`absolute top-5 bottom-2 -left-[19px] w-0.5 ${step4Complete ? 'bg-emerald-500/30' : 'bg-white/10'}`}
                   />
                   <div className="flex flex-1 flex-col items-start">
                     {/* Action required badge at top */}
@@ -882,7 +882,7 @@ export default function ClientDashboardPage() {
                       </Badge>
                     )}
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-zinc-900">
+                      <span className="font-medium text-soft-white">
                         {step4Complete
                           ? `Documents uploaded · ${completedDocTodos.length}/${documentTodos.length}`
                           : hasDocTodos
@@ -892,7 +892,7 @@ export default function ClientDashboardPage() {
                               : 'Documents'}
                       </span>
                     </div>
-                    <span className="text-sm text-zinc-500">
+                    <span className="text-sm text-steel-gray">
                       {step4Complete
                         ? 'All requested documents have been received'
                         : hasDocTodos
@@ -901,13 +901,13 @@ export default function ClientDashboardPage() {
                             ? 'Your strategist will request documents when needed'
                             : 'You will be notified when documents are needed'}
                     </span>
-                    <span className="mt-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                    <span className="mt-2 text-xs font-medium tracking-wide text-steel-gray uppercase">
                       {formatDate(createdAt)}
                     </span>
                     {/* Show document todos from agreement with upload functionality */}
                     {hasDocTodos && documentTodos.length > 0 && serviceAgreement && (
                       <div className="mt-3 flex w-full flex-col gap-2">
-                        <span className="mb-1 text-xs font-medium tracking-wide text-zinc-500 uppercase">
+                        <span className="mb-1 text-xs font-medium tracking-wide text-steel-gray uppercase">
                           Requested documents ({completedDocTodos.length}/{documentTodos.length})
                         </span>
                         {documentTodos.map(todo => (
@@ -931,16 +931,16 @@ export default function ClientDashboardPage() {
                       <div className="h-2 w-2 rounded-full bg-amber-500" />
                     </div>
                     <div
-                      className={`absolute top-5 bottom-2 -left-[19px] w-0.5 bg-zinc-200`}
+                      className={`absolute top-5 bottom-2 -left-[19px] w-0.5 bg-white/10`}
                     />
                     <div className="flex flex-1 flex-col items-start">
                       <Badge variant="warning" className="mb-2 w-fit">
                         Action required
                       </Badge>
-                      <span className="font-medium text-zinc-900">
+                      <span className="font-medium text-soft-white">
                         Additional documents requested · {pendingDocTodos.length} pending
                       </span>
-                      <span className="text-sm text-zinc-500">
+                      <span className="text-sm text-steel-gray">
                         Your strategist has requested additional documents
                       </span>
                       <div className="mt-3 flex w-full flex-col gap-2">
@@ -965,13 +965,13 @@ export default function ClientDashboardPage() {
                       <Check weight="bold" className="h-3 w-3 text-emerald-500" />
                     ) : (
                       <div
-                        className={`h-2 w-2 rounded-full ${step5Sent ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                        className={`h-2 w-2 rounded-full ${step5Sent ? 'bg-emerald-500' : 'bg-steel-gray'}`}
                       />
                     )}
                   </div>
                   <div className="flex flex-1 flex-col">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-zinc-900">
+                      <span className="font-medium text-soft-white">
                         {step5Complete
                           ? 'Tax strategy approved'
                           : step5ClientCanAct
@@ -987,7 +987,7 @@ export default function ClientDashboardPage() {
                             : 'Tax strategy pending'}
                       </span>
                     </div>
-                    <span className="text-sm text-zinc-500">
+                    <span className="text-sm text-steel-gray">
                       {step5Complete
                         ? 'Your tax strategy has been approved and finalized'
                         : step5ClientCanAct
@@ -1002,7 +1002,7 @@ export default function ClientDashboardPage() {
                           ? 'Your strategy is being reviewed'
                           : 'Your strategist will create your personalized tax strategy after documents are reviewed'}
                     </span>
-                    <span className="mt-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                    <span className="mt-1 text-xs font-medium tracking-wide text-steel-gray uppercase">
                       {strategyMetadata?.sentAt
                         ? formatDate(new Date(strategyMetadata.sentAt))
                         : formatDate(createdAt)}
@@ -1051,7 +1051,7 @@ export default function ClientDashboardPage() {
                               const result = await getStrategyDocumentUrl(strategyDocumentId!);
                               if (result.success && result.url) window.open(result.url, '_blank');
                             }}
-                            className="w-fit rounded bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200"
+                            className="w-fit rounded bg-white/8 px-2 py-1 text-xs font-semibold text-steel-gray hover:bg-white/12"
                           >
                             View strategy
                           </button>
@@ -1080,7 +1080,7 @@ export default function ClientDashboardPage() {
                               }
                             }}
                             disabled={isApprovingStrategy || isDecliningStrategy || !strategyDocumentId}
-                            className="flex w-fit items-center gap-1 rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                            className="flex w-fit items-center gap-1 rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-soft-white hover:bg-emerald-700 disabled:opacity-50"
                           >
                             {isApprovingStrategy ? (
                               <>
@@ -1118,7 +1118,7 @@ export default function ClientDashboardPage() {
                               }
                             }}
                             disabled={isApprovingStrategy || isDecliningStrategy || !strategyDocumentId}
-                            className="flex w-fit items-center gap-1 rounded bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-200 disabled:opacity-50"
+                            className="flex w-fit items-center gap-1 rounded bg-red-500/15 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/25 disabled:opacity-50"
                           >
                             {isDecliningStrategy ? (
                               <>
@@ -1139,7 +1139,7 @@ export default function ClientDashboardPage() {
                     {/* Completed state */}
                     {step5Complete && (
                       <div className="mt-2">
-                        <Badge variant="default" className="bg-emerald-100 text-emerald-700">
+                        <Badge variant="default" className="bg-emerald-500/15 text-emerald-400">
                           ✓ Strategy approved — Agreement completed
                         </Badge>
                       </div>
@@ -1152,9 +1152,9 @@ export default function ClientDashboardPage() {
         </div>
 
         {/* Bottom Section - Recent Documents */}
-        <div className="bg-white pb-42">
+        <div className="pb-42">
           <div className="mx-auto flex w-full max-w-[642px] flex-col py-6">
-            <h2 className="mb-4 text-lg font-medium text-zinc-900">Documents</h2>
+            <h2 className="mb-4 text-lg font-medium text-soft-white">Documents</h2>
 
             {/* Pending document requests */}
             {pendingDocTodos.length > 0 && serviceAgreement && (
@@ -1181,8 +1181,8 @@ export default function ClientDashboardPage() {
               <div className="flex flex-col items-center justify-center pt-24 pb-12 text-center">
                 {/* Empty */}
                 <EmptyDocumentsIllustration />
-                <p className="text-lg font-semibold text-zinc-800">No documents yet</p>
-                <p className="text-sm text-zinc-400">Documents you upload will appear here</p>
+                <p className="text-lg font-semibold text-soft-white">No documents yet</p>
+                <p className="text-sm text-steel-gray">Documents you upload will appear here</p>
               </div>
             )}
 
@@ -1198,7 +1198,7 @@ export default function ClientDashboardPage() {
                 ).map(group => (
                   <div key={group.label} className="mb-6">
                     {/* Date Group Label */}
-                    <p className="mb-3 text-sm font-medium text-zinc-400">{group.label}</p>
+                    <p className="mb-3 text-sm font-medium text-steel-gray">{group.label}</p>
 
                     {/* Document List */}
                     <div className="flex flex-col">
@@ -1217,25 +1217,25 @@ export default function ClientDashboardPage() {
                                   <CheckIcon weight="bold" className="h-3 w-3 text-white" />
                                 </div>
                               ) : (
-                                <div className="h-4 w-4 rounded border-2 border-zinc-300 bg-white transition-colors group-hover:border-teal-400" />
+                                <div className="h-4 w-4 rounded border-2 border-white/20 bg-transparent transition-colors group-hover:border-electric-blue" />
                               )}
                             </div>
 
                             {/* Document Row - clickable */}
                             <div
                               onClick={() => toggleDocSelection(doc.id)}
-                              className={`flex cursor-pointer items-center gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-zinc-50 ${
-                                isSelected ? 'bg-zinc-50' : ''
+                              className={`flex cursor-pointer items-center gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-white/4 ${
+                                isSelected ? 'bg-white/4' : ''
                               }`}
                             >
                               {/* Document Icon */}
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-                                <FileIcon className="h-5 w-5 text-zinc-400" />
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/8">
+                                <FileIcon className="h-5 w-5 text-steel-gray" />
                               </div>
 
                               {/* Document Info */}
                               <div className="flex flex-1 flex-col">
-                                <span className="font-medium text-zinc-900">
+                                <span className="font-medium text-soft-white">
                                   {doc.todoId && todoTitles.get(doc.todoId)
                                     ? todoTitles.get(doc.todoId)
                                     : 'Agreement Document'}
@@ -1244,7 +1244,7 @@ export default function ClientDashboardPage() {
 
                               {/* Timestamp + open button */}
                               <div className="flex items-center gap-2">
-                                <span className="text-sm text-zinc-400">
+                                <span className="text-sm text-steel-gray">
                                   {formatRelativeTime(doc.createdAt)}
                                 </span>
                                 <button
@@ -1259,7 +1259,7 @@ export default function ClientDashboardPage() {
                                     }
                                   }}
                                   disabled={openingDocId === doc.id}
-                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-400 opacity-0 transition-opacity hover:bg-zinc-100 hover:text-zinc-700 group-hover:opacity-100 disabled:opacity-40"
+                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-steel-gray opacity-0 transition-opacity hover:bg-white/8 hover:text-soft-white group-hover:opacity-100 disabled:opacity-40"
                                   title="Open document"
                                 >
                                   {openingDocId === doc.id ? (

@@ -4,9 +4,9 @@ interface StatusBadgeProps {
 }
 
 const variants = {
-  default: 'bg-zinc-100 text-zinc-700',
-  success: 'bg-emerald-50 text-emerald-700',
-  warning: 'bg-amber-50 text-amber-700',
+  default: 'bg-white/8 text-steel-gray',
+  success: 'bg-emerald-500/15 text-emerald-400',
+  warning: 'bg-amber-500/15 text-amber-400',
 };
 
 export function StatusBadge({ children, variant = 'default' }: StatusBadgeProps) {
