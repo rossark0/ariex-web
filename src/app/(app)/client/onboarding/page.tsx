@@ -170,6 +170,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
   // Form state — covers every field the profile API accepts, plus a UI-only
   // "hasBusiness" toggle that gates the business section.
@@ -222,6 +223,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
   const handleSaveAndContinue = async () => {
     setIsSaving(true);
     setError(null);
+    setWarning(null);
 
     try {
       // Build update payload — only include filled fields
@@ -251,14 +253,57 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
       if (Object.keys(updateData).length > 0) {
         const updatedProfile = await updateClientProfile(updateData);
 
-        if (updatedProfile && dashboardData && onProfileUpdate) {
-          onProfileUpdate({
-            ...dashboardData,
-            profile: updatedProfile,
-          });
+        if (updatedProfile) {
+          // Round-trip verification: confirm the API actually persisted the new
+          // fields. If the backend's DTO silently drops any of them we surface
+          // a clear warning (visible to user + console for backend devs) instead
+          // of advancing through onboarding under a false impression.
+          const dropped: string[] = [];
+          const VERIFY: Array<[keyof typeof updateData, string]> = [
+            ['filingStatus', 'Filing status'],
+            ['dependents', 'Dependents'],
+            ['estimatedIncome', 'Estimated income'],
+            ['taxId', 'Tax ID'],
+          ];
+          for (const [key, label] of VERIFY) {
+            if (updateData[key] !== undefined) {
+              const persisted = (updatedProfile as unknown as Record<string, unknown>)[key];
+              const sent = updateData[key];
+              // Loose equality (numbers may come back as strings, etc.)
+              const match =
+                persisted === sent ||
+                (typeof persisted === 'string' && persisted === String(sent)) ||
+                (typeof sent === 'string' && sent === String(persisted));
+              if (!match && (persisted === null || persisted === undefined || persisted === '')) {
+                dropped.push(label);
+              }
+            }
+          }
+
+          if (dropped.length > 0) {
+            console.warn(
+              '[ProfileStep] Backend did not persist these fields:',
+              dropped,
+              '— DTO/migration may be missing them. Update POST /users/:id/client-profile to accept the full ClientProfile shape.'
+            );
+            setWarning(
+              `${dropped.join(', ')} couldn't be saved right now. You can continue — your strategist will help fill this in.`
+            );
+          } else {
+            setWarning(null);
+          }
+
+          if (dashboardData && onProfileUpdate) {
+            onProfileUpdate({
+              ...dashboardData,
+              profile: updatedProfile,
+            });
+          }
         }
       }
 
+      // Advance regardless of partial persistence: the user shouldn't be stuck
+      // on the profile step if the backend drops optional planning fields.
       onContinue();
     } catch (err) {
       console.error('Failed to update profile:', err);
@@ -443,13 +488,17 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
       <div className="pt-0">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-xs font-medium text-steel-gray/60 uppercase">Business Information</h3>
-          <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-steel-gray">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={formData.hasBusiness}
+            aria-label="I own a business"
+            onClick={() => handleInputChange('hasBusiness', !formData.hasBusiness)}
+            className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs font-medium text-steel-gray transition-colors duration-150 ease-linear hover:text-soft-white focus:outline-none focus-visible:ring-2 focus-visible:ring-electric-blue/40"
+          >
             <span>I own a business</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={formData.hasBusiness}
-              onClick={() => handleInputChange('hasBusiness', !formData.hasBusiness)}
+            <span
+              aria-hidden="true"
               className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors duration-150 ease-linear ${
                 formData.hasBusiness ? 'bg-electric-blue' : 'bg-white/15'
               }`}
@@ -459,8 +508,8 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
                   formData.hasBusiness ? 'translate-x-3.5' : 'translate-x-0.5'
                 }`}
               />
-            </button>
-          </label>
+            </span>
+          </button>
         </div>
 
         {formData.hasBusiness && (
@@ -530,6 +579,13 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
 
       {/* Error message */}
       {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+
+      {/* Soft warning when backend silently dropped fields */}
+      {warning && (
+        <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+          <p className="text-xs leading-relaxed text-amber-300">{warning}</p>
+        </div>
+      )}
 
       {/* Navigation Buttons */}
       <div className="mt-8 flex gap-3">
