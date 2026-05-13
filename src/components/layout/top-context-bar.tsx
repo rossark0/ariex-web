@@ -48,6 +48,7 @@ function humanize(segment: string): string {
 // We suppress the context bar there to avoid double headers.
 const SUPPRESS_ON_PATTERNS: RegExp[] = [
   /^\/strategist\/clients\/[^/]+$/,
+  /^\/strategist\/scenarios\/[^/]+$/,
   /^\/compliance\/clients\/[^/]+$/,
   /^\/compliance\/strategists\/[^/]+$/,
 ];

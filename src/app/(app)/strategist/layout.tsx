@@ -16,11 +16,13 @@ import {
   FileText,
   CreditCard,
   ShieldCheck,
+  TreeStructure,
 } from '@phosphor-icons/react';
 
 const navItems = [
   { href: '/strategist/home', label: 'Home', icon: House },
   { href: '/strategist/clients', label: 'Clients', icon: AddressBook },
+  { href: '/strategist/scenarios', label: 'Scenarios', icon: TreeStructure },
   { href: '/strategist/compliance', label: 'Compliance', icon: ShieldCheck },
   { href: '/strategist/billing', label: 'Billing', icon: CreditCard },
   // { href: '/strategist/agreements', label: 'Agreements', icon: FileText },
