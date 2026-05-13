@@ -39,21 +39,21 @@ import type { AiDocumentContext, AiAgreementContext } from '@/contexts/ai/AiPage
 
 function AnimatedDots() {
   return (
-    <span className="inline-flex gap-0.5 pl-1">
+    <span className="inline-flex gap-0.5 pl-1" aria-hidden="true">
       <span
-        className="animate-[bounce_1.4s_ease-in-out_infinite]"
+        className="animate-ariex-dot-pulse"
         style={{ animationDelay: '0ms' }}
       >
         .
       </span>
       <span
-        className="animate-[bounce_1.4s_ease-in-out_infinite]"
+        className="animate-ariex-dot-pulse"
         style={{ animationDelay: '200ms' }}
       >
         .
       </span>
       <span
-        className="animate-[bounce_1.4s_ease-in-out_infinite]"
+        className="animate-ariex-dot-pulse"
         style={{ animationDelay: '400ms' }}
       >
         .
@@ -660,15 +660,15 @@ export default function ClientDashboardPage() {
       <div className="flex-1">
         {/* Action Banner - Shows when there's a pending agreement to sign */}
         {/* {hasPendingAgreement && (
-          <div className="bg-amber-50 border-b border-amber-200">
+          <div className="bg-amber-500/10 border-b border-amber-500/30">
             <div className="mx-auto max-w-[642px] px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100">
-                  <FileIcon className="h-4 w-4 text-amber-600" weight="fill" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/15">
+                  <FileIcon className="h-4 w-4 text-amber-400" weight="fill" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-amber-900">Action Required</p>
-                  <p className="text-xs text-amber-700">Please sign your service agreement to continue</p>
+                  <p className="text-xs text-amber-300">Please sign your service agreement to continue</p>
                 </div>
               </div>
               <button
@@ -1159,7 +1159,7 @@ export default function ClientDashboardPage() {
             {/* Pending document requests */}
             {pendingDocTodos.length > 0 && serviceAgreement && (
               <div className="mb-6">
-                <p className="mb-3 text-sm font-medium text-amber-600">
+                <p className="mb-3 text-sm font-medium text-amber-400">
                   Pending requests · {pendingDocTodos.length} document{pendingDocTodos.length !== 1 ? 's' : ''} needed
                 </p>
                 <div className="flex flex-col gap-2">

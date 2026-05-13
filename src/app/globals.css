@@ -195,6 +195,20 @@
   .animate-risk-pulse {
     animation: ariex-risk-pulse 1.6s linear infinite;
   }
+
+  /* Loading dot pulse — opacity only, no position shift (ARIEX motion rules) */
+  @keyframes ariex-dot-pulse {
+    0%,
+    100% {
+      opacity: 0.3;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  .animate-ariex-dot-pulse {
+    animation: ariex-dot-pulse 1.2s linear infinite;
+  }
 }
 
 /* Tiptap Editor Styles */

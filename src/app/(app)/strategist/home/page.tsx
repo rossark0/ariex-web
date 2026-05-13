@@ -227,7 +227,7 @@ export default function StrategistDashboardPage() {
     <div className="flex min-h-full flex-col bg-deep-navy">
       <div className="flex-1">
         {/* Welcome Section */}
-        <div className="shrink-0 pt-12 pb-8">
+        <div className="shrink-0 pt-6 pb-8">
           <div className="mx-auto w-full max-w-[720px] px-6">
             <Reveal>
               <h1 className="mb-2 text-3xl font-medium text-soft-white tracking-tight">

@@ -101,9 +101,9 @@ export function ChatMessagesList({
               {getInitials(clientName)}
             </div>
             <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-white/6 px-4 py-2">
-              <div className="h-2 w-2 animate-bounce rounded-full bg-steel-gray [animation-delay:-0.3s]" />
-              <div className="h-2 w-2 animate-bounce rounded-full bg-steel-gray [animation-delay:-0.15s]" />
-              <div className="h-2 w-2 animate-bounce rounded-full bg-steel-gray" />
+              <div className="h-1.5 w-1.5 animate-ariex-dot-pulse rounded-full bg-steel-gray [animation-delay:0ms]" />
+              <div className="h-1.5 w-1.5 animate-ariex-dot-pulse rounded-full bg-steel-gray [animation-delay:200ms]" />
+              <div className="h-1.5 w-1.5 animate-ariex-dot-pulse rounded-full bg-steel-gray [animation-delay:400ms]" />
             </div>
           </div>
         )}

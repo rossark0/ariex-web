@@ -6,7 +6,7 @@ import { useUiStore } from '@/contexts/ui/UiStore';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
 import ChatSidebar from './chat-sidebar';
-import { SidebarToggle } from './sidebar-toggle';
+import { TopContextBar } from './top-context-bar';
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
 import { useAiBasicPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
@@ -114,20 +114,7 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
       </aside>
       <main className="relative max-h-screen flex-1 p-4 pb-2 pl-0">
         <div className="relative flex h-full w-full flex-1 flex-col overflow-y-auto rounded-lg border border-white/8 bg-deep-navy shadow-sm">
-          {/* Sidebar Close Button */}
-          <div
-            className={cn(
-              'absolute top-4 left-4 z-10 hidden md:block',
-              isClientPage ? 'top-5.5 left-12' : ''
-            )}
-          >
-            <SidebarToggle />
-          </div>
-
-          {/* Chat Sidebar Toggle Button */}
-          {/* <div className="absolute top-4 right-4 z-10 hidden md:block">
-            <ChatSidebarToggle />
-          </div> */}
+          <TopContextBar />
 
           <div className="flex-1 overflow-y-auto">{children}</div>
 
