@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowsClockwise, Check, Copy, Info, Sparkle, Trash } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowsClockwise, Check, Copy, Info, MagicWand, Sparkle, Trash } from '@phosphor-icons/react';
 import { Reveal } from '@/components/ui/reveal';
 import {
   computeScenario,
@@ -10,9 +10,11 @@ import {
   type Scenario,
   type StrategyId,
 } from '@/lib/tax/scenarios';
-import type { ScenarioInputs } from '@/lib/tax/calculator';
+import { DEFAULT_TAX_YEAR, type ScenarioInputs } from '@/lib/tax/calculator';
 import { getClientById } from '@/lib/api/strategist.api';
 import { clientProfileToScenarioInputs } from '@/lib/tax/from-client-profile';
+import { fetchClientAggregate } from '@/lib/tax/client-aggregate';
+import { sanitizePageContext } from '@/lib/ai/sanitize-pii';
 import { ScenarioTree } from '../components/scenario-tree';
 import { ScenarioImpactPanel } from '../components/scenario-impact-panel';
 import { ScenarioInputsEditor } from '../components/scenario-inputs-editor';
@@ -40,6 +42,15 @@ export default function ScenarioWorkspacePage() {
     filledFields: string[];
   } | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // AI scenario-generation state.
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationResult, setGenerationResult] = useState<{
+    rationale: string;
+    notes: string[];
+    enabledStrategies: StrategyId[];
+  } | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
   useEffect(() => () => {
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
@@ -172,6 +183,96 @@ export default function ScenarioWorkspacePage() {
     await handleClientChange(draft.clientId);
   };
 
+  /**
+   * Pull the full client picture (profile + documents + agreements) and
+   * ask the AI to propose a scenario blueprint — inputs to refine + which
+   * strategies to enable + planning notes. Applies the result to the
+   * current scenario in one shot.
+   */
+  const handleGenerateFromClient = async () => {
+    if (!draft?.clientId) return;
+    setIsGenerating(true);
+    setGenerationError(null);
+    setGenerationResult(null);
+    try {
+      const aggregate = await fetchClientAggregate(draft.clientId);
+      const seed = draft.inputs;
+
+      // Sanitize PII out of everything before it leaves the browser.
+      const sanitizedContext = sanitizePageContext({
+        client: aggregate.client
+          ? {
+              id: aggregate.client.id,
+              name: aggregate.client.name,
+              email: aggregate.client.email,
+              status: aggregate.client.status,
+              role: aggregate.client.role,
+              createdAt: aggregate.client.createdAt,
+            }
+          : null,
+        profile: aggregate.client?.clientProfile ?? null,
+        documents: aggregate.documents.map(d => ({
+          name: d.name,
+          type: d.type,
+          status: d.status,
+          category: d.category,
+          uploadedBy: d.uploadedByName || d.uploadedBy,
+          createdAt: d.createdAt,
+        })),
+        agreements: aggregate.agreements.map(a => ({
+          id: a.id,
+          name: a.name,
+          status: a.status,
+          price: a.price,
+          createdAt: a.createdAt,
+          updatedAt: a.updatedAt,
+        })),
+      });
+
+      const res = await fetch('/api/ai/generate-scenario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          context: sanitizedContext,
+          currentInputs: seed,
+          year: seed.year ?? DEFAULT_TAX_YEAR,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Generation failed (${res.status})`);
+      }
+      const blueprint = (await res.json()) as {
+        name: string;
+        rationale: string;
+        inputs: ScenarioInputs;
+        enabledStrategies: StrategyId[];
+        notes: string[];
+      };
+
+      setDraft(prev =>
+        prev
+          ? {
+              ...prev,
+              name: blueprint.name || prev.name,
+              inputs: { ...prev.inputs, ...blueprint.inputs },
+              enabledStrategies: blueprint.enabledStrategies,
+            }
+          : prev
+      );
+      setGenerationResult({
+        rationale: blueprint.rationale,
+        notes: blueprint.notes,
+        enabledStrategies: blueprint.enabledStrategies,
+      });
+    } catch (err) {
+      console.error('[Scenario] AI generation failed:', err);
+      setGenerationError(err instanceof Error ? err.message : 'Failed to generate scenario');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleDelete = () => {
     if (!window.confirm('Delete this scenario? This cannot be undone.')) return;
     deleteScenario(draft.id);
@@ -247,6 +348,23 @@ export default function ScenarioWorkspacePage() {
             onSelect={clientId => handleClientChange(clientId)}
           />
           <button
+            onClick={handleGenerateFromClient}
+            disabled={!draft.clientId || isGenerating}
+            title={
+              draft.clientId
+                ? 'Pull this client\'s profile, documents, and agreements, then ask ARIEX to propose a tailored scenario.'
+                : 'Link a client first to generate a scenario from their data.'
+            }
+            className="flex items-center gap-1.5 rounded-md border border-electric-blue/40 bg-electric-blue/10 px-2.5 py-1 text-xs font-medium text-electric-blue transition-colors duration-150 ease-linear hover:bg-electric-blue/20 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {isGenerating ? (
+              <ArrowsClockwise weight="bold" className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <MagicWand weight="fill" className="h-3.5 w-3.5" />
+            )}
+            {isGenerating ? 'Generating…' : 'Generate from client'}
+          </button>
+          <button
             onClick={handleCopySummary}
             disabled={!computation}
             className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/3 px-2.5 py-1 text-xs font-medium text-soft-white transition-colors duration-150 ease-linear hover:bg-white/8 disabled:opacity-40"
@@ -272,6 +390,63 @@ export default function ScenarioWorkspacePage() {
       {/* Body: tree on left, impact panel on right */}
       <div className="flex flex-1 min-h-0 gap-4 overflow-hidden p-6">
         <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-y-auto">
+          {generationError && (
+            <Reveal>
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2">
+                <p className="text-xs font-medium text-red-300">
+                  Couldn&apos;t generate a scenario
+                </p>
+                <p className="mt-0.5 text-[11px] text-red-300/80">{generationError}</p>
+              </div>
+            </Reveal>
+          )}
+
+          {generationResult && (
+            <Reveal>
+              <div className="rounded-lg border border-electric-blue/30 bg-electric-blue/10 px-3 py-2.5">
+                <div className="flex items-start gap-2">
+                  <MagicWand weight="fill" className="mt-0.5 h-4 w-4 shrink-0 text-electric-blue" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-soft-white">
+                      ARIEX generated this scenario from the client&apos;s data
+                    </p>
+                    {generationResult.rationale && (
+                      <p className="mt-0.5 text-[11px] leading-relaxed text-soft-white/85">
+                        {generationResult.rationale}
+                      </p>
+                    )}
+                    {generationResult.enabledStrategies.length > 0 && (
+                      <p className="mt-1 text-[11px] text-steel-gray">
+                        Enabled: {generationResult.enabledStrategies.length} strateg
+                        {generationResult.enabledStrategies.length === 1 ? 'y' : 'ies'}.
+                      </p>
+                    )}
+                    {generationResult.notes.length > 0 && (
+                      <ul className="mt-2 flex flex-col gap-1">
+                        {generationResult.notes.map((note, i) => (
+                          <li
+                            key={i}
+                            className="flex gap-1.5 text-[11px] leading-relaxed text-steel-gray"
+                          >
+                            <span className="mt-1 inline-block h-1 w-1 shrink-0 rounded-full bg-electric-blue" />
+                            <span>{note}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setGenerationResult(null)}
+                    className="flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </Reveal>
+          )}
+
           {draft.clientId && (
             <Reveal>
               <div className="flex items-start justify-between gap-3 rounded-lg border border-electric-blue/25 bg-electric-blue/8 px-3 py-2">
