@@ -35,14 +35,6 @@ const RequestDocumentsModal = dynamic(
   { ssr: false }
 );
 
-const ClientFloatingChat = dynamic(
-  () =>
-    import('@/components/chat/client-floating-chat').then(m => ({
-      default: m.ClientFloatingChat,
-    })),
-  { ssr: false }
-);
-
 import { LoadingState } from '@/contexts/strategist-contexts/client-management/components/shared/loading-state';
 import { ClientHeader } from '@/contexts/strategist-contexts/client-management/components/detail/client-header';
 import { ClientInfoCard } from '@/contexts/strategist-contexts/client-management/components/detail/client-info-card';
@@ -474,19 +466,7 @@ export default function StrategistClientDetailPage({ params }: Props) {
         />
       )}
 
-      {/* Floating Chat */}
-      {apiClient && (
-        <ClientFloatingChat
-          client={{
-            id: apiClient.id,
-            user: {
-              id: apiClient.id,
-              name: apiClient.name,
-              email: apiClient.email,
-            },
-          }}
-        />
-      )}
+      {/* Strategist ↔ client chat now lives in the right-rail Client Chat tab. */}
     </div>
   );
 }

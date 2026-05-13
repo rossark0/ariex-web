@@ -9,6 +9,8 @@ import ChatSidebar from './chat-sidebar';
 import { TopContextBar } from './top-context-bar';
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
+import { AiInsightsRail } from '@/components/ai/ai-insights-rail';
+import { ClientDetailRail } from '@/components/ai/client-detail-rail';
 import { useAiBasicPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
 import { DesktopIcon, DeviceMobileCamera } from '@phosphor-icons/react';
 
@@ -71,6 +73,18 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
   const isAgreements =
     pathname.startsWith('/client/agreements') || pathname.startsWith('/strategist/agreements');
 
+  // Routes where the AI Insights Rail replaces the human ChatSidebar.
+  // Pick pages with rich page context where structured insights add the most value.
+  const isStrategistHome = pathname === '/strategist/home';
+  const isStrategistClientDetail = !!pathname.match(/^\/strategist\/clients\/[^/]+$/);
+  const isClientHome = pathname === '/client/home';
+  const showAiInsightsRail =
+    (isStrategistRole && isStrategistHome) || (isClientRole && isClientHome);
+  // Client detail uses a richer tabbed rail (AI Copilot + Client Chat) instead.
+  const showClientDetailRail = isStrategistRole && isStrategistClientDetail;
+  // Suppress the floating chatbot when the rail provides AI access inline.
+  const suppressFloatingChatbot = showAiInsightsRail || showClientDetailRail;
+
   // Determine context type for AI chatbot based on current page
   const getContextType = () => {
     if (isPayments) return 'payment';
@@ -118,7 +132,7 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
 
           <div className="flex-1 overflow-y-auto">{children}</div>
 
-          {isClientRole || isStrategistRole ? (
+          {(isClientRole || isStrategistRole) && !suppressFloatingChatbot ? (
             <AiFloatingChatbot
               selectedCount={selectedCount}
               onClearSelection={onClearSelection ?? undefined}
@@ -131,10 +145,20 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
           ) : null}
         </div>
       </main>
-      {(!isCompliance || isComplianceStrategistDetail || isComplianceClientDetail) && !isStrategistCompliance && !isBilling && (
-        <aside className="hidden h-[calc(100vh-0.5rem)] flex-col gap-4 pt-4 pr-4 md:flex">
-          <ChatSidebar />
+      {showClientDetailRail ? (
+        <aside className="hidden h-[calc(100vh-0.5rem)] flex-col gap-4 py-4 pr-4 md:flex">
+          <ClientDetailRail className="h-full" />
         </aside>
+      ) : showAiInsightsRail ? (
+        <aside className="hidden h-[calc(100vh-0.5rem)] flex-col gap-4 py-4 pr-4 md:flex">
+          <AiInsightsRail className="h-full" />
+        </aside>
+      ) : (
+        (!isCompliance || isComplianceStrategistDetail || isComplianceClientDetail) && !isStrategistCompliance && !isBilling && (
+          <aside className="hidden h-[calc(100vh-0.5rem)] flex-col gap-4 pt-4 pr-4 md:flex">
+            <ChatSidebar />
+          </aside>
+        )
       )}
     </div>
   );

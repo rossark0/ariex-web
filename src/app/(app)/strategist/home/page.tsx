@@ -8,6 +8,7 @@ import { listClients, type ApiClient } from '@/lib/api/strategist.api';
 import { useCountUp } from '@/hooks/use-count-up';
 import { Reveal } from '@/components/ui/reveal';
 import { ArrowRight, Warning } from '@phosphor-icons/react';
+import { useAiPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
 
 // ============================================================================
 // TYPES
@@ -222,6 +223,31 @@ export default function StrategistDashboardPage() {
   const atRiskCount = useMemo(() => prioritized.filter(a => a.atRisk).length, [prioritized]);
   const animatedAtRisk = useCountUp(atRiskCount, 300);
   const displayAtRisk = Math.round(animatedAtRisk);
+
+  // Push cross-client context to the AI rail so it can surface systemic insights
+  // (e.g., "3 clients stalled at agreement signature").
+  useAiPageContext({
+    pageTitle: 'Strategist Dashboard',
+    userRole: 'STRATEGIST',
+    extra: {
+      totalClients: clients.length,
+      atRiskCount,
+      clientSummary: clients.slice(0, 25).map(c => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        status: c.status,
+        createdAt: c.createdAt,
+      })),
+      topPriorities: prioritized.slice(0, 5).map(p => ({
+        clientId: p.clientId,
+        clientName: p.clientName,
+        priority: p.priority,
+        atRisk: p.atRisk,
+        description: p.description,
+      })),
+    },
+  });
 
   return (
     <div className="flex min-h-full flex-col bg-deep-navy">

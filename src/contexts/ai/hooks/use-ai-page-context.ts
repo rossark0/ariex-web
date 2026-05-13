@@ -75,6 +75,7 @@ export function useAiPageContext(options: UseAiPageContextOptions) {
   // Serialize complex deps for stable change detection
   const clientKey = JSON.stringify(options.client ?? null);
   const strategyKey = JSON.stringify(options.strategy ?? null);
+  const extraKey = JSON.stringify(options.extra ?? null);
   const docCount = options.documents?.length ?? 0;
   const agreementCount = options.agreements?.length ?? 0;
   const paymentCount = options.payments?.length ?? 0;
@@ -106,6 +107,7 @@ export function useAiPageContext(options: UseAiPageContextOptions) {
     agreementCount,
     paymentCount,
     strategyKey,
+    extraKey,
   ]);
 }
 
