@@ -226,10 +226,13 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
     setWarning(null);
 
     try {
-      // Build update payload — only include filled fields
+      // Build update payload — use the field names the backend documents in
+      // its OpenAPI spec (POST /users/:userId/client-profile → see InviteClientDto.profileData).
+      // We keep sending businessName/businessType/estimatedIncome too; if the
+      // backend drops them the verification step below will surface a warning.
       const updateData: Record<string, unknown> = {};
 
-      if (formData.phoneNumber) updateData.phoneNumber = formData.phoneNumber;
+      if (formData.phoneNumber) updateData.phone = formData.phoneNumber;
       if (formData.address) updateData.address = formData.address;
       if (formData.filingStatus) updateData.filingStatus = formData.filingStatus;
 
@@ -254,29 +257,42 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
         const updatedProfile = await updateClientProfile(updateData);
 
         if (updatedProfile) {
-          // Round-trip verification: confirm the API actually persisted the new
-          // fields. If the backend's DTO silently drops any of them we surface
-          // a clear warning (visible to user + console for backend devs) instead
-          // of advancing through onboarding under a false impression.
+          // Round-trip verification: confirm the API actually persisted each
+          // field we sent. If the backend's DTO silently drops any of them we
+          // surface a clear warning to the user and log a precise dev-facing
+          // message naming the dropped fields. Keys whose value comes back
+          // either under the same key OR an aliased key (e.g., we sent `phone`
+          // and got `phoneNumber` back) are considered persisted.
           const dropped: string[] = [];
-          const VERIFY: Array<[keyof typeof updateData, string]> = [
+          const aliases: Record<string, string[]> = {
+            phone: ['phone', 'phoneNumber'],
+            phoneNumber: ['phone', 'phoneNumber'],
+          };
+          const VERIFY: Array<[string, string]> = [
+            ['phone', 'Phone number'],
+            ['address', 'Address'],
             ['filingStatus', 'Filing status'],
             ['dependents', 'Dependents'],
             ['estimatedIncome', 'Estimated income'],
             ['taxId', 'Tax ID'],
+            ['businessName', 'Business name'],
+            ['businessType', 'Business type'],
           ];
+          const profileRecord = updatedProfile as unknown as Record<string, unknown>;
           for (const [key, label] of VERIFY) {
-            if (updateData[key] !== undefined) {
-              const persisted = (updatedProfile as unknown as Record<string, unknown>)[key];
-              const sent = updateData[key];
-              // Loose equality (numbers may come back as strings, etc.)
-              const match =
-                persisted === sent ||
-                (typeof persisted === 'string' && persisted === String(sent)) ||
-                (typeof sent === 'string' && sent === String(persisted));
-              if (!match && (persisted === null || persisted === undefined || persisted === '')) {
-                dropped.push(label);
-              }
+            if (updateData[key] === undefined) continue;
+            const sent = updateData[key];
+            const keysToCheck = aliases[key] ?? [key];
+            const persistedFromAlias = keysToCheck
+              .map(k => profileRecord[k])
+              .find(v => v !== undefined && v !== null && v !== '');
+            const match =
+              persistedFromAlias === sent ||
+              (typeof persistedFromAlias === 'string' && persistedFromAlias === String(sent)) ||
+              (typeof sent === 'string' && sent === String(persistedFromAlias)) ||
+              (typeof persistedFromAlias === 'number' && persistedFromAlias === Number(sent));
+            if (!match) {
+              dropped.push(label);
             }
           }
 
@@ -284,7 +300,8 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
             console.warn(
               '[ProfileStep] Backend did not persist these fields:',
               dropped,
-              '— DTO/migration may be missing them. Update POST /users/:id/client-profile to accept the full ClientProfile shape.'
+              '— POST /users/:userId/client-profile DTO/migration may be missing them. ' +
+                'See https://qt4pgrsacn.us-east-2.awsapprunner.com/api for the documented schema.'
             );
             setWarning(
               `${dropped.join(', ')} couldn't be saved right now. You can continue — your strategist will help fill this in.`

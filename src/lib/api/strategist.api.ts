@@ -684,12 +684,13 @@ export async function createClient(data: CreateClientData): Promise<ApiClient | 
 
     console.log('[API] Client invited:', inviteResult);
 
-    // Create client profile with additional data
+    // Create client profile with additional data. Field names match the
+    // backend's documented schema (POST /users/:userId/client-profile).
     try {
       await apiRequest(`/users/${inviteResult.id}/client-profile`, {
         method: 'POST',
         body: JSON.stringify({
-          phoneNumber: data.phone || null,
+          phone: data.phone || null,
           address: data.address || null,
           businessName: data.businessName || null,
           businessType: data.clientType === 'business' ? 'Business' : null,
