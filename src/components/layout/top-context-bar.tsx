@@ -55,6 +55,13 @@ const SUPPRESS_ON_PATTERNS: RegExp[] = [
   /^\/compliance\/strategists\/[^/]+$/,
 ];
 
+// Routes that own their own SidebarToggle (rendered inside the page's own
+// header). For these we skip the floating-toggle fallback altogether so the
+// page chrome doesn't have a duplicate orphan toggle drifting over it.
+const OWN_SIDEBAR_TOGGLE_PATTERNS: RegExp[] = [
+  /^\/strategist\/scenarios\/[^/]+$/,
+];
+
 export function TopContextBar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -98,7 +105,12 @@ export function TopContextBar() {
 
   // On routes that own their top chrome, render just an absolute-positioned
   // sidebar toggle to preserve the prior layout without doubling the header.
+  // Some routes (e.g. scenario workspace) embed the toggle in their own
+  // header — for those we skip the floating fallback so the page chrome
+  // doesn't end up with two competing toggles.
   if (suppressed) {
+    const ownsToggle = OWN_SIDEBAR_TOGGLE_PATTERNS.some(re => re.test(pathname));
+    if (ownsToggle) return null;
     return (
       <div className="absolute top-4 left-4 z-10 hidden md:block">
         <SidebarToggle />

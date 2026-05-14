@@ -15,6 +15,7 @@ import { getClientById } from '@/lib/api/strategist.api';
 import { clientProfileToScenarioInputs } from '@/lib/tax/from-client-profile';
 import { fetchClientAggregate } from '@/lib/tax/client-aggregate';
 import { sanitizePageContext } from '@/lib/ai/sanitize-pii';
+import { SidebarToggle } from '@/components/layout/sidebar-toggle';
 import { ScenarioTree } from '../components/scenario-tree';
 import { ScenarioImpactPanel } from '../components/scenario-impact-panel';
 import { ScenarioInputsEditor } from '../components/scenario-inputs-editor';
@@ -328,14 +329,20 @@ export default function ScenarioWorkspacePage() {
       {/* Top toolbar — three regions: nav · identity · actions */}
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/8 px-4">
         {/* ── Region 1: Nav ─────────────────────────────────────────── */}
-        <button
-          type="button"
-          onClick={() => router.push('/strategist/scenarios')}
-          className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white"
-        >
-          <ArrowLeft weight="bold" className="h-3.5 w-3.5" />
-          Scenarios
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center">
+            <SidebarToggle />
+          </div>
+          <span aria-hidden="true" className="h-5 w-px shrink-0 bg-white/10" />
+          <button
+            type="button"
+            onClick={() => router.push('/strategist/scenarios')}
+            className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white"
+          >
+            <ArrowLeft weight="bold" className="h-3.5 w-3.5" />
+            Scenarios
+          </button>
+        </div>
 
         <span aria-hidden="true" className="h-5 w-px shrink-0 bg-white/10" />
 
