@@ -1,10 +1,12 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { listAgreements, listClients } from '@/lib/api/strategist.api';
+import { listAgreements, listClients, type ApiAgreement, type ApiClient } from '@/lib/api/strategist.api';
 import { getClientDashboardData, getChargesForAgreement } from '@/lib/api/client.api';
 import { computeClientPriority } from '@/lib/client-priority';
+import { sanitizePageContext } from '@/lib/ai/sanitize-pii';
 import { isAgreementSigned, isAgreementPaid, AgreementStatus } from '@/types/agreement';
+import type { ClientRanking, PrioritizeResponse } from '@/app/api/ai/prioritize-clients/route';
 
 export interface UrgentAlertsResult {
   /** Total number of items needing attention. 0 = nothing urgent. */
@@ -68,14 +70,32 @@ async function computeStrategistUrgentAlerts(): Promise<UrgentAlertsResult> {
       return { count: 0, label: 'All clear', href: '/strategist/clients' };
     }
 
+    // Try the AI ranker first so the badge agrees with what the strategist
+    // home shows. If the call fails (no key, rate limit, network), fall
+    // back to the deterministic engine — no UI regression.
+    const aiRankings = await fetchAiRankings(clients, agreements).catch(() => null);
+
     let highCount = 0;
     let mediumCount = 0;
-    for (const client of clients) {
-      const priority = computeClientPriority(client, agreements || []);
-      if (priority.riskBand === 'high' || priority.atRisk) {
-        highCount += 1;
-      } else if (priority.riskBand === 'medium') {
-        mediumCount += 1;
+    if (aiRankings && aiRankings.length > 0) {
+      const byId = new Map(aiRankings.map(r => [r.clientId, r]));
+      for (const client of clients) {
+        const r = byId.get(client.id);
+        if (!r) continue;
+        if (r.riskBand === 'high' || r.atRisk) {
+          highCount += 1;
+        } else if (r.riskBand === 'medium') {
+          mediumCount += 1;
+        }
+      }
+    } else {
+      for (const client of clients) {
+        const priority = computeClientPriority(client, agreements || []);
+        if (priority.riskBand === 'high' || priority.atRisk) {
+          highCount += 1;
+        } else if (priority.riskBand === 'medium') {
+          mediumCount += 1;
+        }
       }
     }
 
@@ -153,6 +173,49 @@ async function computeClientUrgentAlerts(): Promise<UrgentAlertsResult> {
   } catch (err) {
     console.error('[useUrgentAlerts] client computation failed:', err);
     return { count: 0, label: 'Status unavailable', href: '/client/home' };
+  }
+}
+
+// ─── AI ranker fetch (shared with strategist home) ────────────────────────
+
+async function fetchAiRankings(
+  clients: ApiClient[],
+  agreements: ApiAgreement[]
+): Promise<ClientRanking[] | null> {
+  const sanitized = sanitizePageContext({
+    clients: clients.map(c => ({
+      id: c.id,
+      name: c.name,
+      email: c.email,
+      createdAt: c.createdAt,
+      status: c.status,
+    })),
+    agreements: (agreements || []).map(a => ({
+      clientId: a.clientId,
+      status: a.status,
+      createdAt: a.createdAt,
+      updatedAt: a.updatedAt,
+      price: a.price,
+    })),
+  });
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const res = await fetch('/api/ai/prioritize-clients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sanitized),
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    const payload = (await res.json()) as PrioritizeResponse;
+    return payload.rankings.length > 0 ? payload.rankings : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

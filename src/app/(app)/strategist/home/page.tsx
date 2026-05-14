@@ -9,7 +9,7 @@ import { useCountUp } from '@/hooks/use-count-up';
 import { Reveal } from '@/components/ui/reveal';
 import { ArrowRight, Warning } from '@phosphor-icons/react';
 import { useAiPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
-import { computeClientPriority } from '@/lib/client-priority';
+import { useClientRankings } from '@/hooks/use-client-rankings';
 
 // ============================================================================
 // TYPES
@@ -153,60 +153,57 @@ export default function StrategistDashboardPage() {
   const { user } = useAuth();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [activities, setActivities] = useState<ClientActivity[]>([]);
   const [clients, setClients] = useState<ApiClient[]>([]);
   const [agreements, setAgreements] = useState<ApiAgreement[]>([]);
 
   useEffect(() => {
     async function loadData() {
       try {
-        // Fetch clients + agreements in parallel so the shared priority engine
-        // has the agreement data it needs to compute accurate scores.
         const [clientsData, agreementsData] = await Promise.all([
           listClients(),
           listAgreements(),
         ]);
         setClients(clientsData);
         setAgreements(agreementsData || []);
-
-        const generatedActivities: ClientActivity[] = clientsData.map(client => {
-          const priority = computeClientPriority(client, agreementsData || []);
-          const clientName = client.name || client.email;
-          return {
-            id: `${client.id}-priority`,
-            clientId: client.id,
-            clientName,
-            type: 'account_created',
-            description: priority.atRisk
-              ? `${clientName} — ${priority.signal}`
-              : `${clientName} · ${priority.signal}`,
-            actionLabel: priority.atRisk ? 'See' : 'View',
-            date: new Date(client.createdAt),
-            priority: priority.score,
-            atRisk: priority.atRisk,
-          };
-        });
-
-        setActivities(generatedActivities);
       } catch (error) {
         console.error('Failed to load data:', error);
       } finally {
         setIsLoading(false);
       }
     }
-
     loadData();
   }, []);
 
-  // Live priority re-sort — higher score first, then most recent.
-  const prioritized = useMemo(
-    () =>
-      [...activities].sort((a, b) => {
-        if (b.priority !== a.priority) return b.priority - a.priority;
-        return b.date.getTime() - a.date.getTime();
-      }),
-    [activities]
-  );
+  // Live rankings — AI-driven when /api/ai/prioritize-clients is available,
+  // falls back to the deterministic engine if the API is unavailable.
+  const { rankings, byClientId, source: rankingsSource, isLoading: rankingsLoading } =
+    useClientRankings(clients, agreements);
+
+  // Build the activity rows the UI renders, joined to rankings by clientId.
+  const prioritized = useMemo<ClientActivity[]>(() => {
+    if (clients.length === 0) return [];
+    const clientById = new Map(clients.map(c => [c.id, c]));
+    const ordered: ClientActivity[] = [];
+    for (const ranking of rankings) {
+      const client = clientById.get(ranking.clientId);
+      if (!client) continue;
+      const clientName = client.name || client.email;
+      ordered.push({
+        id: `${client.id}-priority`,
+        clientId: client.id,
+        clientName,
+        type: 'account_created',
+        description: ranking.atRisk
+          ? `${clientName} — ${ranking.signal}`
+          : `${clientName} · ${ranking.signal}`,
+        actionLabel: ranking.atRisk ? 'See' : 'View',
+        date: new Date(client.createdAt),
+        priority: ranking.score,
+        atRisk: ranking.atRisk,
+      });
+    }
+    return ordered;
+  }, [clients, rankings]);
 
   const animatedClientCount = useCountUp(clients.length, 300);
 
@@ -214,6 +211,10 @@ export default function StrategistDashboardPage() {
   const atRiskCount = useMemo(() => prioritized.filter(a => a.atRisk).length, [prioritized]);
   const animatedAtRisk = useCountUp(atRiskCount, 300);
   const displayAtRisk = Math.round(animatedAtRisk);
+
+  // byClientId is reserved for a future per-row "why this rank?" tooltip
+  // that surfaces ranking.reasoning. The other two are consumed in JSX.
+  void byClientId;
 
   // Push cross-client context to the AI rail so it can surface systemic insights
   // (e.g., "3 clients stalled at agreement signature").
@@ -297,7 +298,24 @@ export default function StrategistDashboardPage() {
           <div className="mx-auto flex w-full max-w-[720px] flex-col px-6 py-6">
             <div className="mb-4 flex w-full items-center justify-between">
               <div>
-                <h2 className="font-medium text-soft-white">Priorities</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-medium text-soft-white">Priorities</h2>
+                  {rankingsSource === 'ai' ? (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full border border-electric-blue/30 bg-electric-blue/10 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-electric-blue uppercase"
+                      title="Ranked by ARIEX from your live client and agreement data"
+                    >
+                      AI-ranked
+                    </span>
+                  ) : rankingsLoading ? (
+                    <span
+                      className="text-[10px] font-medium tracking-wide text-steel-gray/70 uppercase"
+                      title="AI is analyzing — interim ranking from deterministic rules shown"
+                    >
+                      Analyzing…
+                    </span>
+                  ) : null}
+                </div>
                 <p className="text-xs text-steel-gray">
                   Sorted by urgency. Hover to focus, others dim
                 </p>

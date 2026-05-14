@@ -12,6 +12,7 @@ import {
   type ClientPriority,
   type RiskBand,
 } from '@/lib/client-priority';
+import { useClientRankings } from '@/hooks/use-client-rankings';
 
 // ─── Sort state ───────────────────────────────────────────────────────────
 
@@ -51,11 +52,30 @@ export function ClientMatrix({ clients, agreements }: ClientMatrixProps) {
   const [sortKey, setSortKey] = useState<SortKey>('priority');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
+  // Pull AI-driven rankings to override the deterministic priority signal/
+  // score/atRisk for each client. Deadline projection still comes from the
+  // deterministic engine because it depends on agreement timestamps the AI
+  // doesn't compute itself.
+  const { byClientId: rankingByClientId, source: rankingsSource } = useClientRankings(
+    clients,
+    agreements
+  );
+
   const rows = useMemo<MatrixRow[]>(() => {
-    const computed = clients.map<MatrixRow>(client => ({
-      client,
-      priority: computeClientPriority(client, agreements),
-    }));
+    const computed = clients.map<MatrixRow>(client => {
+      const deterministic = computeClientPriority(client, agreements);
+      const ai = rankingByClientId.get(client.id);
+      const priority: ClientPriority = ai
+        ? {
+            ...deterministic,
+            score: ai.score,
+            riskBand: ai.riskBand,
+            atRisk: ai.atRisk,
+            signal: ai.signal,
+          }
+        : deterministic;
+      return { client, priority };
+    });
 
     const sorted = [...computed].sort((a, b) => {
       let cmp = 0;
@@ -82,7 +102,7 @@ export function ClientMatrix({ clients, agreements }: ClientMatrixProps) {
     });
 
     return sorted;
-  }, [clients, agreements, sortKey, sortDir]);
+  }, [clients, agreements, sortKey, sortDir, rankingByClientId]);
 
   const handleSort = (key: SortKey) => {
     if (key === sortKey) {
@@ -103,6 +123,14 @@ export function ClientMatrix({ clients, agreements }: ClientMatrixProps) {
   }
 
   return (
+    <div className="flex flex-col gap-2">
+      {rankingsSource === 'ai' && (
+        <div className="flex items-center gap-1.5 self-end">
+          <span className="inline-flex items-center gap-1 rounded-full border border-electric-blue/30 bg-electric-blue/10 px-2 py-0.5 text-[10px] font-medium tracking-wide text-electric-blue uppercase">
+            AI-ranked
+          </span>
+        </div>
+      )}
     <div className="overflow-hidden rounded-lg border border-white/8 bg-deep-navy">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -127,6 +155,7 @@ export function ClientMatrix({ clients, agreements }: ClientMatrixProps) {
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   );
 }
