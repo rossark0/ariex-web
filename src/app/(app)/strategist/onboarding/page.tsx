@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createPaymentIntegration, getPaymentIntegration } from '@/lib/api/strategist.api';
 import { useAuth } from '@/contexts/auth/AuthStore';
 import Image from 'next/image';
+import { Wordmark } from '@/components/layout/wordmark';
 
 export default function StrategistOnboardingPage() {
   const router = useRouter();
@@ -94,7 +95,7 @@ export default function StrategistOnboardingPage() {
       <header className="flex shrink-0 items-center justify-between px-6 py-4">
         <div className="flex w-full items-center gap-2">
           <div className="mb-8 flex items-center gap-2 pl-2">
-            <span className="font-mono text-sm font-medium text-steel-gray uppercase">ARIEX AI</span>
+            <Wordmark height={16} className="text-soft-white" />
           </div>
         </div>
         <div className="flex w-full items-center justify-end gap-4">

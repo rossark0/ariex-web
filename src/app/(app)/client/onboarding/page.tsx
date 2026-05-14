@@ -38,6 +38,7 @@ import { useClientAgreementStore } from '@/contexts/client/ClientAgreementStore'
 import { AgreementSelector } from '@/contexts/strategist-contexts/client-management/components/detail/agreement-selector';
 import { Reveal } from '@/components/ui/reveal';
 import { OnboardingOpportunityCard } from './components/onboarding-opportunity-card';
+import { Wordmark } from '@/components/layout/wordmark';
 
 // ============================================================================
 // ONBOARDING STEPS
@@ -1966,7 +1967,7 @@ function OnboardingContent() {
               onSelect={setSelectedAgreementId}
             />
           ) : (
-            <span className="font-mono text-sm font-medium text-steel-gray uppercase">ARIEX AI</span>
+            <Wordmark height={16} className="text-soft-white" />
           )}
         </div>
 

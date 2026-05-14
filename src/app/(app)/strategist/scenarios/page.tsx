@@ -104,15 +104,19 @@ export default function ScenarioListPage() {
             </div>
           ) : (
             <ul data-focus-group className="flex flex-col gap-2">
-              {scenarios.map(scenario => {
+              {scenarios.map((scenario, index) => {
                 const computation = computeScenario(scenario);
                 const enabledCount = scenario.enabledStrategies.length;
                 const linkedClientName = scenario.clientId
                   ? clientById.get(scenario.clientId)
                   : undefined;
+                // Stagger reveals so the list reads as ARIEX is laying the
+                // scenarios out one after another — caps at 12 items so a
+                // long list doesn't drag past the user's attention window.
+                const revealDelay = Math.min(index, 11) * 60;
                 return (
+                  <Reveal key={scenario.id} delay={revealDelay}>
                   <li
-                    key={scenario.id}
                     data-focus-item
                     onClick={() => router.push(`/strategist/scenarios/${scenario.id}`)}
                     className="group flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-white/8 bg-white/3 px-4 py-3 transition-colors duration-150 ease-linear hover:border-white/15 hover:bg-white/5"
@@ -153,6 +157,7 @@ export default function ScenarioListPage() {
                       <Trash weight="bold" className="h-3.5 w-3.5" />
                     </button>
                   </li>
+                  </Reveal>
                 );
               })}
             </ul>

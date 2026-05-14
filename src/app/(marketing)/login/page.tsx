@@ -7,6 +7,7 @@ import { Eye, EyeSlash } from '@phosphor-icons/react';
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { mockUsers, getRoleHomePath } from '@/contexts/auth/data/mock-users';
 import { Button } from '@/components/ui/button';
+import { Wordmark } from '@/components/layout/wordmark';
 
 // Check if mock auth is enabled
 const USE_MOCK_AUTH = process.env.NEXT_PUBLIC_AUTH_BYPASS === 'true';
@@ -76,7 +77,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col bg-graphite">
       {/* Header */}
       <div className="flex items-center gap-2 p-6">
-        <span className="font-mono text-sm font-medium text-steel-gray uppercase">ARIEX AI</span>
+        <Wordmark height={16} className="text-soft-white" />
       </div>
 
       {/* Main Content */}

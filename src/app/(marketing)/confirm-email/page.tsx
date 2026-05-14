@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth/AuthStore';
 import { ConfirmEmailForm } from '@/contexts/auth/components/confirm-email-form';
 import { getRoleHomePath } from '@/contexts/auth/data/mock-users';
+import { Wordmark } from '@/components/layout/wordmark';
 
 export default function ConfirmEmailPage() {
   const router = useRouter();
@@ -27,11 +28,8 @@ export default function ConfirmEmailPage() {
     <div className="flex min-h-screen flex-col bg-graphite">
       {/* Header */}
       <div className="flex items-center gap-2 p-6">
-        <Link
-          href="/"
-          className="font-mono text-sm font-medium text-steel-gray uppercase hover:text-soft-white"
-        >
-          ARIEX AI
+        <Link href="/" aria-label="ARIEX home" className="text-soft-white transition-colors duration-150 ease-linear hover:text-electric-blue">
+          <Wordmark height={16} />
         </Link>
       </div>
 
