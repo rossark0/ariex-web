@@ -25,6 +25,9 @@ interface RailCopy {
   heading: string;
   risksLabel: string;
   risksEmpty: string;
+  /** Opportunities is strategist-only — clients don't action tax-saving
+   *  angles, their strategist does. Hidden entirely for the client rail. */
+  showOpportunities: boolean;
   oppsLabel: string;
   oppsEmpty: string;
   actionsLabel: string;
@@ -37,6 +40,7 @@ const STRATEGIST_COPY: RailCopy = {
   heading: 'AI Copilot',
   risksLabel: 'Top Risks',
   risksEmpty: 'No risks detected on this page.',
+  showOpportunities: true,
   oppsLabel: 'Opportunities',
   oppsEmpty: 'No tax-saving angles surfaced yet.',
   actionsLabel: 'Suggested Actions',
@@ -49,8 +53,9 @@ const CLIENT_COPY: RailCopy = {
   heading: 'Your AI Advisor',
   risksLabel: 'Needs Your Attention',
   risksEmpty: 'Nothing needs your attention right now.',
-  oppsLabel: 'Tax-Saving Opportunities',
-  oppsEmpty: 'Your strategist will surface savings opportunities here.',
+  showOpportunities: false,
+  oppsLabel: '',
+  oppsEmpty: '',
   actionsLabel: 'Your Next Steps',
   actionsEmpty: "You're all caught up — nothing to do right now.",
   emptyTitle: 'Nothing to review yet',
@@ -265,10 +270,11 @@ export function AiInsightsContent({ showAskFooter = true }: AiInsightsContentPro
   const totals = useMemo(
     () => ({
       risks: data?.risks.length ?? 0,
-      opps: data?.opportunities.length ?? 0,
+      // Opportunities only count toward "has content" when the role shows them.
+      opps: copy.showOpportunities ? (data?.opportunities.length ?? 0) : 0,
       actions: data?.actions.length ?? 0,
     }),
-    [data]
+    [data, copy.showOpportunities]
   );
 
   const handleAskFollowUp = (prompt: string) => {
@@ -288,7 +294,7 @@ export function AiInsightsContent({ showAskFooter = true }: AiInsightsContentPro
         {showSkeleton ? (
           <div className="flex flex-col gap-5">
             <SkeletonSection label={copy.risksLabel} />
-            <SkeletonSection label={copy.oppsLabel} />
+            {copy.showOpportunities && <SkeletonSection label={copy.oppsLabel} />}
             <SkeletonSection label={copy.actionsLabel} />
           </div>
         ) : error ? (
@@ -318,13 +324,15 @@ export function AiInsightsContent({ showAskFooter = true }: AiInsightsContentPro
               emptyLabel={copy.risksEmpty}
               onAskFollowUp={handleAskFollowUp}
             />
-            <InsightSection
-              icon={<Lightning weight="fill" className="h-3.5 w-3.5" />}
-              label={copy.oppsLabel}
-              items={data.opportunities}
-              emptyLabel={copy.oppsEmpty}
-              onAskFollowUp={handleAskFollowUp}
-            />
+            {copy.showOpportunities && (
+              <InsightSection
+                icon={<Lightning weight="fill" className="h-3.5 w-3.5" />}
+                label={copy.oppsLabel}
+                items={data.opportunities}
+                emptyLabel={copy.oppsEmpty}
+                onAskFollowUp={handleAskFollowUp}
+              />
+            )}
             <InsightSection
               icon={<Target weight="fill" className="h-3.5 w-3.5" />}
               label={copy.actionsLabel}
