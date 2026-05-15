@@ -89,11 +89,12 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
     (isStrategistRole && isStrategistHome) || (isClientRole && isClientHome);
   // Client detail uses a richer tabbed rail (AI Copilot + Client Chat) instead.
   const showClientDetailRail = isStrategistRole && isStrategistClientDetail;
-  // Only the tabbed ClientDetailRail hosts its own chat surface (the Chat
-  // tab), so only there should the floating chatbot be suppressed. The
-  // standalone AiInsightsRail (home pages) has no chat surface — its
-  // "Ask ARIEX" buttons rely on the floating chatbot, so keep it mounted.
-  const suppressFloatingChatbot = showClientDetailRail;
+  // The floating "Ask ARIEX" chatbot must stay mounted everywhere it can be
+  // invoked. The ClientDetailRail's "Client Chat" tab is the human
+  // strategist↔client chat — a different surface — while its "Ask ARIEX"
+  // buttons (and the AiInsightsRail's) open this floating AI chatbot.
+  // Suppressing it here left those buttons dead, so it is never suppressed.
+  const suppressFloatingChatbot = false;
 
   // Determine context type for AI chatbot based on current page
   const getContextType = () => {

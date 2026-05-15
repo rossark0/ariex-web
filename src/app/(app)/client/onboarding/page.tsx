@@ -1957,7 +1957,7 @@ function OnboardingContent() {
   return (
     <div className="flex min-h-screen flex-col bg-deep-navy">
       {/* Header — fixed so the agreement switcher is always visible */}
-      <header className="fixed inset-x-0 top-0 z-50 flex items-center justify-between border-b border-white/8 bg-white/95 px-6 py-3 backdrop-blur-sm">
+      <header className="fixed inset-x-0 top-0 z-50 flex items-center justify-between border-b border-white/8 bg-deep-navy/95 px-6 py-3 backdrop-blur-sm">
         {/* Agreement switcher replaces the logo */}
         <div className="flex items-center">
           {(dashboardData?.agreements?.length ?? 0) > 1 ? (

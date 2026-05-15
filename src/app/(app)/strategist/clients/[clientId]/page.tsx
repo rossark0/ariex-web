@@ -154,8 +154,13 @@ export default function StrategistClientDetailPage({ params }: Props) {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Also poll every 15s while the agreement is pending signatures
+    // Also poll every 15s while the agreement is pending signatures — but
+    // only while the tab is actually visible. Each refreshSigningInfo() is a
+    // 5–11s SignatureAPI round-trip; firing it against a backgrounded tab is
+    // wasted load. The visibilitychange handler above already refreshes the
+    // moment the user returns, so a hidden tab misses nothing.
     const interval = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
       refreshSigningInfo();
     }, 15_000);
 

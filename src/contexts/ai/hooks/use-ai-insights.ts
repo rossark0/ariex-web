@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { useAiPageContextStore } from '@/contexts/ai/AiPageContextStore';
 import { sanitizePageContext } from '@/lib/ai/sanitize-pii';
 import type { AiInsightItem, AiInsightsResponse } from '@/app/api/ai/insights/route';
@@ -30,115 +30,152 @@ const DEFAULT_DEBOUNCE_MS = 600;
  * Production guarantees:
  *  - Debounces rapid context churn so we don't burn tokens during page transitions.
  *  - Cancels in-flight requests when a newer one is needed (no out-of-order writes).
- *  - Caches by stable context signature on the server, so revisits are free.
+ *  - **Coalesces every concurrent hook instance into a single request.** The
+ *    rails render `<AiInsightsContent>` and `<AiInsightsRefreshButton>`
+ *    side-by-side; previously each owned its own fetch, so every refresh fired
+ *    `/api/ai/insights` twice with an identical payload. State now lives in a
+ *    module-level store keyed by a stable context signature, so N mounted
+ *    instances share exactly one request and one result.
  *  - Surfaces errors instead of throwing.
  */
+
+// ─── Shared module-level store (one fetch across all hook instances) ───────
+
+type SharedState = {
+  data: AiInsightsResponse | null;
+  isLoading: boolean;
+  error: string | null;
+};
+
+let sharedState: SharedState = { data: null, isLoading: false, error: null };
+let currentSignature = '';
+let refetchToken = 0;
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+let abortController: AbortController | null = null;
+let subscriberCount = 0;
+const listeners = new Set<() => void>();
+
+function emit() {
+  for (const l of listeners) l();
+}
+
+function setSharedState(patch: Partial<SharedState>) {
+  sharedState = { ...sharedState, ...patch };
+  emit();
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function getSnapshot() {
+  return sharedState;
+}
+
+function computeSignature(pageContext: Record<string, unknown>): string {
+  // Signature over the meaningful fields (skip the updatedAt timestamp), plus
+  // the refetch token so an explicit refresh re-runs even when context is equal.
+  return JSON.stringify({
+    role: pageContext.userRole,
+    path: pageContext.pagePath,
+    client: pageContext.client,
+    documents: pageContext.documents,
+    agreements: pageContext.agreements,
+    payments: pageContext.payments,
+    strategy: pageContext.strategy,
+    extra: pageContext.extra,
+    _token: refetchToken,
+  });
+}
+
+function ensureFetch(pageContext: Record<string, unknown>, debounceMs: number) {
+  const signature = computeSignature(pageContext);
+  if (signature === currentSignature) return; // already fetched/fetching this context
+  currentSignature = signature;
+
+  if (debounceTimer) clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    abortController?.abort();
+    const controller = new AbortController();
+    abortController = controller;
+
+    setSharedState({ isLoading: true, error: null });
+
+    fetch('/api/ai/insights', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pageContext: sanitizePageContext(pageContext) }),
+      signal: controller.signal,
+    })
+      .then(async res => {
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody?.error || `Insights request failed (${res.status})`);
+        }
+        return (await res.json()) as AiInsightsResponse;
+      })
+      .then(payload => {
+        if (abortController === controller) {
+          setSharedState({ data: payload, isLoading: false });
+        }
+      })
+      .catch(err => {
+        if (err?.name === 'AbortError') return;
+        if (abortController === controller) {
+          setSharedState({
+            error: err instanceof Error ? err.message : 'Failed to load insights',
+            isLoading: false,
+          });
+        }
+      });
+  }, debounceMs);
+}
+
 export function useAiInsights(options: UseAiInsightsOptions = {}): UseAiInsightsState {
   const { debounceMs = DEFAULT_DEBOUNCE_MS, disabled = false } = options;
 
   const pageContext = useAiPageContextStore(s => s.pageContext);
-
-  const [data, setData] = useState<AiInsightsResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Signature of the context bits that affect insights — used to detect "real" changes
-  const signatureRef = useRef<string>('');
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  // Bumped on every refetch() to force a re-run even when signature is unchanged
-  const [refetchToken, setRefetchToken] = useState(0);
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   useEffect(() => {
-    if (disabled) {
-      setData(null);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
+    if (disabled || !pageContext) return;
+    ensureFetch(pageContext as unknown as Record<string, unknown>, debounceMs);
+  }, [pageContext, disabled, debounceMs]);
 
-    if (!pageContext) {
-      setData(null);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
-
-    // Compute signature over the meaningful fields (skip updatedAt timestamp)
-    const signature = JSON.stringify({
-      role: pageContext.userRole,
-      path: pageContext.pagePath,
-      client: pageContext.client,
-      documents: pageContext.documents,
-      agreements: pageContext.agreements,
-      payments: pageContext.payments,
-      strategy: pageContext.strategy,
-      extra: pageContext.extra,
-      _token: refetchToken,
-    });
-
-    if (signature === signatureRef.current) {
-      return;
-    }
-    signatureRef.current = signature;
-
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
-    debounceTimerRef.current = setTimeout(() => {
-      // Cancel any in-flight request
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      setIsLoading(true);
-      setError(null);
-
-      fetch('/api/ai/insights', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pageContext: sanitizePageContext(pageContext) }),
-        signal: controller.signal,
-      })
-        .then(async res => {
-          if (!res.ok) {
-            const errBody = await res.json().catch(() => ({}));
-            throw new Error(errBody?.error || `Insights request failed (${res.status})`);
-          }
-          return (await res.json()) as AiInsightsResponse;
-        })
-        .then(payload => {
-          // Only commit if this controller is still the active one
-          if (abortRef.current === controller) {
-            setData(payload);
-            setIsLoading(false);
-          }
-        })
-        .catch(err => {
-          if (err.name === 'AbortError') return;
-          if (abortRef.current === controller) {
-            setError(err instanceof Error ? err.message : 'Failed to load insights');
-            setIsLoading(false);
-          }
-        });
-    }, debounceMs);
-
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    };
-  }, [pageContext, disabled, debounceMs, refetchToken]);
-
+  // Track live subscribers so we only tear down the shared request when the
+  // last consumer unmounts. (In ClientDetailRail the refresh button unmounts
+  // on tab switch while the content stays — we must not abort its data then.)
   useEffect(() => {
+    subscriberCount += 1;
     return () => {
-      abortRef.current?.abort();
+      subscriberCount -= 1;
+      if (subscriberCount === 0) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        abortController?.abort();
+        abortController = null;
+        debounceTimer = null;
+        currentSignature = '';
+      }
     };
   }, []);
 
+  if (disabled) {
+    return { data: null, isLoading: false, error: null, refetch: () => {} };
+  }
+
   return {
-    data,
-    isLoading,
-    error,
-    refetch: () => setRefetchToken(t => t + 1),
+    data: snapshot.data,
+    isLoading: snapshot.isLoading,
+    error: snapshot.error,
+    refetch: () => {
+      refetchToken += 1;
+      currentSignature = ''; // force the next ensureFetch to re-run
+      if (pageContext) {
+        ensureFetch(pageContext as unknown as Record<string, unknown>, 0);
+      }
+    },
   };
 }

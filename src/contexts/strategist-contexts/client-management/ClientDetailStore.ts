@@ -328,10 +328,22 @@ export const useClientDetailStore = create<ClientDetailState>((set, get) => ({
     });
 
     // Load client + agreements in parallel
+    const __t0 = Date.now();
     const [clientResult, agreementsResult] = await Promise.allSettled([
-      getClientById(clientId),
-      listClientAgreements(clientId),
+      (async () => {
+        const s = Date.now();
+        const r = await getClientById(clientId);
+        console.log('[PERF] getClientById', Date.now() - s, 'ms');
+        return r;
+      })(),
+      (async () => {
+        const s = Date.now();
+        const r = await listClientAgreements(clientId);
+        console.log('[PERF] listClientAgreements', Date.now() - s, 'ms');
+        return r;
+      })(),
     ]);
+    console.log('[PERF] init→firstPaintUnblocked', Date.now() - __t0, 'ms');
 
     // Stale guard
     if (get()._initVersion !== version) return;
@@ -961,7 +973,9 @@ export const useClientDetailStore = create<ClientDetailState>((set, get) => ({
       }
       set({ isLoadingDocuments: true });
       try {
+        const __s = Date.now();
         const docs = await listAgreementDocuments(target.id);
+        console.log('[PERF] listAgreementDocuments', Date.now() - __s, 'ms');
         if (target.contractDocumentId) {
           const alreadyIncluded = docs.some(d => d.id === target.contractDocumentId);
           if (!alreadyIncluded) {
@@ -994,7 +1008,9 @@ export const useClientDetailStore = create<ClientDetailState>((set, get) => ({
         return;
       }
       try {
+        const __s = Date.now();
         const charges = await getChargesForAgreement(signed.id);
+        console.log('[PERF] getChargesForAgreement', Date.now() - __s, 'ms');
         if (get()._initVersion !== version) return;
         const pendingCharge = charges.find((c: any) => c.status === 'pending') || charges[0];
         set({ existingCharge: pendingCharge || null });
@@ -1033,8 +1049,31 @@ export const useClientDetailStore = create<ClientDetailState>((set, get) => ({
       }
       set({ _hasFetchedSigningInfo: true });
 
+      // Fast path: an agreement past PENDING_SIGNATURE has, by definition, a
+      // completed envelope (status only advances once SignatureAPI reports
+      // 'completed' = all recipients signed). The heavy getStrategistSigningInfo
+      // (5 sequential SignatureAPI/backend round-trips, 6–13s) yields nothing
+      // new here: signed state is implied by status, the ceremony URL is moot,
+      // and the signed PDF URL is reachable via the lighter fetchSignedDocUrl
+      // the catch-block fallback already uses. Setting both flags true keeps
+      // needsSigningPoll false (no 15s poll) — identical to the post-call state.
+      if (isAgreementSigned(active.status)) {
+        set({ strategistHasSigned: true, clientHasSigned: true });
+        try {
+          const url = await fetchSignedDocUrl(active);
+          if (get()._initVersion === version && url) {
+            set({ signedAgreementDocUrl: url });
+          }
+        } catch {
+          /* non-critical — signed PDF URL is best-effort */
+        }
+        return;
+      }
+
       try {
+        const __s = Date.now();
         const info = await getStrategistSigningInfo(active.id);
+        console.log('[PERF] getStrategistSigningInfo', Date.now() - __s, 'ms');
         if (get()._initVersion !== version) return;
 
         set({
@@ -1085,10 +1124,19 @@ export const useClientDetailStore = create<ClientDetailState>((set, get) => ({
     if (agreements.length === 0) return;
     set({ _hasSyncedEnvelopes: true });
 
-    const agreementsWithEnvelopes = agreements.filter(a => a.signatureEnvelopeId);
+    // Only agreements still awaiting signatures need a SignatureAPI round-trip.
+    // For any already-signed agreement isAgreementSigned(status) is true, and
+    // the sole consumer of envelopeStatuses (selectHasAgreementSigned, via
+    // selectEnvelopeIsCompleted) short-circuits on that OR — so re-fetching the
+    // envelope status for those is provably a no-op. Skipping it removes the
+    // 6–13s SignatureAPI calls that previously re-ran on every page load.
+    const agreementsWithEnvelopes = agreements.filter(
+      a => a.signatureEnvelopeId && !isAgreementSigned(a.status)
+    );
     if (agreementsWithEnvelopes.length === 0) return;
 
     try {
+      const __sync = Date.now();
       const results = await Promise.allSettled(
         agreementsWithEnvelopes.map(async agreement => {
           const result = await getAgreementEnvelopeStatus(
@@ -1097,6 +1145,13 @@ export const useClientDetailStore = create<ClientDetailState>((set, get) => ({
           );
           return { agreementId: agreement.id, status: result.status, agreement };
         })
+      );
+      console.log(
+        '[PERF] _syncEnvelopeStatuses',
+        Date.now() - __sync,
+        'ms for',
+        agreementsWithEnvelopes.length,
+        'agreements'
       );
 
       if (get()._initVersion !== version) return;

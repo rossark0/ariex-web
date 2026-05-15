@@ -48,14 +48,20 @@ export const ClientHeader = memo(function ClientHeader({
 
   return (
     <>
-      {/* Back Button */}
-      <div className="absolute top-4 left-4 mb-4 flex items-center gap-2">
-        <div
+      {/* Back Button — the global sidebar toggle is rendered by TopContextBar
+          at `absolute top-4 left-4 z-10` on this (suppressed) route, so the
+          back button sits just to its right and shares the same stacking
+          layer. top-2.5 vertically centers the 28px target against the 16px
+          toggle (both centers land at y≈24px). */}
+      <div className="absolute top-2.5 left-11 z-10 flex items-center">
+        <button
+          type="button"
+          aria-label="Go back"
           className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white"
           onClick={() => router.back()}
         >
           <ArrowLeftIcon weight="bold" className="h-4 w-4" />
-        </div>
+        </button>
       </div>
 
       <div className="relative z-40 mx-auto w-full max-w-2xl px-4 pt-22">
