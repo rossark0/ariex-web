@@ -1,16 +1,20 @@
 /**
- * Strip personally identifiable information from AI page contexts before
+ * Strip the genuinely sensitive identifiers from AI page contexts before
  * the data leaves the browser.
  *
- * The AI doesn't need names, emails, phone numbers, or government IDs to
- * surface useful tax-strategy insights — it needs filing status, business
- * type, income tier, and agreement state. We keep the strategic signal and
- * drop the PII at the boundary.
+ * Policy: the AI is analyzing the strategist's OWN client portfolio for the
+ * strategist's OWN benefit, on the firm's OWN OpenAI account. Client display
+ * names are required for the product to be usable — the strategist must know
+ * WHICH client an insight is about — so names pass through. What we DO strip
+ * is the high-severity, regulated stuff that the AI never needs: emails,
+ * phone numbers, street addresses, and government tax IDs (SSN/EIN). Exact
+ * dollar income is coarsened into tiers.
  *
  * This is a frontend mitigation; it does NOT replace a server-side audit
- * log + per-client opt-out flag, which is still required before launch with
- * real-client data. But it removes the highest-severity items (names,
- * emails, taxIds) from the OpenAI request stream.
+ * log + per-client opt-out flag, which is still recommended before scaling
+ * with regulated tax data. But it removes the highest-severity items
+ * (emails, addresses, taxIds, SSNs) from the OpenAI request stream while
+ * keeping the tool functional.
  */
 
 /** Keys whose values are dropped from the payload entirely. */
@@ -24,17 +28,12 @@ const PII_KEY_BLOCKLIST = new Set([
   'einMasked',
 ]);
 
-/** Keys whose values are replaced with an anonymized handle. */
-const NAME_KEYS = new Set([
-  'name',
-  'fullName',
-  'firstName',
-  'lastName',
-  'clientName',
-  'userName',
-  'strategistName',
-  'displayName',
-]);
+/**
+ * Names pass through unchanged — the strategist needs to know which client
+ * each insight refers to. (Kept as an empty set so the recursion logic
+ * stays identical if a future policy decides to anonymize a subset again.)
+ */
+const NAME_KEYS = new Set<string>([]);
 
 /** Coarse income tiers used in place of exact dollar figures. */
 function bucketIncome(value: number | null | undefined): string | null {

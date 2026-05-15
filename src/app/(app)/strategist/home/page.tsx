@@ -20,7 +20,10 @@ interface ClientActivity {
   clientId: string;
   clientName: string;
   type: string;
-  description: string;
+  /** Short reason label shown as a badge, e.g. "Unsigned · 58d". */
+  signal: string;
+  /** One-sentence AI reasoning, shown as a tooltip on the signal badge. */
+  reasoning: string;
   actionLabel: string;
   date: Date;
   /** Computed priority score — higher means more urgent. */
@@ -90,17 +93,35 @@ function PriorityRow({ activity, index }: { activity: ClientActivity; index: num
             />
           )}
         </div>
-        <div className="flex flex-1 flex-col">
-          <div className="flex truncate items-center gap-2 font-medium text-soft-white">
-            {activity.description}
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate font-medium text-soft-white">
+              {activity.clientName}
+            </span>
             {activity.atRisk && (
-              <span className="inline-flex truncate items-center gap-1 rounded-full border border-electric-blue/30 bg-electric-blue/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-electric-blue uppercase">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-electric-blue/30 bg-electric-blue/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-electric-blue uppercase">
                 <Warning weight="fill" className="h-3 w-3" />
                 Needs attention
               </span>
             )}
           </div>
-          <span className="text-sm text-steel-gray">{formatRelativeTime(activity.date)}</span>
+          <div className="flex min-w-0 items-center gap-2">
+            {activity.signal && (
+              <span
+                title={activity.reasoning || undefined}
+                className={`inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
+                  activity.atRisk
+                    ? 'bg-amber-500/15 text-amber-300'
+                    : 'bg-white/8 text-steel-gray'
+                }`}
+              >
+                {activity.signal}
+              </span>
+            )}
+            <span className="truncate text-xs text-steel-gray">
+              {formatRelativeTime(activity.date)}
+            </span>
+          </div>
         </div>
         <button
           onClick={() => router.push(`/strategist/clients/${activity.clientId}`)}
@@ -193,9 +214,8 @@ export default function StrategistDashboardPage() {
         clientId: client.id,
         clientName,
         type: 'account_created',
-        description: ranking.atRisk
-          ? `${clientName} — ${ranking.signal}`
-          : `${clientName} · ${ranking.signal}`,
+        signal: ranking.signal,
+        reasoning: ranking.reasoning,
         actionLabel: ranking.atRisk ? 'See' : 'View',
         date: new Date(client.createdAt),
         priority: ranking.score,
@@ -236,7 +256,8 @@ export default function StrategistDashboardPage() {
         clientName: p.clientName,
         priority: p.priority,
         atRisk: p.atRisk,
-        description: p.description,
+        signal: p.signal,
+        reasoning: p.reasoning,
       })),
     },
   });

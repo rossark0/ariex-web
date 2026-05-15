@@ -86,7 +86,10 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
   };
 
   const projected = TAX_YEAR_IS_PROJECTED[draft.year];
-  const stateInfo = STATE_TAX[draft.state];
+  // Guard against stale / AI-supplied state values that aren't in the map
+  // (e.g., a full name like "California" instead of "CA").
+  const stateInfo = STATE_TAX[draft.state] ?? STATE_TAX.none;
+  const stateIsValid = !!STATE_TAX[draft.state];
 
   return (
     <section className="rounded-lg border border-white/8 bg-deep-navy p-4">
@@ -131,7 +134,7 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
             State
           </label>
           <select
-            value={draft.state}
+            value={stateIsValid ? draft.state : 'none'}
             onChange={e => setField('state', e.target.value as UsState)}
             className="w-full rounded-md border border-white/10 bg-deep-navy px-2.5 py-1.5 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
           >
@@ -178,12 +181,12 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
             {' '}{draft.year - 1}-XX is loaded.
           </p>
         )}
-        {draft.state !== 'none' && stateInfo.note && (
+        {stateIsValid && draft.state !== 'none' && stateInfo.note && (
           <p className="text-[10px] leading-relaxed text-steel-gray/80">
             {stateInfo.name}: {stateInfo.note}
           </p>
         )}
-        {draft.state !== 'none' && (
+        {stateIsValid && draft.state !== 'none' && (
           <p className="text-[10px] leading-relaxed text-steel-gray/60">
             State tax estimated at top marginal rate × AGI. Doesn&apos;t model
             per-state deductions, credits, or city add-ons.

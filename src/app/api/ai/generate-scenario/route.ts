@@ -186,6 +186,44 @@ const VALID_STRATEGIES: StrategyId[] = [
   'hsa_contribution',
 ];
 
+// 2-letter US state codes (+ 'none') the tax engine actually models. The
+// model is told to use codes but can still emit a full name — we normalize
+// here so the client never receives an unknown state that crashes the UI.
+const VALID_STATE_CODES = new Set<string>([
+  'none', 'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA',
+  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI',
+  'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND',
+  'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA',
+  'WA', 'WV', 'WI', 'WY',
+]);
+
+const STATE_NAME_TO_CODE: Record<string, string> = {
+  alabama: 'AL', alaska: 'AK', arizona: 'AZ', arkansas: 'AR', california: 'CA',
+  colorado: 'CO', connecticut: 'CT', delaware: 'DE', 'district of columbia': 'DC',
+  florida: 'FL', georgia: 'GA', hawaii: 'HI', idaho: 'ID', illinois: 'IL',
+  indiana: 'IN', iowa: 'IA', kansas: 'KS', kentucky: 'KY', louisiana: 'LA',
+  maine: 'ME', maryland: 'MD', massachusetts: 'MA', michigan: 'MI',
+  minnesota: 'MN', mississippi: 'MS', missouri: 'MO', montana: 'MT',
+  nebraska: 'NE', nevada: 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ',
+  'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC',
+  'north dakota': 'ND', ohio: 'OH', oklahoma: 'OK', oregon: 'OR',
+  pennsylvania: 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+  'south dakota': 'SD', tennessee: 'TN', texas: 'TX', utah: 'UT',
+  vermont: 'VT', virginia: 'VA', washington: 'WA', 'west virginia': 'WV',
+  wisconsin: 'WI', wyoming: 'WY',
+};
+
+function normalizeState(raw: unknown, fallback: string): string {
+  if (typeof raw !== 'string') return fallback;
+  const trimmed = raw.trim();
+  if (VALID_STATE_CODES.has(trimmed.toUpperCase())) {
+    return trimmed.toUpperCase() === 'NONE' ? 'none' : trimmed.toUpperCase();
+  }
+  const byName = STATE_NAME_TO_CODE[trimmed.toLowerCase()];
+  if (byName) return byName;
+  return VALID_STATE_CODES.has(fallback) ? fallback : 'none';
+}
+
 function sanitizeBlueprint(
   raw: unknown,
   fallback: ScenarioInputsLite,
@@ -222,7 +260,7 @@ function sanitizeBlueprint(
           ? i.otherIncome
           : fallback.otherIncome,
       year,
-      state: typeof i.state === 'string' ? i.state : fallback.state,
+      state: normalizeState(i.state, fallback.state ?? 'none'),
     };
   }
 
