@@ -34,7 +34,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
 import { AgreementSelector } from '@/contexts/strategist-contexts/client-management/components/detail/agreement-selector';
 import { useAiPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
 import { useUiStore } from '@/contexts/ui/UiStore';
@@ -1267,11 +1266,6 @@ export default function ComplianceClientDetailPage({ params }: Props) {
           </div>
         </div>
       </div>
-
-      <AiFloatingChatbot
-        selectedCount={selectedDocs.size}
-        onClearSelection={() => setSelectedDocs(new Set())}
-      />
 
       {/* Rejection Modal */}
       <RejectStrategyModal

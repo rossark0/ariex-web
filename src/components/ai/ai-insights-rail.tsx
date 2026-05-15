@@ -11,8 +11,61 @@ import {
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { useAiInsights, type AiInsightItem } from '@/contexts/ai/hooks/use-ai-insights';
+import { useAiPageContextStore } from '@/contexts/ai/AiPageContextStore';
 import { useUiStore } from '@/contexts/ui/UiStore';
 import { useCountUp } from '@/hooks/use-count-up';
+
+// ─── Role-aware copy ───────────────────────────────────────────────────────
+// The same three insight axes (risks / opportunities / actions) read very
+// differently to a strategist managing a book of clients vs. a client
+// looking at their own engagement. We only swap the framing copy here — the
+// underlying AI prompt is already role-aware on the server.
+
+interface RailCopy {
+  heading: string;
+  risksLabel: string;
+  risksEmpty: string;
+  oppsLabel: string;
+  oppsEmpty: string;
+  actionsLabel: string;
+  actionsEmpty: string;
+  emptyTitle: string;
+  emptyBody: string;
+}
+
+const STRATEGIST_COPY: RailCopy = {
+  heading: 'AI Copilot',
+  risksLabel: 'Top Risks',
+  risksEmpty: 'No risks detected on this page.',
+  oppsLabel: 'Opportunities',
+  oppsEmpty: 'No tax-saving angles surfaced yet.',
+  actionsLabel: 'Suggested Actions',
+  actionsEmpty: 'No next actions queued.',
+  emptyTitle: 'No insights yet',
+  emptyBody: 'ARIEX surfaces signals here as data on this page evolves.',
+};
+
+const CLIENT_COPY: RailCopy = {
+  heading: 'Your AI Advisor',
+  risksLabel: 'Needs Your Attention',
+  risksEmpty: 'Nothing needs your attention right now.',
+  oppsLabel: 'Tax-Saving Opportunities',
+  oppsEmpty: 'Your strategist will surface savings opportunities here.',
+  actionsLabel: 'Your Next Steps',
+  actionsEmpty: "You're all caught up — nothing to do right now.",
+  emptyTitle: 'Nothing to review yet',
+  emptyBody:
+    'As your engagement progresses, ARIEX will highlight what matters for you here.',
+};
+
+function copyForRole(role: string | undefined): RailCopy {
+  return role === 'CLIENT' ? CLIENT_COPY : STRATEGIST_COPY;
+}
+
+/** Compliance/admin never get the AI copilot rail. */
+function roleHasInsightsRail(role: string | undefined): boolean {
+  return role === 'CLIENT' || role === 'STRATEGIST';
+}
 
 // ─── Severity → accent class ──────────────────────────────────────────────
 
@@ -206,6 +259,8 @@ interface AiInsightsContentProps {
 export function AiInsightsContent({ showAskFooter = true }: AiInsightsContentProps) {
   const { data, isLoading, error, refetch } = useAiInsights();
   const { setAiChatOpen, sendAiMessage } = useUiStore();
+  const role = useAiPageContextStore(s => s.pageContext?.userRole);
+  const copy = copyForRole(role);
 
   const totals = useMemo(
     () => ({
@@ -232,9 +287,9 @@ export function AiInsightsContent({ showAskFooter = true }: AiInsightsContentPro
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {showSkeleton ? (
           <div className="flex flex-col gap-5">
-            <SkeletonSection label="Top Risks" />
-            <SkeletonSection label="Opportunities" />
-            <SkeletonSection label="Suggested Actions" />
+            <SkeletonSection label={copy.risksLabel} />
+            <SkeletonSection label={copy.oppsLabel} />
+            <SkeletonSection label={copy.actionsLabel} />
           </div>
         ) : error ? (
           <div className="flex flex-col gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3">
@@ -251,32 +306,30 @@ export function AiInsightsContent({ showAskFooter = true }: AiInsightsContentPro
         ) : !data || totals.risks + totals.opps + totals.actions === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-white/8 bg-white/3 px-4 py-8 text-center">
             <Sparkle weight="duotone" className="h-6 w-6 text-steel-gray/70" />
-            <p className="text-xs font-medium text-soft-white">No insights yet</p>
-            <p className="text-[11px] leading-relaxed text-steel-gray/70">
-              ARIEX surfaces signals here as data on this page evolves.
-            </p>
+            <p className="text-xs font-medium text-soft-white">{copy.emptyTitle}</p>
+            <p className="text-[11px] leading-relaxed text-steel-gray/70">{copy.emptyBody}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-5">
             <InsightSection
               icon={<Warning weight="fill" className="h-3.5 w-3.5" />}
-              label="Top Risks"
+              label={copy.risksLabel}
               items={data.risks}
-              emptyLabel="No risks detected on this page."
+              emptyLabel={copy.risksEmpty}
               onAskFollowUp={handleAskFollowUp}
             />
             <InsightSection
               icon={<Lightning weight="fill" className="h-3.5 w-3.5" />}
-              label="Opportunities"
+              label={copy.oppsLabel}
               items={data.opportunities}
-              emptyLabel="No tax-saving angles surfaced yet."
+              emptyLabel={copy.oppsEmpty}
               onAskFollowUp={handleAskFollowUp}
             />
             <InsightSection
               icon={<Target weight="fill" className="h-3.5 w-3.5" />}
-              label="Suggested Actions"
+              label={copy.actionsLabel}
               items={data.actions}
-              emptyLabel="No next actions queued."
+              emptyLabel={copy.actionsEmpty}
               onAskFollowUp={handleAskFollowUp}
             />
           </div>
@@ -325,6 +378,14 @@ interface AiInsightsRailProps {
 }
 
 export function AiInsightsRail({ className }: AiInsightsRailProps) {
+  const role = useAiPageContextStore(s => s.pageContext?.userRole);
+
+  // Defense in depth: compliance / admin must never see the AI copilot
+  // rail, regardless of how app-layout routing evolves.
+  if (!roleHasInsightsRail(role)) return null;
+
+  const copy = copyForRole(role);
+
   return (
     <aside
       className={cn(
@@ -336,7 +397,7 @@ export function AiInsightsRail({ className }: AiInsightsRailProps) {
       <header className="flex items-center justify-between border-b border-white/8 px-4 py-3">
         <div className="flex items-center gap-2">
           <Sparkle weight="fill" className="h-4 w-4 text-electric-blue" />
-          <h3 className="text-sm font-medium text-soft-white">AI Copilot</h3>
+          <h3 className="text-sm font-medium text-soft-white">{copy.heading}</h3>
         </div>
         <AiInsightsRefreshButton />
       </header>

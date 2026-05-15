@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
 import { useRouter } from 'next/navigation';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
 import { useComplianceStrategists } from '@/contexts/compliance/hooks/use-compliance-strategists';
@@ -219,7 +218,6 @@ export default function ComplianceHomePage() {
         </div>
       </div>
 
-      <AiFloatingChatbot />
     </div>
   );
 }

@@ -13,7 +13,6 @@ import {
   CaretDown,
   MagnifyingGlass,
 } from '@phosphor-icons/react';
-import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -421,7 +420,6 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <AiFloatingChatbot />
     </div>
   );
 }

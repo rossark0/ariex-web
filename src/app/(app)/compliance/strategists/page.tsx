@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AiFloatingChatbot } from '@/components/ai/ai-floating-chatbot';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
 import { useComplianceStrategists } from '@/contexts/compliance/hooks/use-compliance-strategists';
 import { acceptInvitation } from '@/contexts/compliance/services/compliance.service';
@@ -389,7 +388,6 @@ export default function ComplianceStrategistsPage() {
         </div>
       </div>
 
-      <AiFloatingChatbot />
     </div>
   );
 }
