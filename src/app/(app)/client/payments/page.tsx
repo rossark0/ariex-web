@@ -1,14 +1,50 @@
 'use client';
 
 import { useAuth } from '@/contexts/auth/AuthStore';
-import { getFullUserProfile } from '@/contexts/auth/data/mock-users';
 import { useRoleRedirect } from '@/hooks/use-role-redirect';
-import type { FullClientMock } from '@/lib/mocks/client-full';
-import { CaretUp, Info, FunnelSimple, CaretDown, DownloadSimple, Check as CheckIcon } from '@phosphor-icons/react';
+import { getAllChargesForClient, type ClientCharge } from '@/lib/api/client.api';
+import { CaretUp, Info, FunnelSimple, CaretDown, ArrowSquareOut, DownloadSimple, Check as CheckIcon } from '@phosphor-icons/react';
 import { EmptyDocumentsIllustration } from '@/components/ui/empty-documents-illustration';
 import { Badge } from '@/components/ui/badge';
 import { useUiStore } from '@/contexts/ui/UiStore';
 import { useState, useEffect } from 'react';
+
+// ============================================================================
+// REAL CHARGE → PAYMENT-ROW ADAPTER
+// ============================================================================
+
+type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+
+interface PaymentRow {
+  id: string;
+  amount: number;
+  status: PaymentStatus;
+  createdAt: Date;
+  description?: string;
+  /** Live Stripe link — lets the client actually pay an open charge. */
+  paymentLink?: string;
+}
+
+/** Map the real ClientCharge from the backend onto the row shape the
+ *  table renders. No mock data — every field traces to a real charge. */
+function chargeToPaymentRow(c: ClientCharge): PaymentRow {
+  const status: PaymentStatus =
+    c.status === 'paid'
+      ? 'completed'
+      : c.status === 'cancelled'
+        ? 'refunded'
+        : c.status === 'failed'
+          ? 'failed'
+          : 'pending';
+  return {
+    id: c.id,
+    amount: c.amount,
+    status,
+    createdAt: new Date(c.createdAt),
+    description: c.description,
+    paymentLink: c.paymentLink,
+  };
+}
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -50,29 +86,35 @@ export default function ClientPaymentsPage() {
   const { user } = useAuth();
   const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set());
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [clientProfile, setClientProfile] = useState<FullClientMock | null>(null);
+  const [payments, setPayments] = useState<PaymentRow[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const setSelection = useUiStore(state => state.setSelection);
 
-  // Fetch client profile
+  // Fetch the client's real charges from the backend (GET /charges).
   useEffect(() => {
     if (!user) {
       setIsLoading(false);
       return;
     }
 
-    const loadProfile = async () => {
+    let cancelled = false;
+    const loadCharges = async () => {
       try {
-        const profile = await getFullUserProfile(user);
-        setClientProfile(profile as FullClientMock | null);
+        const charges = await getAllChargesForClient();
+        if (cancelled) return;
+        setPayments(charges.map(chargeToPaymentRow));
       } catch (error) {
-        console.error('Failed to load client profile:', error);
+        console.error('Failed to load charges:', error);
+        if (!cancelled) setPayments([]);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
-    loadProfile();
+    loadCharges();
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   // Sync selection state with UiStore for global AI floating chatbot
@@ -101,12 +143,12 @@ export default function ClientPaymentsPage() {
     );
   }
 
-  if (!clientProfile) {
+  if (!payments) {
     return (
       <div className="flex min-h-full flex-col items-center justify-center">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-soft-white">Profile not found</h1>
-          <p className="text-steel-gray">Could not load your client profile.</p>
+          <h1 className="text-xl font-semibold text-soft-white">Couldn&apos;t load payments</h1>
+          <p className="text-steel-gray">Please refresh or try again shortly.</p>
         </div>
       </div>
     );
@@ -123,35 +165,35 @@ export default function ClientPaymentsPage() {
   };
 
   const toggleAllPayments = () => {
-    if (selectedPayments.size === clientProfile.payments.length) {
+    if (selectedPayments.size === payments.length) {
       setSelectedPayments(new Set());
     } else {
-      setSelectedPayments(new Set(clientProfile.payments.map(p => p.id)));
+      setSelectedPayments(new Set(payments.map(p => p.id)));
     }
   };
 
-  const sortedPayments = [...clientProfile.payments].sort((a, b) => {
-    const dateA = a.dueDate?.getTime() || a.createdAt.getTime();
-    const dateB = b.dueDate?.getTime() || b.createdAt.getTime();
+  const sortedPayments = [...payments].sort((a, b) => {
+    const dateA = a.createdAt.getTime();
+    const dateB = b.createdAt.getTime();
     return sortDirection === 'desc' ? dateB - dateA : dateA - dateB;
   });
 
-  // Calculate payment statistics
-  const now = new Date();
-  const totalOpen = clientProfile.payments
+  // Payment statistics — all derived from real charges
+  const totalOpen = payments
     .filter(p => p.status === 'pending' || p.status === 'failed')
     .reduce((sum, p) => sum + p.amount, 0);
-  const totalOpenCount = clientProfile.payments.filter(
+  const totalOpenCount = payments.filter(
     p => p.status === 'pending' || p.status === 'failed'
   ).length;
 
-  const overduePayments = clientProfile.payments.filter(p => {
-    const dueDate = p.dueDate || p.createdAt;
-    return (p.status === 'pending' || p.status === 'failed') && dueDate < now;
-  });
+  // Real charges carry no separate due date — an unpaid charge is treated
+  // as outstanding from its creation date.
+  const overduePayments = payments.filter(
+    p => p.status === 'pending' || p.status === 'failed'
+  );
   const totalOverdue = overduePayments.reduce((sum, p) => sum + p.amount, 0);
 
-  const paidPayments = clientProfile.payments.filter(p => p.status === 'completed');
+  const paidPayments = payments.filter(p => p.status === 'completed');
   const totalPaid = paidPayments.reduce((sum, p) => sum + p.amount, 0);
 
   return (
@@ -243,7 +285,7 @@ export default function ClientPaymentsPage() {
         </div>
         
         {/* Empty State - No payments yet */}
-        {clientProfile.payments.length === 0 && (
+        {payments.length === 0 && (
           <div className="flex flex-col items-center justify-center pt-24 pb-12 text-center">
             <EmptyDocumentsIllustration />
             <p className="text-lg font-semibold text-soft-white">No payments yet</p>
@@ -252,7 +294,7 @@ export default function ClientPaymentsPage() {
         )}
 
         {/* Payments Table */}
-        {clientProfile.payments.length > 0 && (
+        {payments.length > 0 && (
           <div className="overflow-hidden rounded-lg">
             <table className="w-full">
                 <thead className="border-b border-white/10">
@@ -262,7 +304,7 @@ export default function ClientPaymentsPage() {
                         onClick={toggleAllPayments}
                         className="flex h-5 w-5 cursor-pointer items-center justify-center"
                       >
-                        {selectedPayments.size === clientProfile.payments.length && clientProfile.payments.length > 0 ? (
+                        {selectedPayments.size === payments.length && payments.length > 0 ? (
                           <div className="flex h-4 w-4 items-center justify-center rounded bg-electric-blue">
                             <CheckIcon weight="bold" className="h-3 w-3 text-soft-white" />
                           </div>
@@ -293,8 +335,11 @@ export default function ClientPaymentsPage() {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {sortedPayments.map(payment => {
-                    const dueDate = formatDueDate(payment.dueDate || payment.createdAt);
+                    const dueDate = formatDueDate(payment.createdAt);
                     const isSelected = selectedPayments.has(payment.id);
+                    const canPay =
+                      (payment.status === 'pending' || payment.status === 'failed') &&
+                      !!payment.paymentLink;
                     
                     return (
                       <tr
@@ -323,15 +368,10 @@ export default function ClientPaymentsPage() {
                         <td className="px-4 py-3">
                           <div className="flex flex-col">
                             <span className="text-sm font-medium text-soft-white">
-                              {payment.description || (
-                                payment.type === 'onboarding' ? 'Onboarding Fee' : 
-                                payment.type === 'invoice' ? 'Invoice Payment' : 
-                                payment.type === 'subscription' ? 'Monthly Subscription' : 
-                                'Payment'
-                              )}
+                              {payment.description || 'Payment'}
                             </span>
                             <span className="text-xs text-steel-gray">
-                              {payment.invoiceNumber || `#${payment.id.slice(-6).toUpperCase()}`}
+                              {`#${payment.id.slice(-6).toUpperCase()}`}
                             </span>
                           </div>
                         </td>
@@ -358,9 +398,23 @@ export default function ClientPaymentsPage() {
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <span className="text-sm font-semibold text-soft-white">
-                            {formatCurrency(payment.amount)}
-                          </span>
+                          <div className="flex items-center justify-end gap-3">
+                            {canPay && (
+                              <a
+                                href={payment.paymentLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={e => e.stopPropagation()}
+                                className="inline-flex items-center gap-1 rounded-md bg-electric-blue px-2 py-1 text-xs font-medium text-soft-white transition-colors duration-150 ease-linear hover:bg-electric-blue/85"
+                              >
+                                Pay
+                                <ArrowSquareOut weight="bold" className="h-3 w-3" />
+                              </a>
+                            )}
+                            <span className="text-sm font-semibold text-soft-white">
+                              {formatCurrency(payment.amount)}
+                            </span>
+                          </div>
                         </td>
                       </tr>
                     );

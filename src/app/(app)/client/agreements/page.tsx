@@ -47,48 +47,6 @@ function formatRelativeTime(date: Date): string {
   });
 }
 
-function groupDocumentsByDate(
-  documents: (typeof import('@/lib/mocks/client-full').fullClientMocks)[0]['documents']
-) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  const groups: { label: string; documents: typeof documents }[] = [];
-
-  const todayDocs = documents.filter(d => {
-    const docDate = new Date(d.createdAt);
-    docDate.setHours(0, 0, 0, 0);
-    return docDate.getTime() === today.getTime();
-  });
-
-  const yesterdayDocs = documents.filter(d => {
-    const docDate = new Date(d.createdAt);
-    docDate.setHours(0, 0, 0, 0);
-    return docDate.getTime() === yesterday.getTime();
-  });
-
-  const olderDocs = documents.filter(d => {
-    const docDate = new Date(d.createdAt);
-    docDate.setHours(0, 0, 0, 0);
-    return docDate.getTime() < yesterday.getTime();
-  });
-
-  if (todayDocs.length > 0) {
-    groups.push({ label: 'Today', documents: todayDocs });
-  }
-  if (yesterdayDocs.length > 0) {
-    groups.push({ label: 'Yesterday', documents: yesterdayDocs });
-  }
-  if (olderDocs.length > 0) {
-    groups.push({ label: 'Earlier', documents: olderDocs });
-  }
-
-  return groups;
-}
-
 export default function ClientAgreementsPage() {
   useRoleRedirect('CLIENT');
   const { user } = useAuth();
