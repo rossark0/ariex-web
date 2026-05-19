@@ -127,18 +127,18 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen overscroll-none bg-graphite">
+    <div className="flex h-screen overscroll-none bg-deep-navy">
       <aside
         className={cn(
-          'hidden flex-col gap-4 p-4 px-2 pt-6 md:flex',
-          isSidebarCollapsed ? 'w-0' : 'w-48',
+          'hidden flex-col gap-4 overflow-hidden bg-graphite px-2 pt-6 pb-4 md:flex',
+          isSidebarCollapsed ? 'w-0 px-0' : 'w-48',
           'transition-all duration-300 ease-in-out'
         )}
       >
         <Sidebar items={navItems} />
       </aside>
-      <main className="relative max-h-screen flex-1 p-4 pb-2 pl-0">
-        <div className="relative flex h-full w-full flex-1 flex-col overflow-y-auto rounded-lg border border-white/8 bg-deep-navy shadow-sm">
+      <main className="relative max-h-screen flex-1 p-4 pb-2 pl-4">
+        <div className="relative flex h-full w-full flex-1 flex-col overflow-y-auto rounded-lg border border-white/6 bg-panel shadow-sm">
           <TopContextBar />
 
           <div className="flex-1 overflow-y-auto">{children}</div>

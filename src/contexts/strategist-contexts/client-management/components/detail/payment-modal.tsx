@@ -52,7 +52,7 @@ export const PaymentModal = memo(function PaymentModal({
           </button>
         </div>
 
-        <div className="mb-4 rounded-lg bg-white/3 p-4">
+        <div className="mb-4 rounded-lg bg-surface p-4">
           <p className="text-sm font-medium text-soft-white">Agreement</p>
           <p className="text-sm text-steel-gray">{agreementName}</p>
         </div>
@@ -82,7 +82,7 @@ export const PaymentModal = memo(function PaymentModal({
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 rounded-lg border border-white/15 px-4 py-2.5 text-sm font-medium text-soft-white hover:bg-white/3"
+            className="flex-1 rounded-lg border border-white/15 px-4 py-2.5 text-sm font-medium text-soft-white hover:bg-surface"
           >
             Cancel
           </button>

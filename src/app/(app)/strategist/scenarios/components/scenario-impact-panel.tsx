@@ -28,7 +28,7 @@ function MetricCountUp({
 }) {
   const animated = useCountUp(value, 300);
   return (
-    <div className="rounded-lg border border-white/8 bg-white/3 p-3">
+    <div className="rounded-lg border border-white/6 bg-surface p-3">
       <p className="text-[10px] font-semibold tracking-wide text-steel-gray uppercase">{label}</p>
       <p
         className={cn(
@@ -72,7 +72,7 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
       </div>
 
       {/* Tax composition breakdown (baseline → projected) */}
-      <div className="rounded-lg border border-white/8 bg-white/3 p-3">
+      <div className="rounded-lg border border-white/6 bg-surface p-3">
         <p className="mb-2 text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
           Tax composition
         </p>
@@ -90,7 +90,7 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
       </div>
 
       {/* Confidence */}
-      <div className="rounded-lg border border-white/8 bg-white/3 p-3">
+      <div className="rounded-lg border border-white/6 bg-surface p-3">
         <div className="mb-1.5 flex items-center justify-between">
           <p className="text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
             Combined confidence
@@ -118,7 +118,7 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
             {strategyImpacts.map(item => (
               <li
                 key={item.id}
-                className="flex items-center justify-between rounded-lg border border-white/8 bg-white/3 px-3 py-2"
+                className="flex items-center justify-between rounded-lg border border-white/6 bg-surface px-3 py-2"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-soft-white">{item.title}</p>
@@ -147,7 +147,7 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
           <h3 className="text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
             Assumptions in play
           </h3>
-          <ul className="flex flex-col gap-1.5 rounded-lg border border-white/8 bg-white/3 p-3">
+          <ul className="flex flex-col gap-1.5 rounded-lg border border-white/6 bg-surface p-3">
             {allAssumptions.map((a, i) => (
               <li key={i} className="flex gap-2 text-[11px] leading-relaxed text-soft-white/85">
                 <span className="mt-1 inline-block h-1 w-1 shrink-0 rounded-full bg-electric-blue" />

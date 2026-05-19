@@ -13,7 +13,7 @@ export function AgreementViewer({ agreementId, onClose }: AgreementViewerProps) 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="relative mx-4 flex h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-deep-navy shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/8 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-white/6 px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/8">
               <FileText className="h-5 w-5 text-steel-gray" weight="bold" />

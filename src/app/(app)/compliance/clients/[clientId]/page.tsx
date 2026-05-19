@@ -283,7 +283,7 @@ function CommentsPanel({
       ) : (
         <div className="mb-4 flex flex-col gap-3">
           {comments.map(c => (
-            <div key={c.id} className="rounded-lg border border-white/8 bg-white/3 px-4 py-3">
+            <div key={c.id} className="rounded-lg border border-white/6 bg-surface px-4 py-3">
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-sm font-medium text-soft-white">
                   {c.userName || 'Compliance'}
@@ -627,7 +627,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
       <div className="relative flex-1 pt-10">
         <div className="relative z-40 mx-auto w-full max-w-2xl px-4 pt-8">
           {/* Banner color */}
-          <div className="absolute top-0 left-0 -z-10 h-24 w-full bg-white/3" />
+          <div className="absolute top-0 left-0 -z-10 h-24 w-full bg-surface" />
 
           {/* Action feedback banner */}
           {actionFeedback && (
@@ -751,7 +751,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
             )}
 
             {/* About Section */}
-            <div className="mb-4 rounded-xl bg-white/3 p-5">
+            <div className="mb-4 rounded-xl bg-surface p-5">
               <div className="mb-4 flex items-center gap-2">
                 <span className="text-sm text-steel-gray">About</span>
                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-electric-blue/85 text-xs font-medium text-white">
@@ -1177,8 +1177,8 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                 </div>
                                 <div
                                   onClick={() => toggleDocSelection(doc.id)}
-                                  className={`flex cursor-pointer items-center gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-white/3 ${
-                                    isSelected ? 'bg-white/3' : ''
+                                  className={`flex cursor-pointer items-center gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-surface ${
+                                    isSelected ? 'bg-surface' : ''
                                   }`}
                                 >
                                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/8">
@@ -1232,7 +1232,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                       }
                                     }}
                                     disabled={openingDocId === doc.id}
-                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-deep-navy text-steel-gray opacity-0 transition-all group-hover:opacity-100 hover:bg-white/3 hover:text-soft-white disabled:opacity-50"
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-deep-navy text-steel-gray opacity-0 transition-all group-hover:opacity-100 hover:bg-surface hover:text-soft-white disabled:opacity-50"
                                     title="Open document"
                                   >
                                     {openingDocId === doc.id ? (

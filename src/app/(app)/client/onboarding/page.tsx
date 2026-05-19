@@ -579,7 +579,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
                         {entityCopy.taxIdHelper}
                       </p>
                     </div>
-                    <div className="rounded-lg border border-white/8 bg-white/3 p-3">
+                    <div className="rounded-lg border border-white/6 bg-surface p-3">
                       <p className="text-[11px] leading-relaxed text-soft-white/85">
                         {entityCopy.blurb}
                       </p>
@@ -611,7 +611,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
           <button
             onClick={onBack}
             disabled={isSaving}
-            className="flex-1 rounded-md border border-white/10 py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3 disabled:opacity-40"
+            className="flex-1 rounded-md border border-white/10 py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface disabled:opacity-40"
           >
             Back
           </button>
@@ -619,7 +619,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
         <button
           onClick={handleSaveAndContinue}
           disabled={isSaving}
-          className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3 disabled:opacity-40"
+          className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface disabled:opacity-40"
         >
           {isSaving ? 'Saving...' : 'Continue'}
         </button>
@@ -819,7 +819,7 @@ function AgreementStep({
         <div className="py-4">
           <h4 className="mb-3 text-xs font-medium text-steel-gray/60 uppercase">Signed Document</h4>
           {isLoadingDocument ? (
-            <div className="flex h-64 w-full items-center justify-center rounded-md border border-white/10 bg-white/3">
+            <div className="flex h-64 w-full items-center justify-center rounded-md border border-white/10 bg-surface">
               <SpinnerGap weight="bold" className="h-5 w-5 animate-spin text-steel-gray/60" />
             </div>
           ) : signedDocumentUrl ? (
@@ -829,7 +829,7 @@ function AgreementStep({
                 className="h-80 w-full"
                 title="Signed Agreement Document"
               />
-              <div className="flex items-center justify-between border-t border-white/10 bg-white/3 px-4 py-2">
+              <div className="flex items-center justify-between border-t border-white/10 bg-surface px-4 py-2">
                 <span className="text-xs text-steel-gray">Signed Agreement PDF</span>
                 <div className="flex items-center gap-3">
                   <a
@@ -855,7 +855,7 @@ function AgreementStep({
           ) : documentUrl ? (
             <div className="overflow-hidden rounded-md border border-white/10 bg-deep-navy">
               <iframe src={documentUrl} className="h-80 w-full" title="Agreement Document" />
-              <div className="flex items-center justify-between border-t border-white/10 bg-white/3 px-4 py-2">
+              <div className="flex items-center justify-between border-t border-white/10 bg-surface px-4 py-2">
                 <span className="text-xs text-steel-gray">Agreement PDF</span>
                 <a
                   href={documentUrl}
@@ -869,7 +869,7 @@ function AgreementStep({
               </div>
             </div>
           ) : (
-            <div className="flex h-32 w-full flex-col items-center justify-center rounded-md border border-white/10 bg-white/3">
+            <div className="flex h-32 w-full flex-col items-center justify-center rounded-md border border-white/10 bg-surface">
               <FilePdf weight="duotone" className="mb-2 h-8 w-8 text-emerald-500" />
               <p className="text-xs text-steel-gray">Agreement signed successfully</p>
             </div>
@@ -881,7 +881,7 @@ function AgreementStep({
           {!isFirst && (
             <button
               onClick={onBack}
-              className="flex-1 rounded-md border border-white/10 py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3"
+              className="flex-1 rounded-md border border-white/10 py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface"
             >
               Back
             </button>
@@ -921,13 +921,13 @@ function AgreementStep({
       <div className="py-4">
         <h4 className="mb-3 text-xs font-medium text-steel-gray/60 uppercase">Document Preview</h4>
         {isLoadingDocument ? (
-          <div className="flex h-64 w-full items-center justify-center rounded-md border border-white/10 bg-white/3">
+          <div className="flex h-64 w-full items-center justify-center rounded-md border border-white/10 bg-surface">
             <SpinnerGap weight="bold" className="h-5 w-5 animate-spin text-steel-gray/60" />
           </div>
         ) : documentUrl ? (
           <div className="overflow-hidden rounded-md border border-white/10 bg-deep-navy">
             <iframe src={documentUrl} className="h-80 w-full" title="Agreement Document" />
-            <div className="flex items-center justify-between border-t border-white/10 bg-white/3 px-4 py-2">
+            <div className="flex items-center justify-between border-t border-white/10 bg-surface px-4 py-2">
               <span className="text-xs text-steel-gray">Agreement PDF</span>
               <a
                 href={documentUrl}
@@ -941,7 +941,7 @@ function AgreementStep({
             </div>
           </div>
         ) : (
-          <div className="flex h-40 w-full flex-col items-center justify-center rounded-md border border-white/10 bg-white/3">
+          <div className="flex h-40 w-full flex-col items-center justify-center rounded-md border border-white/10 bg-surface">
             <FilePdf weight="duotone" className="mb-3 h-10 w-10 text-steel-gray/40" />
             <p className="text-xs text-steel-gray">Service Agreement</p>
             <p className="mt-1 text-xs text-steel-gray/60">Click below to view and sign</p>
@@ -964,7 +964,7 @@ function AgreementStep({
           className={`rounded-md px-4 py-3 text-center text-xs ${
             signatureVerified
               ? 'border border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
-              : 'border border-white/10 bg-white/3 text-steel-gray'
+              : 'border border-white/10 bg-surface text-steel-gray'
           }`}
         >
           {statusMessage}
@@ -995,7 +995,7 @@ function AgreementStep({
           {!isFirst && (
             <button
               onClick={onBack}
-              className="flex-1 rounded-md border border-white/10 py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3"
+              className="flex-1 rounded-md border border-white/10 py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface"
             >
               Back
             </button>
@@ -1524,7 +1524,7 @@ function PaymentStep({
           <button
             onClick={handlePayNow}
             disabled={isGeneratingLink}
-            className="flex w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3 disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface disabled:opacity-40"
           >
             {isGeneratingLink ? (
               'Preparing checkout...'
@@ -1574,7 +1574,7 @@ function PaymentStep({
           {!isFirst && !isPaymentComplete && (
             <button
               onClick={onBack}
-              className="flex-1 rounded-md border border-white/10 py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3"
+              className="flex-1 rounded-md border border-white/10 py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface"
             >
               Back
             </button>
@@ -1582,7 +1582,7 @@ function PaymentStep({
           {isPaymentComplete && (
             <button
               onClick={onContinue}
-              className="flex-1 cursor-pointer rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3"
+              className="flex-1 cursor-pointer rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface"
             >
               Continue
             </button>
@@ -1641,7 +1641,7 @@ function CompleteStep({ dashboardData }: { dashboardData: ClientDashboardData | 
       <button
         onClick={() => router.push('/client/home')}
         disabled={isFinishing}
-        className="w-full rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3 disabled:opacity-40"
+        className="w-full rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface disabled:opacity-40"
       >
         {isFinishing ? 'Finishing...' : 'Go to Dashboard'}
       </button>
@@ -1957,7 +1957,7 @@ function OnboardingContent() {
   return (
     <div className="flex min-h-screen flex-col bg-deep-navy">
       {/* Header — fixed so the agreement switcher is always visible */}
-      <header className="fixed inset-x-0 top-0 z-50 flex items-center justify-between border-b border-white/8 bg-deep-navy/95 px-6 py-3 backdrop-blur-sm">
+      <header className="fixed inset-x-0 top-0 z-50 flex items-center justify-between border-b border-white/6 bg-deep-navy/95 px-6 py-3 backdrop-blur-sm">
         {/* Agreement switcher replaces the logo */}
         <div className="flex items-center">
           {(dashboardData?.agreements?.length ?? 0) > 1 ? (

@@ -107,7 +107,7 @@ export function SideSheet({
       >
         {/* Header */}
         {(title || subtitle) && (
-          <div className="flex items-center border-b border-white/8 px-2 py-2">
+          <div className="flex items-center border-b border-white/6 px-2 py-2">
             <button
               onClick={handleClose}
               className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 hover:text-soft-white"

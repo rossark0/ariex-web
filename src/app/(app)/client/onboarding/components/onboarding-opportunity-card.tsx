@@ -128,7 +128,7 @@ export function OnboardingOpportunityCard({
           {items.map((item, i) => (
             <li
               key={`${item.title}-${i}`}
-              className="rounded-lg border border-white/8 bg-deep-navy/60 p-3"
+              className="rounded-lg border border-white/6 bg-deep-navy/60 p-3"
             >
               <div className="flex items-start gap-2">
                 <Lightning weight="fill" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-electric-blue" />

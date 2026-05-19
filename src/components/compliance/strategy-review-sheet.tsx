@@ -123,7 +123,7 @@ function PageNavigation({
   onDeletePage,
 }: PageNavigationProps) {
   return (
-    <div className="flex items-center justify-center gap-2 border-t border-white/8 bg-deep-navy py-3">
+    <div className="flex items-center justify-center gap-2 border-t border-white/6 bg-deep-navy py-3">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 0}
@@ -274,7 +274,7 @@ export function CommentsSection({
         ) : (
           <div className="flex flex-col gap-3">
             {comments.map(c => (
-              <div key={c.id} className="rounded-lg border border-white/8 bg-white/4 px-4 py-3">
+              <div key={c.id} className="rounded-lg border border-white/6 bg-white/4 px-4 py-3">
                 <div className="mb-1 flex items-center justify-between">
                   <span className="text-sm font-medium text-soft-white">Compliance</span>
                   <span className="text-xs text-steel-gray">{formatRelativeTime(c.createdAt)}</span>
@@ -286,7 +286,7 @@ export function CommentsSection({
         )}
       </div>
       {!readOnly && (
-        <div className="border-t border-white/8 p-4">
+        <div className="border-t border-white/6 p-4">
           {!documentId && (
             <p className="mb-2 text-xs text-amber-500">Strategy document not linked — can’t post comments.</p>
           )}
@@ -750,8 +750,8 @@ export function StrategyReviewSheet({
           </div>
 
           {/* RIGHT COLUMN — Comments / Chat */}
-          <div className="flex w-[380px] shrink-0 flex-col border-l border-white/8 bg-deep-navy">
-            <div className="border-b border-white/8 px-6 py-4">
+          <div className="flex w-[380px] shrink-0 flex-col border-l border-white/6 bg-deep-navy">
+            <div className="border-b border-white/6 px-6 py-4">
               <h3 className="font-semibold text-soft-white">Comments</h3>
               <p className="text-sm text-steel-gray">
                 {readOnly

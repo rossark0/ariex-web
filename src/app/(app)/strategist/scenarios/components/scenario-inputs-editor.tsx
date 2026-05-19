@@ -92,7 +92,7 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
   const stateIsValid = !!STATE_TAX[draft.state];
 
   return (
-    <section className="rounded-lg border border-white/8 bg-deep-navy p-4">
+    <section className="rounded-lg border border-white/6 bg-deep-navy p-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <div>
           <label className="mb-1 block text-[10px] font-semibold tracking-wide text-steel-gray uppercase">

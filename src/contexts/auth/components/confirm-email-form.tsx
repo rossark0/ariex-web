@@ -25,7 +25,7 @@ export function ConfirmEmailForm() {
         <p className="font-medium text-soft-white">{pendingEmail}</p>
       </div>
 
-      <div className="rounded-lg border border-white/10 bg-white/3 p-4 text-center text-sm text-steel-gray">
+      <div className="rounded-lg border border-white/10 bg-surface p-4 text-center text-sm text-steel-gray">
         <p>Open your email and click the <strong>&quot;Confirm email&quot;</strong> button to verify your account.</p>
       </div>
 

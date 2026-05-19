@@ -116,7 +116,7 @@ export default function ScenarioWorkspacePage() {
         </p>
         <button
           onClick={() => router.push('/strategist/scenarios')}
-          className="mt-2 rounded-md border border-white/10 bg-white/3 px-3 py-1.5 text-sm font-medium text-soft-white transition-colors duration-150 ease-linear hover:bg-white/8"
+          className="mt-2 rounded-md border border-white/10 bg-surface px-3 py-1.5 text-sm font-medium text-soft-white transition-colors duration-150 ease-linear hover:bg-white/8"
         >
           Back to scenarios
         </button>
@@ -327,7 +327,7 @@ export default function ScenarioWorkspacePage() {
   return (
     <div className="flex h-full flex-col">
       {/* Top toolbar — three regions: nav · identity · actions */}
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/8 px-4">
+      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/6 px-4">
         {/* ── Region 1: Nav ─────────────────────────────────────────── */}
         <div className="flex shrink-0 items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center">
@@ -353,7 +353,7 @@ export default function ScenarioWorkspacePage() {
             onChange={e => setDraft({ ...draft, name: e.target.value })}
             placeholder="Untitled scenario"
             aria-label="Scenario name"
-            className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-soft-white placeholder:text-steel-gray/50 transition-colors duration-150 ease-linear hover:border-white/10 hover:bg-white/3 focus:border-electric-blue/40 focus:bg-white/3 focus:outline-none"
+            className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-soft-white placeholder:text-steel-gray/50 transition-colors duration-150 ease-linear hover:border-white/10 hover:bg-surface focus:border-electric-blue/40 focus:bg-surface focus:outline-none"
           />
         </div>
 
@@ -533,7 +533,7 @@ export default function ScenarioWorkspacePage() {
             )}
           </Reveal>
         </div>
-        <aside className="hidden w-[340px] shrink-0 overflow-y-auto rounded-lg border border-white/8 bg-deep-navy p-4 lg:block">
+        <aside className="hidden w-[340px] shrink-0 overflow-y-auto rounded-lg border border-white/6 bg-deep-navy p-4 lg:block">
           {computation && <ScenarioImpactPanel computation={computation} />}
         </aside>
       </div>

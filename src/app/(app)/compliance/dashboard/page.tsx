@@ -37,7 +37,7 @@ export default function ComplianceDashboardPage() {
             <StrategistRow name="Emily Rodriguez" clients={21} status="Active" />
           </div>
 
-          <button className="mt-4 w-full rounded-lg border border-white/15 py-2 text-sm font-medium text-soft-white transition-colors hover:bg-white/3">
+          <button className="mt-4 w-full rounded-lg border border-white/15 py-2 text-sm font-medium text-soft-white transition-colors hover:bg-surface">
             View All Strategists
           </button>
         </div>
@@ -71,7 +71,7 @@ export default function ComplianceDashboardPage() {
             />
           </div>
 
-          <button className="mt-4 w-full rounded-lg border border-white/15 py-2 text-sm font-medium text-soft-white transition-colors hover:bg-white/3">
+          <button className="mt-4 w-full rounded-lg border border-white/15 py-2 text-sm font-medium text-soft-white transition-colors hover:bg-surface">
             View All Activity
           </button>
         </div>
@@ -137,7 +137,7 @@ function StrategistRow({
   status: string;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-white/8 p-3">
+    <div className="flex items-center justify-between rounded-lg border border-white/6 p-3">
       <div>
         <div className="font-medium text-soft-white">{name}</div>
         <div className="text-sm text-steel-gray">{clients} clients</div>
@@ -161,7 +161,7 @@ function ActivityRow({
   flagged?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between border-b border-white/8 pb-3 last:border-0">
+    <div className="flex items-center justify-between border-b border-white/6 pb-3 last:border-0">
       <div>
         <div className={`text-sm font-medium ${flagged ? 'text-amber-300' : 'text-soft-white'}`}>
           {flagged && '⚠️ '}

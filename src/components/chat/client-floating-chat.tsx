@@ -140,7 +140,7 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
       <div
         onClick={() => setIsExpanded(!isExpanded)}
         className={`flex shrink-0 cursor-pointer items-center gap-3 duration-150 ease-linear transition-colors ${
-          isExpanded ? 'border-b border-white/8 px-4 py-3 hover:bg-white/4' : 'px-2 py-1'
+          isExpanded ? 'border-b border-white/6 px-4 py-3 hover:bg-white/4' : 'px-2 py-1'
         }`}
       >
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-medium text-soft-white">
@@ -230,7 +230,7 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
 
       {/* Input */}
       {isExpanded && (
-        <div className="shrink-0 border-t border-white/8 p-3">
+        <div className="shrink-0 border-t border-white/6 p-3">
           <div className="flex items-end gap-2">
             <textarea
               ref={inputRef}

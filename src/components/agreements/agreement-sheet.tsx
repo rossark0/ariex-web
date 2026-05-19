@@ -289,7 +289,7 @@ function PageNavigation({
   onDeletePage,
 }: PageNavigationProps) {
   return (
-    <div className="flex items-center justify-center gap-2 border-t border-white/8 bg-deep-navy py-3">
+    <div className="flex items-center justify-center gap-2 border-t border-white/6 bg-deep-navy py-3">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 0}
@@ -1604,7 +1604,7 @@ export function AgreementSheet({
           </div>
 
           {/* Right Column - AI Assistant */}
-          <div className="w-[400px] shrink-0 border-l border-white/8 bg-deep-navy p-4">
+          <div className="w-[400px] shrink-0 border-l border-white/6 bg-deep-navy p-4">
             <AiAssistant
               clientName={clientName}
               documentContent={currentPage.content}

@@ -365,7 +365,7 @@ function PageNavigation({
   onDeletePage,
 }: PageNavigationProps) {
   return (
-    <div className="flex items-center justify-center gap-2 border-t border-white/8 bg-deep-navy py-3">
+    <div className="flex items-center justify-center gap-2 border-t border-white/6 bg-deep-navy py-3">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 0}
@@ -1409,10 +1409,10 @@ export function StrategySheet({
           </div>
 
           {/* Right Column - Tabs & Content */}
-          <div className="flex w-[400px] shrink-0 flex-col border-l border-white/8 bg-deep-navy">
+          <div className="flex w-[400px] shrink-0 flex-col border-l border-white/6 bg-deep-navy">
             {/* Tabs for Revise Mode */}
             {isReviseMode && (
-              <div className="flex border-b border-white/8">
+              <div className="flex border-b border-white/6">
                 <button
                   onClick={() => setActiveTab('ai')}
                   className={cn(

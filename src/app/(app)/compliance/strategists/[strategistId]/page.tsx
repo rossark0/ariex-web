@@ -70,7 +70,7 @@ function ClientItemReal({
     <div className="group relative">
       <div
         onClick={() => router.push(`/compliance/clients/${client.id}?strategistId=${strategistId}`)}
-        className="flex cursor-pointer items-center gap-4 rounded-none py-4 transition-colors hover:bg-white/3"
+        className="flex cursor-pointer items-center gap-4 rounded-none py-4 transition-colors hover:bg-surface"
       >
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/8">
           <User className="h-5 w-5 text-steel-gray/60" />
@@ -199,7 +199,7 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
           </div>
 
           {/* About Section */}
-          <div className="border-b border-white/8 px-6 py-4">
+          <div className="border-b border-white/6 px-6 py-4">
             <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-steel-gray/60">About</h4>
             <p className="text-sm leading-relaxed text-soft-white">
               {strategistName} is a tax strategist currently managing {clientCount} client
@@ -273,7 +273,7 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
                     placeholder="Search..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="h-[32px] w-64 rounded-lg bg-white/8 pr-2 pl-7 text-sm font-medium text-soft-white placeholder:text-steel-gray/60 hover:bg-white/3 focus:border-white/15 focus:outline-none"
+                    className="h-[32px] w-64 rounded-lg bg-white/8 pr-2 pl-7 text-sm font-medium text-soft-white placeholder:text-steel-gray/60 hover:bg-surface focus:border-white/15 focus:outline-none"
                   />
                 </div>
                 <button className="inline-flex h-[32px] cursor-pointer items-center gap-1.5 rounded-lg bg-white/8 px-2 py-1 text-xs font-semibold text-steel-gray shadow transition-colors hover:bg-white/8">

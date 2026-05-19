@@ -229,7 +229,7 @@ function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProp
 
           <form onSubmit={handleSubmit}>
             <div className="mb-6 overflow-hidden rounded-xl border border-white/10 bg-deep-navy">
-              <div className="border-b border-white/8 p-1">
+              <div className="border-b border-white/6 p-1">
                 <div className="flex rounded-lg bg-white/8 p-1">
                   <button
                     type="button"
@@ -541,7 +541,7 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
 
                 {/* Client Multi-Selector */}
                 <div className="mb-6 rounded-xl border border-white/10 bg-deep-navy">
-                  <div className="flex items-center justify-between border-b border-white/8 px-4 py-2.5">
+                  <div className="flex items-center justify-between border-b border-white/6 px-4 py-2.5">
                     <p className="text-sm font-medium text-soft-white">
                       Clients to share
                       <span className="ml-1.5 text-xs font-normal text-steel-gray/60">
@@ -570,7 +570,7 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
                       clients.map(client => (
                         <label
                           key={client.id}
-                          className="flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-white/3"
+                          className="flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface"
                         >
                           <div
                             className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
@@ -640,7 +640,7 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
                 )}
 
                 {/* Raw response fields */}
-                <div className="rounded-lg border border-white/10 bg-white/3 p-3">
+                <div className="rounded-lg border border-white/10 bg-surface p-3">
                   <div className="mb-2 flex items-center justify-between">
                     <p className="text-xs font-semibold text-steel-gray">API Response</p>
                     <button
@@ -985,7 +985,7 @@ export default function StrategistClientsPage() {
                 </div>
                 <button
                   onClick={() => setIsInviteComplianceModalOpen(true)}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-deep-navy px-2 py-1 text-sm font-medium text-soft-white transition-colors hover:bg-white/3"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-deep-navy px-2 py-1 text-sm font-medium text-soft-white transition-colors hover:bg-surface"
                 >
                   <ShieldCheck weight="bold" className="h-4 w-4" />
                   <span>Invite Compliance</span>

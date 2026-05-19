@@ -27,11 +27,23 @@
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
 
-  /* ARIEX brand palette */
-  --color-graphite: #111315;
-  --color-deep-navy: #13233a;
-  --color-soft-white: #f7f8fa;
-  --color-steel-gray: #8b96a5;
+  /* ──────────────────────────────────────────────────────────────────────
+     ARIEX official color system — allocation by interface anatomy.
+     Color communicates hierarchy + decision states; it does not decorate.
+     ────────────────────────────────────────────────────────────────────── */
+
+  /* Core surfaces (darkest → lightest, builds architectural depth) */
+  --color-graphite: #111315;     /* sidebar / nav / darkest chrome        */
+  --color-deep-navy: #13233a;    /* global application background          */
+  --color-panel: #162b46;        /* main content panels                   */
+  --color-surface: #1a2f4a;      /* cards, containers, AI Copilot panel    */
+
+  /* Text */
+  --color-soft-white: #f7f8fa;   /* primary headings ONLY                  */
+  --color-body: #dce3ea;         /* body text                              */
+  --color-steel-gray: #8b96a5;   /* secondary / meta text                  */
+
+  /* Accent — reserved for actions & signals, never decoration */
   --color-electric-blue: #2f6bff;
 
   /* ARIEX motion tokens */
@@ -112,8 +124,12 @@
   html,
   body {
     @apply overscroll-none;
-    background-color: var(--color-graphite);
-    color: var(--color-soft-white);
+    /* App background is Deep Navy; base text is body color (#DCE3EA).
+       Headings/emphasis opt into the brighter Soft White via text-soft-white,
+       so color carries the type hierarchy instead of everything being pure
+       white on a flat field. */
+    background-color: var(--color-deep-navy);
+    color: var(--color-body);
   }
 
   /* Custom Scrollbar */

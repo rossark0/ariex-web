@@ -103,7 +103,7 @@ export function DocumentPreviewModal({
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-white/6 px-4 py-3">
           <div className="flex items-center gap-3 overflow-hidden">
             <h3 className="truncate text-sm font-semibold text-soft-white">{fileName}</h3>
             {url && (

@@ -68,7 +68,7 @@ export function ScenarioTree({
 
   return (
     <div
-      className="relative w-full overflow-auto rounded-lg border border-white/8 bg-deep-navy"
+      className="relative w-full overflow-auto rounded-lg border border-white/6 bg-deep-navy"
       style={{ minHeight: layout.svgHeight }}
     >
       <svg
@@ -156,7 +156,7 @@ export function ScenarioTree({
               'disabled:cursor-not-allowed disabled:opacity-40',
               enabled
                 ? 'border-electric-blue/50 bg-electric-blue/12 shadow-[0_0_0_1px_rgba(47,107,255,0.25)]'
-                : 'border-white/10 bg-white/3 hover:border-white/20 hover:bg-white/5'
+                : 'border-white/10 bg-surface hover:border-white/20 hover:bg-white/5'
             )}
             style={{
               left: pos.x,

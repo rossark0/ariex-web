@@ -64,7 +64,7 @@ export function ChargesTable({ charges, onVerifyCharge, onGeneratePaymentLink, l
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-white/8 bg-white/4">
+            <tr className="border-b border-white/6 bg-white/4">
               <th className="px-6 py-3 text-left text-xs font-semibold text-steel-gray">Agreement</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-steel-gray">Client</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-steel-gray">Amount</th>

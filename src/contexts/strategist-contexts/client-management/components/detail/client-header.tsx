@@ -66,7 +66,7 @@ export const ClientHeader = memo(function ClientHeader({
 
       <div className="relative z-40 mx-auto w-full max-w-2xl px-4 pt-22">
         {/* Banner color */}
-        <div className="absolute top-0 left-0 -z-10 h-24 w-full bg-white/3" />
+        <div className="absolute top-0 left-0 -z-10 h-24 w-full bg-surface" />
 
         {/* Header Section */}
         <div className="flex flex-col gap-4">

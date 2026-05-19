@@ -36,7 +36,7 @@ export function ChatConversationsList({
   return (
     <div className={cn('flex h-full w-full flex-col', className)}>
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/8 py-3">
+      <div className="flex items-center justify-between border-b border-white/6 py-3">
         <h2 className="text-base font-semibold text-soft-white">{title}</h2>
         {onNewConversation && (
           <button

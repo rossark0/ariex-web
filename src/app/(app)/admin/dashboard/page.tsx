@@ -119,7 +119,7 @@ function ActionCard({ title, description, icon }: { title: string; description: 
 
 function ActivityItem({ action, user, time }: { action: string; user: string; time: string }) {
   return (
-    <div className="flex items-center justify-between border-b border-white/8 py-2 last:border-0">
+    <div className="flex items-center justify-between border-b border-white/6 py-2 last:border-0">
       <div>
         <div className="text-sm font-medium text-soft-white">{action}</div>
         <div className="text-xs text-steel-gray">{user}</div>

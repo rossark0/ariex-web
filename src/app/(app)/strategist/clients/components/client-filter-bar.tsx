@@ -165,7 +165,7 @@ export function ClientFilterBar({
           <button
             type="button"
             onClick={handleSave}
-            className="ml-auto flex items-center gap-1.5 rounded-md border border-white/10 bg-white/3 px-2.5 py-1 text-xs font-medium text-soft-white transition-colors duration-150 ease-linear hover:bg-white/8"
+            className="ml-auto flex items-center gap-1.5 rounded-md border border-white/10 bg-surface px-2.5 py-1 text-xs font-medium text-soft-white transition-colors duration-150 ease-linear hover:bg-white/8"
           >
             <FloppyDisk weight="fill" className="h-3.5 w-3.5 text-electric-blue" />
             Save view
@@ -272,7 +272,7 @@ function FilterDropdown<T extends string>({
             );
           })}
           {activeCount > 0 && (
-            <div className="mt-1 border-t border-white/8 px-2 py-1.5">
+            <div className="mt-1 border-t border-white/6 px-2 py-1.5">
               <button
                 type="button"
                 onClick={() => {
@@ -307,7 +307,7 @@ function SavedViewChip({ view, active, onApply, onRemove }: SavedViewChipProps) 
         'group flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs transition-colors duration-150 ease-linear',
         active
           ? 'border-electric-blue/50 bg-electric-blue/15 text-electric-blue'
-          : 'border-white/10 bg-white/3 text-steel-gray hover:bg-white/8 hover:text-soft-white'
+          : 'border-white/10 bg-surface text-steel-gray hover:bg-white/8 hover:text-soft-white'
       )}
     >
       <button type="button" onClick={onApply} className="cursor-pointer">

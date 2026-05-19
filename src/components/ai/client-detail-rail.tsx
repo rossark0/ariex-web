@@ -42,13 +42,13 @@ export function ClientDetailRail({ className }: ClientDetailRailProps) {
   return (
     <aside
       className={cn(
-        'flex w-72 shrink-0 flex-col rounded-lg border border-white/8 bg-deep-navy',
+        'flex w-72 shrink-0 flex-col rounded-lg border border-white/10 bg-surface',
         className
       )}
       aria-label="Client detail rail"
     >
       {/* Tab strip */}
-      <header className="flex items-center justify-between border-b border-white/8 px-2 py-2">
+      <header className="flex items-center justify-between border-b border-white/6 px-2 py-2">
         <div role="tablist" aria-label="Rail mode" className="flex items-center gap-1">
           <TabButton
             active={tab === 'copilot'}

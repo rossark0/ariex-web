@@ -121,7 +121,7 @@ export const DocumentsList = memo(function DocumentsList({
                   className={`flex items-center gap-3 rounded-lg border p-3 ${
                     isRejected
                       ? 'border-red-500/30 bg-red-500/10'
-                      : 'border-dashed border-white/10 bg-white/3'
+                      : 'border-dashed border-white/10 bg-surface'
                   }`}
                 >
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
@@ -191,8 +191,8 @@ export const DocumentsList = memo(function DocumentsList({
                       </div>
                       <div
                         onClick={() => onToggleSelection(doc.id)}
-                        className={`flex cursor-pointer items-center gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-white/3 ${
-                          isSelected ? 'bg-white/3' : ''
+                        className={`flex cursor-pointer items-center gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-surface ${
+                          isSelected ? 'bg-surface' : ''
                         }`}
                       >
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/8">
@@ -253,7 +253,7 @@ export const DocumentsList = memo(function DocumentsList({
                             }
                           }}
                           disabled={openingDocId === doc.id}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-deep-navy text-steel-gray opacity-0 transition-all group-hover:opacity-100 hover:bg-white/3 hover:text-soft-white disabled:opacity-50"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-deep-navy text-steel-gray opacity-0 transition-all group-hover:opacity-100 hover:bg-surface hover:text-soft-white disabled:opacity-50"
                           title="Open document"
                         >
                           {openingDocId === doc.id ? (

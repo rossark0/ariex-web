@@ -111,7 +111,7 @@ export const AgreementSelector = memo(function AgreementSelector({
         <button
           type="button"
           onClick={onCreateNew}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-white/15 bg-white/3 px-4 py-3 text-sm font-medium text-steel-gray transition-colors duration-150 ease-linear hover:border-white/25 hover:bg-white/5 hover:text-soft-white"
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-white/15 bg-surface px-4 py-3 text-sm font-medium text-steel-gray transition-colors duration-150 ease-linear hover:border-white/25 hover:bg-white/5 hover:text-soft-white"
         >
           <Plus className="h-4 w-4" weight="bold" />
           New Agreement
@@ -183,7 +183,7 @@ export const AgreementSelector = memo(function AgreementSelector({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex w-full min-w-0 flex-1 items-center justify-between rounded-lg border border-white/10 bg-white/3 px-4 py-3 text-left shadow-sm transition-colors duration-150 ease-linear hover:border-white/15 hover:bg-white/5"
+            className="flex w-full min-w-0 flex-1 items-center justify-between rounded-lg border border-white/10 bg-surface px-4 py-3 text-left shadow-sm transition-colors duration-150 ease-linear hover:border-white/15 hover:bg-white/5"
           >
             <div className="flex items-center gap-3 min-w-0">
               <FileText className="h-5 w-5 shrink-0 text-steel-gray" weight="duotone" />
@@ -266,7 +266,7 @@ export const AgreementSelector = memo(function AgreementSelector({
           type="button"
           onClick={onCreateNew}
           title="New agreement"
-          className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-lg border border-dashed border-white/15 bg-white/3 text-steel-gray transition-colors duration-150 ease-linear hover:border-white/25 hover:bg-white/5 hover:text-soft-white"
+          className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-lg border border-dashed border-white/15 bg-surface text-steel-gray transition-colors duration-150 ease-linear hover:border-white/25 hover:bg-white/5 hover:text-soft-white"
         >
           <Plus className="h-5 w-5" weight="bold" />
         </button>

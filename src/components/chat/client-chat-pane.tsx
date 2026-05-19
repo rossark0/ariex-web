@@ -112,7 +112,7 @@ export function ClientChatPane({ client, active = true, className }: ClientChatP
   return (
     <div className={cn('flex h-full min-h-0 flex-col', className)}>
       {/* Online indicator strip */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-white/8 px-4 py-2.5">
+      <div className="flex shrink-0 items-center gap-2 border-b border-white/6 px-4 py-2.5">
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-[10px] font-medium text-soft-white">
           {getInitials(client.user.name)}
         </div>
@@ -183,7 +183,7 @@ export function ClientChatPane({ client, active = true, className }: ClientChatP
       </div>
 
       {/* Input */}
-      <div className="shrink-0 border-t border-white/8 p-3">
+      <div className="shrink-0 border-t border-white/6 p-3">
         <textarea
           ref={inputRef}
           value={input}

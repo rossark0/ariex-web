@@ -153,7 +153,7 @@ function InsightCard({ item, focused, onFocusChange, onAskFollowUp }: InsightCar
       data-focused={focused}
       onMouseEnter={() => onFocusChange(true)}
       onMouseLeave={() => onFocusChange(false)}
-      className="group relative rounded-lg border border-white/8 bg-white/3 p-3 transition-colors duration-150 ease-linear hover:bg-white/5"
+      className="group relative rounded-lg border border-white/6 bg-surface p-3 transition-colors duration-150 ease-linear hover:bg-white/5"
     >
       <span
         aria-hidden="true"
@@ -207,7 +207,7 @@ function InsightSection({ icon, label, items, emptyLabel, onAskFollowUp }: Insig
       </header>
 
       {items.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-white/8 bg-white/3 p-3 text-xs text-steel-gray/70">
+        <p className="rounded-lg border border-dashed border-white/6 bg-surface p-3 text-xs text-steel-gray/70">
           {emptyLabel}
         </p>
       ) : (
@@ -231,7 +231,7 @@ function InsightSection({ icon, label, items, emptyLabel, onAskFollowUp }: Insig
 
 function SkeletonCard() {
   return (
-    <div className="rounded-lg border border-white/8 bg-white/3 p-3">
+    <div className="rounded-lg border border-white/6 bg-surface p-3">
       <div className="h-3 w-3/4 animate-ariex-dot-pulse rounded bg-white/10" />
       <div className="mt-2 h-2 w-full animate-ariex-dot-pulse rounded bg-white/8" />
       <div className="mt-1 h-2 w-2/3 animate-ariex-dot-pulse rounded bg-white/8" />
@@ -310,7 +310,7 @@ export function AiInsightsContent({ showAskFooter = true }: AiInsightsContentPro
             </button>
           </div>
         ) : !data || totals.risks + totals.opps + totals.actions === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-white/8 bg-white/3 px-4 py-8 text-center">
+          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-white/6 bg-surface px-4 py-8 text-center">
             <Sparkle weight="duotone" className="h-6 w-6 text-steel-gray/70" />
             <p className="text-xs font-medium text-soft-white">{copy.emptyTitle}</p>
             <p className="text-[11px] leading-relaxed text-steel-gray/70">{copy.emptyBody}</p>
@@ -345,7 +345,7 @@ export function AiInsightsContent({ showAskFooter = true }: AiInsightsContentPro
       </div>
 
       {showAskFooter && (
-        <footer className="border-t border-white/8 px-4 py-3">
+        <footer className="border-t border-white/6 px-4 py-3">
           <button
             type="button"
             onClick={handleAskFreeform}
@@ -397,12 +397,12 @@ export function AiInsightsRail({ className }: AiInsightsRailProps) {
   return (
     <aside
       className={cn(
-        'flex w-72 shrink-0 flex-col rounded-lg border border-white/8 bg-deep-navy',
+        'flex w-72 shrink-0 flex-col rounded-lg border border-white/10 bg-surface',
         className
       )}
       aria-label="AI Insights"
     >
-      <header className="flex items-center justify-between border-b border-white/8 px-4 py-3">
+      <header className="flex items-center justify-between border-b border-white/6 px-4 py-3">
         <div className="flex items-center gap-2">
           <Sparkle weight="fill" className="h-4 w-4 text-electric-blue" />
           <h3 className="text-sm font-medium text-soft-white">{copy.heading}</h3>

@@ -145,7 +145,7 @@ export default function StrategistOnboardingPage() {
             <button
               type="submit"
               disabled={!isValidStripeKey || isSubmitting}
-              className="w-full rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-white/3 disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-full rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isSubmitting ? 'Connecting...' : 'Continue'}
             </button>

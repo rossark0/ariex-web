@@ -35,7 +35,7 @@ export function ChatHeader({
   return (
     <header
       className={cn(
-        'flex shrink-0 items-center gap-3 border-b border-white/8 px-0 py-3',
+        'flex shrink-0 items-center gap-3 border-b border-white/6 px-0 py-3',
         className
       )}
     >

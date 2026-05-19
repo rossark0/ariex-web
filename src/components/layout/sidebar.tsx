@@ -59,12 +59,19 @@ export default function Sidebar({ items, className }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-2 py-1 text-sm font-medium duration-150 ease-linear transition-colors',
+                'relative flex items-center gap-3 rounded-lg py-1.5 pr-2 pl-3 text-sm font-medium duration-150 ease-linear transition-colors',
                 isActive
                   ? 'bg-electric-blue/12 text-electric-blue'
-                  : 'text-steel-gray hover:bg-white/5 hover:text-soft-white'
+                  : 'text-steel-gray hover:bg-white/4 hover:text-body'
               )}
             >
+              {/* Left indicator — Electric Intelligence Blue, active only */}
+              {isActive && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-electric-blue"
+                />
+              )}
               <Icon
                 weight="fill"
                 className={cn(

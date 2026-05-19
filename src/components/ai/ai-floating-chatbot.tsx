@@ -231,7 +231,7 @@ export function AiFloatingChatbot({
           aria-label="AI Chat Panel"
         >
           <div className="z-50 flex flex-col gap-3 rounded-[36px] border border-white/10 bg-black shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/8 px-4 py-4">
+            <div className="flex items-center justify-between border-b border-white/6 px-4 py-4">
               <div className="flex flex-col pl-2">
                 <span className="text-sm font-medium text-soft-white">
                   {isClient ? 'Tax Assistant' : 'Tax Strategy Assistant'}

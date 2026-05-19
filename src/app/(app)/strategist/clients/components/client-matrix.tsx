@@ -115,7 +115,7 @@ export function ClientMatrix({ clients, agreements }: ClientMatrixProps) {
 
   if (rows.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border border-white/8 bg-white/3 py-16 text-center">
+      <div className="flex flex-col items-center justify-center rounded-lg border border-white/6 bg-surface py-16 text-center">
         <p className="text-sm font-medium text-soft-white">No clients match the current filters</p>
         <p className="mt-1 text-xs text-steel-gray/70">Adjust filters or clear them to see all clients.</p>
       </div>
@@ -131,10 +131,10 @@ export function ClientMatrix({ clients, agreements }: ClientMatrixProps) {
           </span>
         </div>
       )}
-    <div className="overflow-hidden rounded-lg border border-white/8 bg-deep-navy">
+    <div className="overflow-hidden rounded-lg border border-white/6 bg-deep-navy">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-white/3">
+          <thead className="bg-surface">
             <tr className="text-left text-[11px] font-medium tracking-wide text-steel-gray uppercase">
               <HeaderCell label="Client" sortKey="name" active={sortKey} dir={sortDir} onSort={handleSort} />
               <HeaderCell label="Priority" sortKey="priority" active={sortKey} dir={sortDir} onSort={handleSort} alignRight />
@@ -214,7 +214,7 @@ function MatrixRowView({ client, priority, onOpen }: MatrixRowViewProps) {
       onMouseEnter={() => setFocused(true)}
       onMouseLeave={() => setFocused(false)}
       onClick={onOpen}
-      className="cursor-pointer border-t border-white/6 transition-colors duration-150 ease-linear hover:bg-white/3"
+      className="cursor-pointer border-t border-white/6 transition-colors duration-150 ease-linear hover:bg-surface"
     >
       {/* Client */}
       <td className="px-4 py-3">

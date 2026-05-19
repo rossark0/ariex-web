@@ -214,7 +214,7 @@ export function CreatePaymentLinkModal({
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-2xl rounded-xl bg-deep-navy shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/8 p-6">
+        <div className="flex items-center justify-between border-b border-white/6 p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-electric-blue/15">
               <CreditCard className="h-5 w-5 text-electric-blue" weight="duotone" />
@@ -415,7 +415,7 @@ export function CreatePaymentLinkModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t border-white/8 p-6">
+        <div className="flex items-center justify-between border-t border-white/6 p-6">
           <button
             onClick={step === 'client' ? onClose : handleBack}
             className="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-soft-white duration-150 ease-linear transition-colors hover:bg-white/8"

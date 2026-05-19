@@ -555,7 +555,7 @@ export function ActivityTimeline({
                             ? 'border-red-500/30 bg-red-500/10'
                             : isAccepted
                               ? 'border-emerald-500/30 bg-emerald-500/15'
-                              : 'border-white/10 bg-white/3'
+                              : 'border-white/10 bg-surface'
                         }`}
                       >
                         <div className="flex items-start gap-2">

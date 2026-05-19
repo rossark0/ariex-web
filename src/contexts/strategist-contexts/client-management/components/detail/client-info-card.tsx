@@ -35,7 +35,7 @@ export const ClientInfoCard = memo(function ClientInfoCard({
   filingStatus,
 }: ClientInfoCardProps) {
   return (
-    <div className="mb-4 rounded-xl border border-white/8 bg-white/3 p-5">
+    <div className="mb-4 rounded-xl border border-white/6 bg-surface p-5">
       {/* Header */}
       <div className="mb-4 flex items-center gap-2">
         <span className="text-sm text-steel-gray">About</span>

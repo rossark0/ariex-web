@@ -285,7 +285,7 @@ export default function StrategistDashboardPage() {
             {clients.length > 0 && (
               <div className="grid grid-cols-2 gap-3">
                 <Reveal delay={120}>
-                  <div className="rounded-xl border border-white/8 bg-white/3 p-4">
+                  <div className="rounded-xl border border-white/6 bg-surface p-4">
                     <p className="text-xs font-medium tracking-wide text-steel-gray uppercase">
                       Clients
                     </p>
@@ -295,7 +295,7 @@ export default function StrategistDashboardPage() {
                   </div>
                 </Reveal>
                 <Reveal delay={180}>
-                  <div className="rounded-xl border border-white/8 bg-white/3 p-4">
+                  <div className="rounded-xl border border-white/6 bg-surface p-4">
                     <p className="text-xs font-medium tracking-wide text-steel-gray uppercase">
                       Need attention
                     </p>

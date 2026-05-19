@@ -89,7 +89,7 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
     case 'EXPIRED':
       return { bg: 'bg-red-500/10', text: 'text-red-300', dot: 'bg-red-500' };
     default:
-      return { bg: 'bg-white/3', text: 'text-steel-gray', dot: 'bg-white/20' };
+      return { bg: 'bg-surface', text: 'text-steel-gray', dot: 'bg-white/20' };
   }
 }
 
@@ -114,7 +114,7 @@ function FilterChip({
   onRemove: () => void;
 }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/3 px-2.5 py-1.5 text-sm">
+    <div className="flex items-center gap-1.5 rounded-md border border-white/10 bg-surface px-2.5 py-1.5 text-sm">
       <CalendarBlank className="h-3.5 w-3.5 text-steel-gray" weight="bold" />
       <span className="font-medium text-soft-white">{label}</span>
       <span className="text-steel-gray/60">{value}</span>
@@ -167,7 +167,7 @@ function ClientFilterDropdown({
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 rounded-md border border-dashed border-white/15 px-2.5 py-1.5 text-sm text-steel-gray transition-colors hover:border-white/25 hover:bg-white/3"
+        className="flex items-center gap-1.5 rounded-md border border-dashed border-white/15 px-2.5 py-1.5 text-sm text-steel-gray transition-colors hover:border-white/25 hover:bg-surface"
       >
         <FunnelSimple className="h-3.5 w-3.5" weight="bold" />
         <span>Client</span>
@@ -181,8 +181,8 @@ function ClientFilterDropdown({
 
       {open && (
         <div className="absolute left-0 z-50 mt-1.5 w-64 overflow-hidden rounded-lg border border-white/10 bg-deep-navy shadow-lg">
-          <div className="border-b border-white/8 p-2">
-            <div className="flex items-center gap-2 rounded-md bg-white/3 px-2.5 py-1.5">
+          <div className="border-b border-white/6 p-2">
+            <div className="flex items-center gap-2 rounded-md bg-surface px-2.5 py-1.5">
               <MagnifyingGlass className="h-3.5 w-3.5 text-steel-gray/60" />
               <input
                 type="text"
@@ -205,7 +205,7 @@ function ClientFilterDropdown({
                   <button
                     key={client.id}
                     onClick={() => onToggle(client.id)}
-                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-white/3"
+                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-surface"
                   >
                     <div
                       className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${getAvatarColor(client.name)}`}
@@ -224,12 +224,12 @@ function ClientFilterDropdown({
             )}
           </div>
           {selectedClientIds.size > 0 && (
-            <div className="border-t border-white/8 p-1.5">
+            <div className="border-t border-white/6 p-1.5">
               <button
                 onClick={() => {
                   selectedClientIds.forEach(id => onToggle(id));
                 }}
-                className="w-full rounded-md px-2.5 py-1.5 text-center text-xs font-medium text-steel-gray transition-colors hover:bg-white/3 hover:text-soft-white"
+                className="w-full rounded-md px-2.5 py-1.5 text-center text-xs font-medium text-steel-gray transition-colors hover:bg-surface hover:text-soft-white"
               >
                 Clear all
               </button>
@@ -279,7 +279,7 @@ function StatusFilterDropdown({
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 rounded-md border border-dashed border-white/15 px-2.5 py-1.5 text-sm text-steel-gray transition-colors hover:border-white/25 hover:bg-white/3"
+        className="flex items-center gap-1.5 rounded-md border border-dashed border-white/15 px-2.5 py-1.5 text-sm text-steel-gray transition-colors hover:border-white/25 hover:bg-surface"
       >
         <FunnelSimple className="h-3.5 w-3.5" weight="bold" />
         <span>Status</span>
@@ -301,7 +301,7 @@ function StatusFilterDropdown({
                 <button
                   key={status}
                   onClick={() => onToggle(status)}
-                  className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-white/3"
+                  className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-surface"
                 >
                   <div className={`h-2 w-2 rounded-full ${style.dot}`} />
                   <span className="flex-1 text-sm capitalize text-soft-white">
@@ -315,12 +315,12 @@ function StatusFilterDropdown({
             })}
           </div>
           {selectedStatuses.size > 0 && (
-            <div className="border-t border-white/8 p-1.5">
+            <div className="border-t border-white/6 p-1.5">
               <button
                 onClick={() => {
                   selectedStatuses.forEach(s => onToggle(s));
                 }}
-                className="w-full rounded-md px-2.5 py-1.5 text-center text-xs font-medium text-steel-gray transition-colors hover:bg-white/3 hover:text-soft-white"
+                className="w-full rounded-md px-2.5 py-1.5 text-center text-xs font-medium text-steel-gray transition-colors hover:bg-surface hover:text-soft-white"
               >
                 Clear all
               </button>
@@ -715,7 +715,7 @@ export default function StrategistDocumentsPage() {
             <table className="w-full">
               {/* Table Header */}
               <thead>
-                <tr className="border-b border-white/8 bg-white/3/60">
+                <tr className="border-b border-white/6 bg-surface/60">
                   <th className="w-11 px-3 py-3">
                     <button
                       onClick={toggleSelectAll}
@@ -788,7 +788,7 @@ export default function StrategistDocumentsPage() {
                     <tr
                       key={doc.id}
                       className={`group transition-colors ${
-                        isSelected ? 'bg-white/3' : 'hover:bg-white/3/50'
+                        isSelected ? 'bg-surface' : 'hover:bg-surface/50'
                       }`}
                     >
                       {/* Checkbox */}

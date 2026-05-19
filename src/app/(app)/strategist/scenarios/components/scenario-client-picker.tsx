@@ -117,7 +117,7 @@ export function ScenarioClientPicker({ selectedClientId, onSelect }: ScenarioCli
 
       {open && (
         <div className="absolute top-full right-0 z-40 mt-1 w-72 overflow-hidden rounded-lg border border-white/10 bg-deep-navy shadow-xl">
-          <div className="border-b border-white/8 p-2">
+          <div className="border-b border-white/6 p-2">
             <div className="relative">
               <MagnifyingGlass
                 weight="bold"

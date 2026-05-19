@@ -77,13 +77,13 @@ function ComplianceCard({
 
       {/* Linked Clients List */}
       {complianceUser.clients && complianceUser.clients.length > 0 && (
-        <div className="border-t border-white/8 px-4 py-3">
+        <div className="border-t border-white/6 px-4 py-3">
           <p className="mb-2 text-xs font-medium text-steel-gray">Linked Clients</p>
           <div className="space-y-2">
             {complianceUser.clients.map(client => (
               <div
                 key={client.id}
-                className="flex items-center justify-between rounded-lg bg-white/3 px-3 py-2"
+                className="flex items-center justify-between rounded-lg bg-surface px-3 py-2"
               >
                 <p className="text-xs text-soft-white">{client.email}</p>
                 <button
@@ -101,7 +101,7 @@ function ComplianceCard({
 
       <button
         onClick={() => onAddClient(complianceUser)}
-        className="flex w-full cursor-pointer items-center justify-center gap-1.5 border-t border-white/8 py-2.5 text-xs font-medium text-steel-gray transition-colors hover:bg-white/3 hover:text-soft-white"
+        className="flex w-full cursor-pointer items-center justify-center gap-1.5 border-t border-white/6 py-2.5 text-xs font-medium text-steel-gray transition-colors hover:bg-surface hover:text-soft-white"
       >
         <Plus weight="bold" className="h-3.5 w-3.5" />
         Add Client
@@ -241,7 +241,7 @@ function AddClientToComplianceModal({
           {/* Client list */}
           <div className="mb-6 overflow-hidden rounded-xl border border-white/10 bg-deep-navy">
             {/* Search */}
-            <div className="border-b border-white/8 px-3 py-2.5">
+            <div className="border-b border-white/6 px-3 py-2.5">
               <div className="relative">
                 <MagnifyingGlassIcon
                   weight="bold"
@@ -286,7 +286,7 @@ function AddClientToComplianceModal({
                         className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
                           isSelected
                             ? 'bg-emerald-500/15'
-                            : 'hover:bg-white/3'
+                            : 'hover:bg-surface'
                         }`}
                       >
                         <div
@@ -389,7 +389,7 @@ function DeleteClientConfirmationModal({
           <button
             onClick={onClose}
             disabled={isDeleting}
-            className="flex-1 rounded-lg border border-white/15 px-4 py-2.5 text-sm font-medium text-soft-white transition-colors hover:bg-white/3 disabled:opacity-50"
+            className="flex-1 rounded-lg border border-white/15 px-4 py-2.5 text-sm font-medium text-soft-white transition-colors hover:bg-surface disabled:opacity-50"
           >
             Cancel
           </button>
@@ -470,11 +470,11 @@ function LoadingState() {
               <div className="h-3 w-32 rounded bg-white/8" />
             </div>
           </div>
-          <div className="mt-3 border-t border-white/8 pt-3">
+          <div className="mt-3 border-t border-white/6 pt-3">
             <div className="mb-2 h-3 w-16 rounded bg-white/8" />
             <div className="space-y-2">
-              <div className="h-8 rounded-lg bg-white/3" />
-              <div className="h-8 rounded-lg bg-white/3" />
+              <div className="h-8 rounded-lg bg-surface" />
+              <div className="h-8 rounded-lg bg-surface" />
             </div>
           </div>
         </div>

@@ -14,7 +14,7 @@ export function FilterTabs({ activeFilter, onFilterChange }: FilterTabsProps) {
   ];
 
   return (
-    <div className="mb-6 flex gap-2 border-b border-white/8">
+    <div className="mb-6 flex gap-2 border-b border-white/6">
       {filters.map(filter => (
         <button
           key={filter.value}
