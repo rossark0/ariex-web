@@ -51,7 +51,7 @@ function formatDate(dateString: string): string {
 export function ChargesTable({ charges, onVerifyCharge, onGeneratePaymentLink, loadingChargeId }: ChargesTableProps) {
   if (charges.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border border-white/10 bg-deep-navy py-12 text-center">
+      <div className="flex flex-col items-center justify-center rounded-lg border border-white/10 bg-surface py-12 text-center">
         <CreditCard weight="fill" className="mb-3 h-8 w-8 text-steel-gray" />
         <p className="text-sm font-medium text-soft-white">No charges found</p>
         <p className="text-xs text-steel-gray">Try adjusting your filters or search</p>
@@ -60,7 +60,7 @@ export function ChargesTable({ charges, onVerifyCharge, onGeneratePaymentLink, l
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-white/10 bg-deep-navy">
+    <div className="overflow-hidden rounded-lg border border-white/10 bg-surface">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>

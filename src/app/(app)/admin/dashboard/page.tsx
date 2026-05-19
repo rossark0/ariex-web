@@ -15,25 +15,25 @@ export default function AdminDashboardPage() {
 
       {/* Quick Stats */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg bg-deep-navy p-6 shadow-sm">
+        <div className="rounded-lg bg-surface p-6 shadow-sm">
           <div className="text-sm font-medium text-steel-gray">Total Users</div>
           <div className="mt-2 text-3xl font-bold text-soft-white">127</div>
           <div className="mt-1 text-xs text-emerald-400">+12 this month</div>
         </div>
 
-        <div className="rounded-lg bg-deep-navy p-6 shadow-sm">
+        <div className="rounded-lg bg-surface p-6 shadow-sm">
           <div className="text-sm font-medium text-steel-gray">Active Strategists</div>
           <div className="mt-2 text-3xl font-bold text-soft-white">8</div>
           <div className="mt-1 text-xs text-steel-gray">All active</div>
         </div>
 
-        <div className="rounded-lg bg-deep-navy p-6 shadow-sm">
+        <div className="rounded-lg bg-surface p-6 shadow-sm">
           <div className="text-sm font-medium text-steel-gray">Active Clients</div>
           <div className="mt-2 text-3xl font-bold text-soft-white">98</div>
           <div className="mt-1 text-xs text-emerald-400">+8 this week</div>
         </div>
 
-        <div className="rounded-lg bg-deep-navy p-6 shadow-sm">
+        <div className="rounded-lg bg-surface p-6 shadow-sm">
           <div className="text-sm font-medium text-steel-gray">System Health</div>
           <div className="mt-2 text-3xl font-bold text-emerald-400">100%</div>
           <div className="mt-1 text-xs text-steel-gray">All systems operational</div>
@@ -41,7 +41,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Admin Actions */}
-      <div className="rounded-lg bg-deep-navy p-6 shadow-sm">
+      <div className="rounded-lg bg-surface p-6 shadow-sm">
         <h2 className="mb-4 text-xl font-semibold text-soft-white">Admin Actions</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ActionCard
@@ -78,7 +78,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Recent Activity */}
-      <div className="rounded-lg bg-deep-navy p-6 shadow-sm">
+      <div className="rounded-lg bg-surface p-6 shadow-sm">
         <h2 className="mb-4 text-xl font-semibold text-soft-white">Recent System Activity</h2>
         <div className="space-y-3">
           <ActivityItem

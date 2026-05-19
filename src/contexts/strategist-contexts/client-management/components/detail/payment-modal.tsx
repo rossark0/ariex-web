@@ -31,7 +31,7 @@ export const PaymentModal = memo(function PaymentModal({
   return (
     <div className="fixed inset-0 z-9999 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md rounded-xl bg-deep-navy p-6 shadow-2xl">
+      <div className="relative z-10 w-full max-w-md rounded-xl bg-surface p-6 shadow-2xl">
         <div className="mb-6 flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/8">

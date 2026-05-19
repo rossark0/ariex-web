@@ -2,7 +2,7 @@ export function MiniDocumentIllustration() {
   return (
     <div className="relative h-12 w-10">
       {/* Main mini document */}
-      <div className="absolute inset-0 rounded-md border border-white/10 bg-deep-navy shadow-sm">
+      <div className="absolute inset-0 rounded-md border border-white/10 bg-surface shadow-sm">
         <div className="mt-2.5 space-y-1 px-1.5">
           <div className="h-1 w-full rounded-full bg-white/15" />
           <div className="h-1 w-2/3 rounded-full bg-white/15" />
@@ -19,7 +19,7 @@ export function MiniDocumentStack({ count = 1 }: { count?: number }) {
     <div className="relative h-14 w-12">
       {/* Back document (if more than 1) */}
       {count > 1 && (
-        <div className="absolute top-0 left-1 h-10 w-8 rotate-3 rounded-md border border-white/10 bg-deep-navy shadow-sm">
+        <div className="absolute top-0 left-1 h-10 w-8 rotate-3 rounded-md border border-white/10 bg-surface shadow-sm">
           <div className="mt-2 space-y-0.5 px-1">
             <div className="h-0.5 w-full rounded-full bg-white/15" />
             <div className="h-0.5 w-2/3 rounded-full bg-white/15" />
@@ -28,7 +28,7 @@ export function MiniDocumentStack({ count = 1 }: { count?: number }) {
         </div>
       )}
       {/* Front document */}
-      <div className="absolute top-1 left-0 h-10 w-8 rounded-md border border-white/10 bg-deep-navy shadow-sm">
+      <div className="absolute top-1 left-0 h-10 w-8 rounded-md border border-white/10 bg-surface shadow-sm">
         <div className="mt-2 space-y-0.5 px-1">
           <div className="h-0.5 w-full rounded-full bg-white/15" />
           <div className="h-0.5 w-2/3 rounded-full bg-white/15" />
@@ -51,7 +51,7 @@ export function MiniPaymentStack({ count = 1 }: { count?: number }) {
     <div className="relative h-14 w-14">
       {/* Back receipt (if more than 1) */}
       {count > 1 && (
-        <div className="absolute top-0 left-2 h-10 w-10 rotate-3 rounded-md border border-white/10 bg-deep-navy shadow-sm">
+        <div className="absolute top-0 left-2 h-10 w-10 rotate-3 rounded-md border border-white/10 bg-surface shadow-sm">
           <div className="flex h-full flex-col items-center justify-center">
             <div className="h-0.5 w-6 rounded-full bg-white/15" />
             <div className="mt-1 h-2 w-4 rounded-sm bg-electric-blue/15" />
@@ -59,7 +59,7 @@ export function MiniPaymentStack({ count = 1 }: { count?: number }) {
         </div>
       )}
       {/* Front receipt */}
-      <div className="absolute top-1 left-0 h-10 w-10 rounded-md border border-white/10 bg-deep-navy shadow-sm">
+      <div className="absolute top-1 left-0 h-10 w-10 rounded-md border border-white/10 bg-surface shadow-sm">
         <div className="flex h-full flex-col items-center justify-center gap-0.5 px-1">
           <div className="h-0.5 w-full rounded-full bg-white/15" />
           <div className="h-0.5 w-2/3 rounded-full bg-white/15" />
@@ -84,7 +84,7 @@ export function MiniFileStack({ count = 1 }: { count?: number }) {
     <div className="relative h-14 w-12">
       {/* Back file (if more than 1) */}
       {count > 1 && (
-        <div className="absolute top-0 left-1 h-10 w-8 rotate-3 rounded-md border border-white/10 bg-deep-navy shadow-sm">
+        <div className="absolute top-0 left-1 h-10 w-8 rotate-3 rounded-md border border-white/10 bg-surface shadow-sm">
           {/* Folded corner */}
           <div className="absolute top-0 right-0 h-2 w-2 rounded-bl-sm border-b border-l border-white/10 bg-white/6" />
           <div className="mt-3 space-y-0.5 px-1">
@@ -94,7 +94,7 @@ export function MiniFileStack({ count = 1 }: { count?: number }) {
         </div>
       )}
       {/* Front file */}
-      <div className="absolute top-1 left-0 h-10 w-8 rounded-md border border-white/10 bg-deep-navy shadow-sm">
+      <div className="absolute top-1 left-0 h-10 w-8 rounded-md border border-white/10 bg-surface shadow-sm">
         {/* Folded corner */}
         <div className="absolute top-0 right-0 h-2 w-2 rounded-bl-sm border-b border-l border-white/10 bg-white/6" />
         <div className="mt-3 space-y-0.5 px-1">

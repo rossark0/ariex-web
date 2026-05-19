@@ -62,7 +62,7 @@ export function ChatInput({
 
   return (
     <div className={cn('relative -translate-y-4 p-0', className)}>
-      <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-deep-navy shadow-2xl duration-200 ease-linear transition-all focus-within:ring-2 focus-within:ring-electric-blue/30">
+      <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-surface shadow-2xl duration-200 ease-linear transition-all focus-within:ring-2 focus-within:ring-electric-blue/30">
         {/* Textarea */}
         <textarea
           ref={textareaRef}

@@ -180,7 +180,7 @@ function ClientFilterDropdown({
       </button>
 
       {open && (
-        <div className="absolute left-0 z-50 mt-1.5 w-64 overflow-hidden rounded-lg border border-white/10 bg-deep-navy shadow-lg">
+        <div className="absolute left-0 z-50 mt-1.5 w-64 overflow-hidden rounded-lg border border-white/10 bg-surface shadow-lg">
           <div className="border-b border-white/6 p-2">
             <div className="flex items-center gap-2 rounded-md bg-surface px-2.5 py-1.5">
               <MagnifyingGlass className="h-3.5 w-3.5 text-steel-gray/60" />
@@ -292,7 +292,7 @@ function StatusFilterDropdown({
       </button>
 
       {open && (
-        <div className="absolute left-0 z-50 mt-1.5 w-48 overflow-hidden rounded-lg border border-white/10 bg-deep-navy shadow-lg">
+        <div className="absolute left-0 z-50 mt-1.5 w-48 overflow-hidden rounded-lg border border-white/10 bg-surface shadow-lg">
           <div className="max-h-56 overflow-y-auto p-1">
             {DOCUMENT_STATUSES.map(status => {
               const isSelected = selectedStatuses.has(status);
@@ -615,7 +615,7 @@ export default function StrategistDocumentsPage() {
   }
 
   return (
-    <div className="min-h-full bg-deep-navy pb-24">
+    <div className="min-h-full bg-panel pb-24">
       <div className="mx-auto flex w-full max-w-2xl flex-col py-6">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
@@ -664,7 +664,7 @@ export default function StrategistDocumentsPage() {
           />
 
           {/* Search on the right */}
-          <div className="ml-auto flex items-center gap-2 rounded-md border border-white/10 bg-deep-navy px-2.5 py-1.5">
+          <div className="ml-auto flex items-center gap-2 rounded-md border border-white/10 bg-surface px-2.5 py-1.5">
             <MagnifyingGlass className="h-3.5 w-3.5 text-steel-gray/60" />
             <input
               type="text"
@@ -722,7 +722,7 @@ export default function StrategistDocumentsPage() {
                       className={`flex h-4.5 w-4.5 items-center justify-center rounded border transition-colors ${
                         selectedDocs.size === filteredDocuments.length && filteredDocuments.length > 0
                           ? 'border-electric-blue bg-electric-blue'
-                          : 'border-white/15 bg-deep-navy hover:border-white/25'
+                          : 'border-white/15 bg-surface hover:border-white/25'
                       }`}
                     >
                       {selectedDocs.size === filteredDocuments.length && filteredDocuments.length > 0 && (
@@ -798,7 +798,7 @@ export default function StrategistDocumentsPage() {
                           className={`flex h-4.5 w-4.5 items-center justify-center rounded border transition-colors ${
                             isSelected
                               ? 'border-electric-blue bg-electric-blue'
-                              : 'border-white/15 bg-deep-navy hover:border-white/25'
+                              : 'border-white/15 bg-surface hover:border-white/25'
                           }`}
                         >
                           {isSelected && (

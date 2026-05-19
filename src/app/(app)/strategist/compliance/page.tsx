@@ -58,7 +58,7 @@ function ComplianceCard({
   onDeleteClient: (complianceUserId: string, clientId: string, clientEmail: string) => void;
 }) {
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-deep-navy transition-all hover:border-white/15 hover:shadow-md">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-surface transition-all hover:border-white/15 hover:shadow-md">
       <div className="flex items-center gap-3 p-4">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/15 text-xs font-semibold text-emerald-300">
           {getInitials(complianceUser.name || complianceUser.email)}
@@ -207,7 +207,7 @@ function AddClientToComplianceModal({
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="flex h-full w-full items-center justify-center bg-deep-navy">
+      <div className="flex h-full w-full items-center justify-center bg-surface">
         {/* Top bar */}
         <div className="absolute top-0 left-0 flex h-14 w-full items-center gap-2 border-b border-white/10 pl-2">
           <button
@@ -224,7 +224,7 @@ function AddClientToComplianceModal({
 
         <div className="w-full max-w-md px-6">
           {/* Info banner */}
-          <div className="mb-6 rounded-xl border border-white/10 bg-deep-navy p-4">
+          <div className="mb-6 rounded-xl border border-white/10 bg-surface p-4">
             <div className="flex items-start gap-3">
               <div className="h-full w-1 rounded-full bg-emerald-500" />
               <div>
@@ -239,7 +239,7 @@ function AddClientToComplianceModal({
           </div>
 
           {/* Client list */}
-          <div className="mb-6 overflow-hidden rounded-xl border border-white/10 bg-deep-navy">
+          <div className="mb-6 overflow-hidden rounded-xl border border-white/10 bg-surface">
             {/* Search */}
             <div className="border-b border-white/6 px-3 py-2.5">
               <div className="relative">
@@ -377,7 +377,7 @@ function DeleteClientConfirmationModal({
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-xl border border-white/10 bg-deep-navy p-6 shadow-lg">
+      <div className="w-full max-w-sm rounded-xl border border-white/10 bg-surface p-6 shadow-lg">
         <div className="mb-4">
           <h2 className="text-lg font-semibold text-soft-white">Remove Client</h2>
           <p className="mt-2 text-sm text-steel-gray">
@@ -432,7 +432,7 @@ function ErrorModal({ isOpen, onClose, errorMessage }: ErrorModalProps) {
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-xl border border-red-500/30 bg-deep-navy p-6 shadow-lg">
+      <div className="w-full max-w-sm rounded-xl border border-red-500/30 bg-surface p-6 shadow-lg">
         <div className="mb-4 flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-500/15">
             <X weight="bold" className="h-5 w-5 text-red-400" />
@@ -462,7 +462,7 @@ function LoadingState() {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {[1, 2].map(i => (
-        <div key={i} className="animate-pulse rounded-xl border border-white/10 bg-deep-navy p-4">
+        <div key={i} className="animate-pulse rounded-xl border border-white/10 bg-surface p-4">
           <div className="mb-3 flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-white/8" />
             <div className="flex-1">
@@ -603,7 +603,7 @@ export default function StrategistCompliancePage() {
   return (
     <div className="flex min-h-full flex-col">
       <div className="flex-1">
-        <div className="shrink-0 bg-deep-navy pt-6 pb-6">
+        <div className="shrink-0 bg-surface pt-6 pb-6">
           <div className="mx-auto w-full max-w-[642px]">
             <div className="mb-6 flex items-start justify-between">
               <div>
@@ -626,13 +626,13 @@ export default function StrategistCompliancePage() {
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="h-[30px] w-64 rounded-lg border border-white/10 bg-deep-navy pr-3 pl-7 text-sm font-medium text-soft-white shadow placeholder:text-steel-gray/60 hover:bg-white/8 focus:border-white/15 focus:outline-none"
+                className="h-[30px] w-64 rounded-lg border border-white/10 bg-surface pr-3 pl-7 text-sm font-medium text-soft-white shadow placeholder:text-steel-gray/60 hover:bg-white/8 focus:border-white/15 focus:outline-none"
               />
             </div>
           </div>
         </div>
 
-        <div className="bg-deep-navy pb-42">
+        <div className="bg-surface pb-42">
           <div className="mx-auto w-full max-w-[642px] py-6">
             {isLoading ? (
               <LoadingState />

@@ -263,7 +263,7 @@ export default function StrategistDashboardPage() {
   });
 
   return (
-    <div className="flex min-h-full flex-col bg-deep-navy">
+    <div className="flex min-h-full flex-col bg-panel">
       <div className="flex-1">
         {/* Welcome Section */}
         <div className="shrink-0 pt-6 pb-8">

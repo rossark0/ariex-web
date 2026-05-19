@@ -19,7 +19,7 @@ export function ChatInput() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 border-t border-white/10 bg-deep-navy p-4">
+    <form onSubmit={handleSubmit} className="flex gap-2 border-t border-white/10 bg-surface p-4">
       <input
         type="text"
         value={input}

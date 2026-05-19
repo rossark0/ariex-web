@@ -365,7 +365,7 @@ function PageNavigation({
   onDeletePage,
 }: PageNavigationProps) {
   return (
-    <div className="flex items-center justify-center gap-2 border-t border-white/6 bg-deep-navy py-3">
+    <div className="flex items-center justify-center gap-2 border-t border-white/6 bg-surface py-3">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 0}
@@ -740,9 +740,9 @@ function AiAssistant({
   };
 
   return (
-    <div className="relative flex h-full flex-col rounded-xl bg-deep-navy">
+    <div className="relative flex h-full flex-col rounded-xl bg-surface">
       {/* Floating page indicator - top right */}
-      <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 rounded-lg border border-white/10 bg-deep-navy px-2 py-1 text-sm font-medium text-steel-gray">
+      <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 rounded-lg border border-white/10 bg-surface px-2 py-1 text-sm font-medium text-steel-gray">
         <Sparkle weight="fill" className="h-4 w-4 text-electric-blue" /> Editing{' '}
         <span>
           page {currentPageIndex + 1} of {totalPages}
@@ -1331,7 +1331,7 @@ export function StrategySheet({
                 <button
                   onClick={handleExportPdf}
                   disabled={isExporting || !pages.some(p => p.content.trim())}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-deep-navy px-2 py-1 text-sm font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 disabled:opacity-50"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-surface px-2 py-1 text-sm font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 disabled:opacity-50"
                 >
                   {isExporting ? (
                     <>
@@ -1409,7 +1409,7 @@ export function StrategySheet({
           </div>
 
           {/* Right Column - Tabs & Content */}
-          <div className="flex w-[400px] shrink-0 flex-col border-l border-white/6 bg-deep-navy">
+          <div className="flex w-[400px] shrink-0 flex-col border-l border-white/6 bg-surface">
             {/* Tabs for Revise Mode */}
             {isReviseMode && (
               <div className="flex border-b border-white/6">

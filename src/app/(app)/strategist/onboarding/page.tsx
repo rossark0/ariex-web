@@ -72,7 +72,7 @@ export default function StrategistOnboardingPage() {
 
   if (isChecking) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-deep-navy">
+      <div className="flex min-h-screen items-center justify-center bg-panel">
         <p className="text-sm text-steel-gray/60 uppercase font-semibold">Loading...</p>
       </div>
     );
@@ -80,7 +80,7 @@ export default function StrategistOnboardingPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-deep-navy">
+      <div className="flex min-h-screen items-center justify-center bg-panel">
         <div className="text-center">
           <h1 className="mb-2 text-xl font-semibold uppercase text-soft-white">Setup Complete</h1>
           <p className="text-sm text-steel-gray uppercase font-medium">Redirecting to your dashboard...</p>
@@ -90,7 +90,7 @@ export default function StrategistOnboardingPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-deep-navy overflow-hidden md:overflow-hidden overflow-y-auto">
+    <div className="flex h-screen flex-col bg-panel overflow-hidden md:overflow-hidden overflow-y-auto">
       {/* Header */}
       <header className="flex shrink-0 items-center justify-between px-6 py-4">
         <div className="flex w-full items-center gap-2">
@@ -145,7 +145,7 @@ export default function StrategistOnboardingPage() {
             <button
               type="submit"
               disabled={!isValidStripeKey || isSubmitting}
-              className="w-full rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-full rounded-md border border-white/10 bg-surface py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isSubmitting ? 'Connecting...' : 'Continue'}
             </button>

@@ -92,7 +92,7 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
   const stateIsValid = !!STATE_TAX[draft.state];
 
   return (
-    <section className="rounded-lg border border-white/6 bg-deep-navy p-4">
+    <section className="rounded-lg border border-white/6 bg-surface p-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <div>
           <label className="mb-1 block text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
@@ -101,7 +101,7 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
           <select
             value={draft.year}
             onChange={e => setField('year', Number(e.target.value) as TaxYear)}
-            className="w-full rounded-md border border-white/10 bg-deep-navy px-2.5 py-1.5 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
+            className="w-full rounded-md border border-white/10 bg-surface px-2.5 py-1.5 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
           >
             {SUPPORTED_TAX_YEARS.map(y => (
               <option key={y} value={y}>
@@ -119,7 +119,7 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
           <select
             value={draft.filingStatus}
             onChange={e => setField('filingStatus', e.target.value as FilingStatus)}
-            className="w-full rounded-md border border-white/10 bg-deep-navy px-2.5 py-1.5 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
+            className="w-full rounded-md border border-white/10 bg-surface px-2.5 py-1.5 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
           >
             {FILING_STATUS_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>
@@ -136,7 +136,7 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
           <select
             value={stateIsValid ? draft.state : 'none'}
             onChange={e => setField('state', e.target.value as UsState)}
-            className="w-full rounded-md border border-white/10 bg-deep-navy px-2.5 py-1.5 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
+            className="w-full rounded-md border border-white/10 bg-surface px-2.5 py-1.5 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
           >
             {US_STATES.map(s => {
               const info = STATE_TAX[s];
@@ -220,7 +220,7 @@ function Field({
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-md border border-white/10 bg-deep-navy px-2.5 py-1.5 pl-5 text-sm tabular-nums text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
+          className="w-full rounded-md border border-white/10 bg-surface px-2.5 py-1.5 pl-5 text-sm tabular-nums text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
         />
       </div>
     </div>

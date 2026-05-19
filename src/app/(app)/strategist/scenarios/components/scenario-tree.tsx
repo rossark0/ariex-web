@@ -68,7 +68,7 @@ export function ScenarioTree({
 
   return (
     <div
-      className="relative w-full overflow-auto rounded-lg border border-white/6 bg-deep-navy"
+      className="relative w-full overflow-auto rounded-lg border border-white/6 bg-surface"
       style={{ minHeight: layout.svgHeight }}
     >
       <svg

@@ -98,7 +98,7 @@ export function DocumentPreviewModal({
       {/* Modal */}
       <div
         className={cn(
-          'relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-deep-navy shadow-2xl transition-all duration-200',
+          'relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-surface shadow-2xl transition-all duration-200',
           isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
         )}
       >
@@ -163,7 +163,7 @@ export function DocumentPreviewModal({
             <iframe
               src={url}
               title={fileName}
-              className="h-[75vh] w-full rounded-lg border border-white/10 bg-deep-navy"
+              className="h-[75vh] w-full rounded-lg border border-white/10 bg-surface"
             />
           )}
         </div>

@@ -24,7 +24,7 @@ export function AgreementCard({
   return (
     <div 
       onClick={onToggleSelection}
-      className={`group relative flex h-[272px] cursor-pointer flex-col justify-between rounded-lg border bg-deep-navy p-4 shadow-sm transition-all hover:shadow-md ${
+      className={`group relative flex h-[272px] cursor-pointer flex-col justify-between rounded-lg border bg-surface p-4 shadow-sm transition-all hover:shadow-md ${
         isSelected ? 'border-electric-blue bg-electric-blue/5' : 'border-white/10'
       }`}
     >

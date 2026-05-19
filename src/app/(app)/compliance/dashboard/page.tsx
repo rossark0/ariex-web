@@ -26,7 +26,7 @@ export default function ComplianceDashboardPage() {
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Strategists Overview */}
-        <div className="rounded-lg border border-white/10 bg-deep-navy p-6">
+        <div className="rounded-lg border border-white/10 bg-surface p-6">
           <h2 className="mb-4 text-xl font-semibold text-soft-white">Strategists</h2>
           <p className="mb-4 text-sm text-steel-gray">Monitor all strategist activity and performance</p>
           
@@ -43,7 +43,7 @@ export default function ComplianceDashboardPage() {
         </div>
 
         {/* Recent Activity */}
-        <div className="rounded-lg border border-white/10 bg-deep-navy p-6">
+        <div className="rounded-lg border border-white/10 bg-surface p-6">
           <h2 className="mb-4 text-xl font-semibold text-soft-white">Recent Activity</h2>
           <p className="mb-4 text-sm text-steel-gray">Latest actions requiring oversight</p>
           
@@ -78,7 +78,7 @@ export default function ComplianceDashboardPage() {
       </div>
 
       {/* Pending Reviews */}
-      <div className="rounded-lg border border-white/10 bg-deep-navy p-6">
+      <div className="rounded-lg border border-white/10 bg-surface p-6">
         <h2 className="mb-4 text-xl font-semibold text-soft-white">Pending Reviews</h2>
         <div className="space-y-3">
           <ReviewRow
@@ -117,7 +117,7 @@ function StatCard({
   positive?: boolean;
 }) {
   return (
-    <div className="rounded-lg bg-deep-navy p-6 shadow-sm">
+    <div className="rounded-lg bg-surface p-6 shadow-sm">
       <div className="text-sm font-medium text-steel-gray">{label}</div>
       <div className="mt-2 text-3xl font-bold text-soft-white">{value}</div>
       <div className={`mt-1 text-xs ${positive ? 'text-emerald-400' : 'text-amber-400'}`}>

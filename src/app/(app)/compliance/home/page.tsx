@@ -46,7 +46,7 @@ function StatCard({
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-deep-navy p-5">
+    <div className="rounded-xl border border-white/10 bg-surface p-5">
       <div className="mb-3 flex items-center gap-3">
         <div
           className={`flex h-9 w-9 items-center justify-center rounded-lg ${colorMap[color]}`}

@@ -130,7 +130,7 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
   return (
     <div
       ref={chatRef}
-      className={`fixed right-10 bottom-4 z-40 flex w-80 flex-col overflow-hidden border border-white/10 bg-deep-navy transition-[height,border-radius,box-shadow] duration-200 ease-linear ${
+      className={`fixed right-10 bottom-4 z-40 flex w-80 flex-col overflow-hidden border border-white/10 bg-surface transition-[height,border-radius,box-shadow] duration-200 ease-linear ${
         isExpanded
           ? 'h-[500px] rounded-2xl shadow-2xl'
           : 'h-auto rounded-lg shadow-lg hover:shadow-xl'

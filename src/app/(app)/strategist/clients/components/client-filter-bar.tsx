@@ -237,7 +237,7 @@ function FilterDropdown<T extends string>({
           'flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors duration-150 ease-linear',
           activeCount > 0
             ? 'border-electric-blue/40 bg-electric-blue/10 text-electric-blue hover:bg-electric-blue/15'
-            : 'border-white/10 bg-deep-navy text-steel-gray hover:bg-white/5'
+            : 'border-white/10 bg-surface text-steel-gray hover:bg-white/5'
         )}
       >
         <span>{label}</span>
@@ -256,7 +256,7 @@ function FilterDropdown<T extends string>({
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 z-40 mt-1 w-56 overflow-hidden rounded-lg border border-white/10 bg-deep-navy py-1 shadow-xl">
+        <div className="absolute top-full left-0 z-40 mt-1 w-56 overflow-hidden rounded-lg border border-white/10 bg-surface py-1 shadow-xl">
           {options.map(opt => {
             const isSelected = selected.includes(opt.value);
             return (

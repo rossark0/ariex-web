@@ -116,7 +116,7 @@ export function ChatMessagesList({
       {showScrollButton && (
         <button
           onClick={scrollToBottom}
-          className="absolute bottom-4 left-1/2 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full bg-deep-navy shadow-lg ring-1 ring-white/10 duration-150 ease-linear transition-all hover:bg-white/8"
+          className="absolute bottom-4 left-1/2 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full bg-surface shadow-lg ring-1 ring-white/10 duration-150 ease-linear transition-all hover:bg-white/8"
           aria-label="Scroll to bottom"
         >
           <ArrowDown className="h-4 w-4 text-soft-white" weight="bold" />

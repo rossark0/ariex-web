@@ -157,7 +157,7 @@ export function TodoUploadItem({ todo, agreementId, strategistId, onUploadComple
         isRejected && 'border-red-500/30 bg-red-500/10',
         isAccepted && 'border-emerald-500/30 bg-emerald-500/10',
         isCompleted && !isRejected && !isAccepted && 'border-white/10 bg-white/4',
-        !isCompleted && !isRejected && 'border-white/10 bg-deep-navy hover:border-white/20',
+        !isCompleted && !isRejected && 'border-white/10 bg-surface hover:border-white/20',
         dragActive && 'border-electric-blue bg-electric-blue/10'
       )}
       onDragEnter={handleDrag}

@@ -212,7 +212,7 @@ export function CreatePaymentLinkModal({
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-2xl rounded-xl bg-deep-navy shadow-xl">
+      <div className="w-full max-w-2xl rounded-xl bg-surface shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/6 p-6">
           <div className="flex items-center gap-3">
@@ -274,7 +274,7 @@ export function CreatePaymentLinkModal({
                     <button
                       key={client.id}
                       onClick={() => handleClientSelect(client)}
-                      className="w-full rounded-lg border border-white/10 bg-deep-navy p-4 text-left transition-colors hover:border-electric-blue/30 hover:bg-electric-blue/5"
+                      className="w-full rounded-lg border border-white/10 bg-surface p-4 text-left transition-colors hover:border-electric-blue/30 hover:bg-electric-blue/5"
                     >
                       <p className="font-medium text-soft-white">{client.name || 'Unnamed Client'}</p>
                       <p className="text-sm text-steel-gray">{client.email}</p>
@@ -288,7 +288,7 @@ export function CreatePaymentLinkModal({
                   <div className="w-full border-t border-white/10" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="bg-deep-navy px-2 text-steel-gray">or</span>
+                  <span className="bg-surface px-2 text-steel-gray">or</span>
                 </div>
               </div>
 
@@ -340,7 +340,7 @@ export function CreatePaymentLinkModal({
                     <button
                       key={agreement.id}
                       onClick={() => handleAgreementSelect(agreement)}
-                      className="w-full rounded-lg border border-white/10 bg-deep-navy p-4 text-left transition-colors hover:border-electric-blue/30 hover:bg-electric-blue/5"
+                      className="w-full rounded-lg border border-white/10 bg-surface p-4 text-left transition-colors hover:border-electric-blue/30 hover:bg-electric-blue/5"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">

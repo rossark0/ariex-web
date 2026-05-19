@@ -185,7 +185,7 @@ interface SignatureFieldItemProps {
 function SignatureFieldItem({ field, onRemove }: SignatureFieldItemProps) {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-dashed border-white/15 bg-white/4 px-4 py-3">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-deep-navy">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-surface">
         <PenNib className="h-5 w-5 text-steel-gray" weight="duotone" />
       </div>
       <div className="flex-1">
@@ -224,7 +224,7 @@ function SignatureArea({ signatureFields, onAddField, onRemoveField }: Signature
         <div className="relative">
           <button
             onClick={() => setIsAddingField(!isAddingField)}
-            className="flex items-center gap-1.5 rounded-md border border-white/10 bg-deep-navy px-2 py-1 text-xs font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8"
+            className="flex items-center gap-1.5 rounded-md border border-white/10 bg-surface px-2 py-1 text-xs font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8"
           >
             <Plus className="h-3.5 w-3.5" />
             Add Signature
@@ -232,7 +232,7 @@ function SignatureArea({ signatureFields, onAddField, onRemoveField }: Signature
 
           {/* Dropdown for role selection */}
           {isAddingField && (
-            <div className="absolute top-full right-0 z-10 mt-1 w-48 rounded-lg border border-white/10 bg-deep-navy py-1 shadow-lg">
+            <div className="absolute top-full right-0 z-10 mt-1 w-48 rounded-lg border border-white/10 bg-surface py-1 shadow-lg">
               {SIGNATURE_ROLES.map(role => (
                 <button
                   key={role}
@@ -289,7 +289,7 @@ function PageNavigation({
   onDeletePage,
 }: PageNavigationProps) {
   return (
-    <div className="flex items-center justify-center gap-2 border-t border-white/6 bg-deep-navy py-3">
+    <div className="flex items-center justify-center gap-2 border-t border-white/6 bg-surface py-3">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 0}
@@ -435,7 +435,7 @@ function UploadCard({ onFileSelect, onSkipUpload, isProcessing }: UploadCardProp
 
       <button
         onClick={onSkipUpload}
-        className="mt-4 rounded-lg border border-white/10 bg-deep-navy px-4 py-2 text-sm font-medium text-soft-white duration-150 ease-linear transition-colors hover:bg-white/8"
+        className="mt-4 rounded-lg border border-white/10 bg-surface px-4 py-2 text-sm font-medium text-soft-white duration-150 ease-linear transition-colors hover:bg-white/8"
       >
         Start from template
       </button>
@@ -511,7 +511,7 @@ function MarkdownEditor({ content, onChange, onOverflow }: MarkdownEditorProps) 
   }, [content, onOverflow]);
 
   return (
-    <div className="flex h-full flex-col bg-deep-navy">
+    <div className="flex h-full flex-col bg-surface">
       <div
         ref={editorContainerRef}
         className="relative flex-1 overflow-auto"
@@ -762,9 +762,9 @@ function AiAssistant({
   };
 
   return (
-    <div className="relative flex h-full flex-col rounded-xl bg-deep-navy">
+    <div className="relative flex h-full flex-col rounded-xl bg-surface">
       {/* Floating page indicator - top right */}
-      <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 rounded-lg border border-white/10 bg-deep-navy px-2 py-1 text-sm font-medium text-steel-gray">
+      <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 rounded-lg border border-white/10 bg-surface px-2 py-1 text-sm font-medium text-steel-gray">
         <Sparkle weight="fill" className="h-4 w-4 text-electric-blue" /> Editing{' '}
         <span>
           page {currentPageIndex + 1} of {totalPages}
@@ -1505,7 +1505,7 @@ export function AgreementSheet({
               <button
                 onClick={handleExportPdf}
                 disabled={isExporting || !pages.some(p => p.content.trim())}
-                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-deep-navy px-2 py-1 text-sm font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 disabled:opacity-50"
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-surface px-2 py-1 text-sm font-medium text-steel-gray duration-150 ease-linear transition-colors hover:bg-white/8 disabled:opacity-50"
               >
                 {isExporting ? (
                   <>
@@ -1547,7 +1547,7 @@ export function AgreementSheet({
                       type="text"
                       value={title}
                       onChange={e => setTitle(e.target.value)}
-                      className="w-full rounded-lg border border-white/10 bg-deep-navy px-3 py-2 text-lg font-semibold text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none"
+                      className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2 text-lg font-semibold text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none"
                       placeholder="Enter document title..."
                     />
                   </div>
@@ -1561,7 +1561,7 @@ export function AgreementSheet({
                         step={1}
                         value={price}
                         onChange={e => setPrice(Number(e.target.value) || 0)}
-                        className="w-full rounded-lg border border-white/10 bg-deep-navy py-2 pr-3 pl-7 text-lg font-semibold text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none"
+                        className="w-full rounded-lg border border-white/10 bg-surface py-2 pr-3 pl-7 text-lg font-semibold text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none"
                         placeholder="499"
                       />
                     </div>
@@ -1604,7 +1604,7 @@ export function AgreementSheet({
           </div>
 
           {/* Right Column - AI Assistant */}
-          <div className="w-[400px] shrink-0 border-l border-white/6 bg-deep-navy p-4">
+          <div className="w-[400px] shrink-0 border-l border-white/6 bg-surface p-4">
             <AiAssistant
               clientName={clientName}
               documentContent={currentPage.content}

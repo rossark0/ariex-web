@@ -186,7 +186,7 @@ export const DocumentsList = memo(function DocumentsList({
                             <CheckIcon weight="bold" className="h-3 w-3 text-white" />
                           </div>
                         ) : (
-                          <div className="h-4 w-4 rounded border-2 border-white/15 bg-deep-navy transition-colors group-hover:border-teal-400" />
+                          <div className="h-4 w-4 rounded border-2 border-white/15 bg-surface transition-colors group-hover:border-teal-400" />
                         )}
                       </div>
                       <div
@@ -253,7 +253,7 @@ export const DocumentsList = memo(function DocumentsList({
                             }
                           }}
                           disabled={openingDocId === doc.id}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-deep-navy text-steel-gray opacity-0 transition-all group-hover:opacity-100 hover:bg-surface hover:text-soft-white disabled:opacity-50"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-surface text-steel-gray opacity-0 transition-all group-hover:opacity-100 hover:bg-surface hover:text-soft-white disabled:opacity-50"
                           title="Open document"
                         >
                           {openingDocId === doc.id ? (

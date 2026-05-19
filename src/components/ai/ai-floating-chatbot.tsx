@@ -194,7 +194,7 @@ export function AiFloatingChatbot({
               <button
                 onClick={onDownload}
                 disabled={isDownloading}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-deep-navy py-1.5 pr-3 pl-2 text-sm font-medium text-soft-white shadow-lg duration-150 ease-linear transition-colors hover:bg-white/8 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-surface py-1.5 pr-3 pl-2 text-sm font-medium text-soft-white shadow-lg duration-150 ease-linear transition-colors hover:bg-white/8 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isDownloading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -532,7 +532,7 @@ export function AiFloatingChatbot({
                     textareaRef.current?.focus();
                   }, 0);
                 }}
-                className="mr-3 flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-deep-navy px-2 py-2 duration-150 ease-linear transition-all hover:bg-white/8"
+                className="mr-3 flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-surface px-2 py-2 duration-150 ease-linear transition-all hover:bg-white/8"
               >
                 <div className="flex h-5 w-8 items-center justify-center rounded-md bg-electric-blue/15">
                   <kbd className="text-xs font-extrabold text-electric-blue">TAB</kbd>

@@ -160,7 +160,7 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
   const isActive = clientCount > 0;
 
   return (
-    <div className="relative flex min-h-full flex-col bg-deep-navy">
+    <div className="relative flex min-h-full flex-col bg-panel">
       {/* Breadcrumb */}
       <div
         className={`fixed top-4 z-50 pl-2 pt-3.75 pb-2 transition-all duration-300 ${isSidebarCollapsed ? 'left-14' : 'left-56'}`}

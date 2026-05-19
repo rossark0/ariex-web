@@ -88,7 +88,7 @@ function ClientCard({
   return (
     <div
       onClick={() => router.push(`/strategist/clients/${client.id}`)}
-      className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-white/10 bg-deep-navy transition-all hover:border-white/15 hover:shadow-md"
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-white/10 bg-surface transition-all hover:border-white/15 hover:shadow-md"
     >
       <div className="flex flex-1 flex-col items-start p-4">
         <span
@@ -197,7 +197,7 @@ function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProp
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="flex h-full w-full items-center justify-center bg-deep-navy">
+      <div className="flex h-full w-full items-center justify-center bg-surface">
         <div className="absolute top-0 left-0 flex h-14 w-full items-center gap-2 border-b border-white/10 pl-2">
           <button
             onClick={onClose}
@@ -212,7 +212,7 @@ function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProp
         </div>
 
         <div className="w-full max-w-md px-6">
-          <div className="mb-6 rounded-xl border border-white/10 bg-deep-navy p-4">
+          <div className="mb-6 rounded-xl border border-white/10 bg-surface p-4">
             <div className="flex items-start gap-3">
               <div className="h-full w-1 rounded-full bg-emerald-500" />
               <div>
@@ -228,7 +228,7 @@ function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProp
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div className="mb-6 overflow-hidden rounded-xl border border-white/10 bg-deep-navy">
+            <div className="mb-6 overflow-hidden rounded-xl border border-white/10 bg-surface">
               <div className="border-b border-white/6 p-1">
                 <div className="flex rounded-lg bg-white/8 p-1">
                   <button
@@ -236,7 +236,7 @@ function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProp
                     onClick={() => setClientType('individual')}
                     className={`flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${
                       clientType === 'individual'
-                        ? 'bg-deep-navy text-soft-white shadow-sm'
+                        ? 'bg-surface text-soft-white shadow-sm'
                         : 'text-steel-gray hover:text-soft-white'
                     }`}
                   >
@@ -251,7 +251,7 @@ function AddClientModal({ isOpen, onClose, onClientCreated }: AddClientModalProp
                     onClick={() => setClientType('business')}
                     className={`flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${
                       clientType === 'business'
-                        ? 'bg-deep-navy text-soft-white shadow-sm'
+                        ? 'bg-surface text-soft-white shadow-sm'
                         : 'text-steel-gray hover:text-soft-white'
                     }`}
                   >
@@ -489,7 +489,7 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
 
   return (
     <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col rounded-2xl bg-deep-navy p-0 shadow-xl">
+      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col rounded-2xl bg-surface p-0 shadow-xl">
         {/* Header */}
         <div className="flex shrink-0 items-center gap-2 border-b border-white/10 px-4 py-3">
           <button
@@ -507,7 +507,7 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
         <div className="flex-1 overflow-y-auto p-6">
           {/* Info Banner — hide after success */}
           {!apiResponse && (
-            <div className="mb-6 rounded-xl border border-white/10 bg-deep-navy p-4">
+            <div className="mb-6 rounded-xl border border-white/10 bg-surface p-4">
               <div className="flex items-start gap-3">
                 <div className="h-full w-1 rounded-full bg-teal-500" />
                 <div>
@@ -525,7 +525,7 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
             {/* Email input — hide after success */}
             {!apiResponse && (
               <>
-                <div className="mb-4 overflow-hidden rounded-xl border border-white/10 bg-deep-navy">
+                <div className="mb-4 overflow-hidden rounded-xl border border-white/10 bg-surface">
                   <div className="flex items-center justify-between px-4 py-3">
                     <label className="text-sm font-medium text-steel-gray">Email</label>
                     <input
@@ -540,7 +540,7 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
                 </div>
 
                 {/* Client Multi-Selector */}
-                <div className="mb-6 rounded-xl border border-white/10 bg-deep-navy">
+                <div className="mb-6 rounded-xl border border-white/10 bg-surface">
                   <div className="flex items-center justify-between border-b border-white/6 px-4 py-2.5">
                     <p className="text-sm font-medium text-soft-white">
                       Clients to share
@@ -576,7 +576,7 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
                             className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
                               selectedClientIds.has(client.id)
                                 ? 'border-teal-600 bg-teal-600'
-                                : 'border-white/15 bg-deep-navy'
+                                : 'border-white/15 bg-surface'
                             }`}
                           >
                             {selectedClientIds.has(client.id) && (
@@ -625,7 +625,7 @@ function InviteComplianceModal({ isOpen, onClose, onInvited }: InviteComplianceM
                       Acceptance Link (share with compliance user)
                     </p>
                     <div className="flex items-center gap-2">
-                      <code className="flex-1 rounded-md border border-teal-500/30 bg-deep-navy px-2 py-1.5 text-xs break-all text-soft-white">
+                      <code className="flex-1 rounded-md border border-teal-500/30 bg-surface px-2 py-1.5 text-xs break-all text-soft-white">
                         {acceptanceUrl}
                       </code>
                       <button
@@ -926,7 +926,7 @@ export default function StrategistClientsPage() {
   return (
     <div className="flex min-h-full flex-col">
       <div className="flex-1">
-        <div className="shrink-0 bg-deep-navy pt-6 pb-6">
+        <div className="shrink-0 bg-surface pt-6 pb-6">
           <div className="mx-auto w-full max-w-[642px]">
             <div className="mb-6 flex items-start justify-between">
               <div>
@@ -950,7 +950,7 @@ export default function StrategistClientsPage() {
                   placeholder="Search..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="h-[30px] w-64 rounded-lg border border-white/10 bg-deep-navy pr-3 pl-7 text-sm font-medium text-soft-white shadow placeholder:text-steel-gray/60 hover:bg-white/8 focus:border-white/15 focus:outline-none"
+                  className="h-[30px] w-64 rounded-lg border border-white/10 bg-surface pr-3 pl-7 text-sm font-medium text-soft-white shadow placeholder:text-steel-gray/60 hover:bg-white/8 focus:border-white/15 focus:outline-none"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -958,7 +958,7 @@ export default function StrategistClientsPage() {
                 <div
                   role="tablist"
                   aria-label="View mode"
-                  className="flex items-center rounded-md border border-white/10 bg-deep-navy p-0.5"
+                  className="flex items-center rounded-md border border-white/10 bg-surface p-0.5"
                 >
                   <button
                     role="tab"
@@ -985,7 +985,7 @@ export default function StrategistClientsPage() {
                 </div>
                 <button
                   onClick={() => setIsInviteComplianceModalOpen(true)}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-deep-navy px-2 py-1 text-sm font-medium text-soft-white transition-colors hover:bg-surface"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-surface px-2 py-1 text-sm font-medium text-soft-white transition-colors hover:bg-surface"
                 >
                   <ShieldCheck weight="bold" className="h-4 w-4" />
                   <span>Invite Compliance</span>
@@ -1014,7 +1014,7 @@ export default function StrategistClientsPage() {
           </div>
         </div>
 
-        <div className="bg-deep-navy pb-42">
+        <div className="bg-surface pb-42">
           <div
             className={`mx-auto w-full py-6 ${
               viewMode === 'matrix' ? 'max-w-[1100px] px-6' : 'max-w-[642px]'

@@ -99,7 +99,7 @@ export function ScenarioClientPicker({ selectedClientId, onSelect }: ScenarioCli
           'flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors duration-150 ease-linear',
           selectedClient
             ? 'border-electric-blue/40 bg-electric-blue/10 text-electric-blue hover:bg-electric-blue/15'
-            : 'border-white/10 bg-deep-navy text-steel-gray hover:bg-white/5'
+            : 'border-white/10 bg-surface text-steel-gray hover:bg-white/5'
         )}
       >
         <User weight="fill" className="h-3 w-3" />
@@ -116,7 +116,7 @@ export function ScenarioClientPicker({ selectedClientId, onSelect }: ScenarioCli
       </button>
 
       {open && (
-        <div className="absolute top-full right-0 z-40 mt-1 w-72 overflow-hidden rounded-lg border border-white/10 bg-deep-navy shadow-xl">
+        <div className="absolute top-full right-0 z-40 mt-1 w-72 overflow-hidden rounded-lg border border-white/10 bg-surface shadow-xl">
           <div className="border-b border-white/6 p-2">
             <div className="relative">
               <MagnifyingGlass
@@ -129,7 +129,7 @@ export function ScenarioClientPicker({ selectedClientId, onSelect }: ScenarioCli
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Search clients..."
-                className="w-full rounded-md border border-white/10 bg-deep-navy py-1 pr-2 pl-7 text-xs text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
+                className="w-full rounded-md border border-white/10 bg-surface py-1 pr-2 pl-7 text-xs text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
               />
             </div>
           </div>

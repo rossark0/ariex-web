@@ -619,7 +619,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
         <button
           onClick={handleSaveAndContinue}
           disabled={isSaving}
-          className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface disabled:opacity-40"
+          className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-white/10 bg-surface py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface disabled:opacity-40"
         >
           {isSaving ? 'Saving...' : 'Continue'}
         </button>
@@ -823,7 +823,7 @@ function AgreementStep({
               <SpinnerGap weight="bold" className="h-5 w-5 animate-spin text-steel-gray/60" />
             </div>
           ) : signedDocumentUrl ? (
-            <div className="overflow-hidden rounded-md border border-white/10 bg-deep-navy">
+            <div className="overflow-hidden rounded-md border border-white/10 bg-surface">
               <iframe
                 src={signedDocumentUrl}
                 className="h-80 w-full"
@@ -853,7 +853,7 @@ function AgreementStep({
               </div>
             </div>
           ) : documentUrl ? (
-            <div className="overflow-hidden rounded-md border border-white/10 bg-deep-navy">
+            <div className="overflow-hidden rounded-md border border-white/10 bg-surface">
               <iframe src={documentUrl} className="h-80 w-full" title="Agreement Document" />
               <div className="flex items-center justify-between border-t border-white/10 bg-surface px-4 py-2">
                 <span className="text-xs text-steel-gray">Agreement PDF</span>
@@ -925,7 +925,7 @@ function AgreementStep({
             <SpinnerGap weight="bold" className="h-5 w-5 animate-spin text-steel-gray/60" />
           </div>
         ) : documentUrl ? (
-          <div className="overflow-hidden rounded-md border border-white/10 bg-deep-navy">
+          <div className="overflow-hidden rounded-md border border-white/10 bg-surface">
             <iframe src={documentUrl} className="h-80 w-full" title="Agreement Document" />
             <div className="flex items-center justify-between border-t border-white/10 bg-surface px-4 py-2">
               <span className="text-xs text-steel-gray">Agreement PDF</span>
@@ -1524,7 +1524,7 @@ function PaymentStep({
           <button
             onClick={handlePayNow}
             disabled={isGeneratingLink}
-            className="flex w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-surface py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface disabled:opacity-40"
           >
             {isGeneratingLink ? (
               'Preparing checkout...'
@@ -1541,7 +1541,7 @@ function PaymentStep({
             <button
               onClick={handleVerifyPayment}
               disabled={isVerifying}
-              className="flex w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-deep-navy py-2 text-xs font-medium text-soft-white transition-colors hover:bg-white/8 disabled:opacity-40"
+              className="flex w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-surface py-2 text-xs font-medium text-soft-white transition-colors hover:bg-white/8 disabled:opacity-40"
             >
               {isVerifying ? (
                 <>
@@ -1582,7 +1582,7 @@ function PaymentStep({
           {isPaymentComplete && (
             <button
               onClick={onContinue}
-              className="flex-1 cursor-pointer rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface"
+              className="flex-1 cursor-pointer rounded-md border border-white/10 bg-surface py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface"
             >
               Continue
             </button>
@@ -1641,7 +1641,7 @@ function CompleteStep({ dashboardData }: { dashboardData: ClientDashboardData | 
       <button
         onClick={() => router.push('/client/home')}
         disabled={isFinishing}
-        className="w-full rounded-md border border-white/10 bg-deep-navy py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface disabled:opacity-40"
+        className="w-full rounded-md border border-white/10 bg-surface py-3 text-sm font-medium text-soft-white transition-colors hover:bg-surface disabled:opacity-40"
       >
         {isFinishing ? 'Finishing...' : 'Go to Dashboard'}
       </button>
@@ -1948,16 +1948,16 @@ function OnboardingContent() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-deep-navy">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-panel">
         <p className="text-xs font-medium text-steel-gray/60 uppercase">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-deep-navy">
+    <div className="flex min-h-screen flex-col bg-panel">
       {/* Header — fixed so the agreement switcher is always visible */}
-      <header className="fixed inset-x-0 top-0 z-50 flex items-center justify-between border-b border-white/6 bg-deep-navy/95 px-6 py-3 backdrop-blur-sm">
+      <header className="fixed inset-x-0 top-0 z-50 flex items-center justify-between border-b border-white/6 bg-surface/95 px-6 py-3 backdrop-blur-sm">
         {/* Agreement switcher replaces the logo */}
         <div className="flex items-center">
           {(dashboardData?.agreements?.length ?? 0) > 1 ? (
@@ -2104,7 +2104,7 @@ export default function ClientOnboardingPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen flex-col items-center justify-center bg-deep-navy">
+        <div className="flex min-h-screen flex-col items-center justify-center bg-panel">
           <p className="text-xs font-medium text-steel-gray/60 uppercase">Loading...</p>
         </div>
       }

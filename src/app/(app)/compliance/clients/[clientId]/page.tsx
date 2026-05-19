@@ -152,7 +152,7 @@ function RejectStrategyModal({
 
   return (
     <div className="fixed inset-0 z-100000 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-md rounded-xl bg-deep-navy p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
         <h3 className="mb-1 text-lg font-semibold text-soft-white">Reject Strategy</h3>
         <p className="mb-4 text-sm text-steel-gray">
           Provide a reason for the rejection. The strategist will be notified.
@@ -205,7 +205,7 @@ function ApproveStrategyModal({
 
   return (
     <div className="fixed inset-0 z-100000 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-md rounded-xl bg-deep-navy p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
         <h3 className="mb-1 text-lg font-semibold text-soft-white">Approve Strategy</h3>
         <p className="mb-4 text-sm text-steel-gray">
           Once approved, this strategy will be sent to the client for review. This action cannot be
@@ -328,7 +328,7 @@ function CommentsPanel({
 
 function LoadingState() {
   return (
-    <div className="flex min-h-full flex-col bg-deep-navy">
+    <div className="flex min-h-full flex-col bg-panel">
       <div className="mx-auto w-full max-w-2xl animate-pulse px-4 pt-20">
         <div className="mb-4 h-12 w-12 rounded-full bg-white/12" />
         <div className="mb-2 h-8 w-48 rounded bg-white/12" />
@@ -594,7 +594,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
   const strategyDocName = strategyDocument?.name?.replace(/\.[^/.]+$/, '') || 'Tax Strategy Plan';
 
   return (
-    <div className="flex min-h-full flex-col bg-deep-navy">
+    <div className="flex min-h-full flex-col bg-panel">
       {/* Breadcrumb */}
       <div
         className={`fixed top-4 z-50 pt-3.75 pb-2 pl-2 transition-all duration-300 ${isSidebarCollapsed ? 'left-14' : 'left-60'}`}
@@ -1107,14 +1107,14 @@ export default function ComplianceClientDetailPage({ params }: Props) {
               {nonStrategyDocs.length === 0 && !documentsError && (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <div className="relative mb-6 h-28 w-28">
-                    <div className="absolute top-2 left-2 h-20 w-16 -rotate-6 rounded-lg border border-white/10 bg-deep-navy shadow-sm">
+                    <div className="absolute top-2 left-2 h-20 w-16 -rotate-6 rounded-lg border border-white/10 bg-surface shadow-sm">
                       <div className="mt-4 space-y-1.5 px-2.5">
                         <div className="h-1.5 w-full rounded-full bg-white/12" />
                         <div className="h-1.5 w-3/4 rounded-full bg-white/12" />
                         <div className="h-1.5 w-full rounded-full bg-white/12" />
                       </div>
                     </div>
-                    <div className="absolute top-0 right-2 h-20 w-16 rotate-6 rounded-lg border border-white/10 bg-deep-navy shadow-sm">
+                    <div className="absolute top-0 right-2 h-20 w-16 rotate-6 rounded-lg border border-white/10 bg-surface shadow-sm">
                       <div className="mt-4 space-y-1.5 px-2.5">
                         <div className="h-1.5 w-full rounded-full bg-white/12" />
                         <div className="h-1.5 w-2/3 rounded-full bg-white/12" />
@@ -1172,7 +1172,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                       <CheckIcon weight="bold" className="h-3 w-3 text-white" />
                                     </div>
                                   ) : (
-                                    <div className="h-4 w-4 rounded border-2 border-white/15 bg-deep-navy transition-colors group-hover:border-teal-400" />
+                                    <div className="h-4 w-4 rounded border-2 border-white/15 bg-surface transition-colors group-hover:border-teal-400" />
                                   )}
                                 </div>
                                 <div
@@ -1232,7 +1232,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                                       }
                                     }}
                                     disabled={openingDocId === doc.id}
-                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-deep-navy text-steel-gray opacity-0 transition-all group-hover:opacity-100 hover:bg-surface hover:text-soft-white disabled:opacity-50"
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-surface text-steel-gray opacity-0 transition-all group-hover:opacity-100 hover:bg-surface hover:text-soft-white disabled:opacity-50"
                                     title="Open document"
                                   >
                                     {openingDocId === doc.id ? (

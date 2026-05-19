@@ -508,7 +508,7 @@ export default function ScenarioWorkspacePage() {
                   onClick={handleResyncFromClient}
                   disabled={isSyncing}
                   title="Re-pull the latest profile values from this client"
-                  className="flex shrink-0 items-center gap-1 rounded-md border border-white/10 bg-deep-navy/40 px-2 py-1 text-[11px] font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white disabled:opacity-40"
+                  className="flex shrink-0 items-center gap-1 rounded-md border border-white/10 bg-surface/40 px-2 py-1 text-[11px] font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white disabled:opacity-40"
                 >
                   <ArrowsClockwise
                     weight="bold"
@@ -533,7 +533,7 @@ export default function ScenarioWorkspacePage() {
             )}
           </Reveal>
         </div>
-        <aside className="hidden w-[340px] shrink-0 overflow-y-auto rounded-lg border border-white/6 bg-deep-navy p-4 lg:block">
+        <aside className="hidden w-[340px] shrink-0 overflow-y-auto rounded-lg border border-white/6 bg-surface p-4 lg:block">
           {computation && <ScenarioImpactPanel computation={computation} />}
         </aside>
       </div>

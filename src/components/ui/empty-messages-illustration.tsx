@@ -2,7 +2,7 @@ export function EmptyMessagesIllustration() {
   return (
     <div className="relative mb-8 h-24 w-32">
       {/* Main message bubble - chat interface */}
-      <div className="absolute top-2 left-4 h-24 w-20 rounded-lg border border-white/10 bg-deep-navy shadow-md">
+      <div className="absolute top-2 left-4 h-24 w-20 rounded-lg border border-white/10 bg-surface shadow-md">
         <div className="mt-2 space-y-1.5 px-2">
           {/* Chat bubble 1 - left aligned */}
           <div className="flex justify-start">
@@ -30,7 +30,7 @@ export function EmptyMessagesIllustration() {
         <div className="absolute right-2 bottom-2 text-xs font-medium text-white/20">ariex</div>
       </div>
       {/* Tilted message bubble on top */}
-      <div className="absolute top-0 right-2 h-20 w-16 rotate-6 rounded-lg border border-white/10 bg-deep-navy shadow-sm">
+      <div className="absolute top-0 right-2 h-20 w-16 rotate-6 rounded-lg border border-white/10 bg-surface shadow-sm">
         <div className="mt-2 space-y-1 px-2">
           {/* Chat bubble 1 - left aligned */}
           <div className="flex justify-start">

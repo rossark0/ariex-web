@@ -131,7 +131,7 @@ export function ClientMatrix({ clients, agreements }: ClientMatrixProps) {
           </span>
         </div>
       )}
-    <div className="overflow-hidden rounded-lg border border-white/6 bg-deep-navy">
+    <div className="overflow-hidden rounded-lg border border-white/6 bg-surface">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-surface">

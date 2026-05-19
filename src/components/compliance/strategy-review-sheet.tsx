@@ -123,7 +123,7 @@ function PageNavigation({
   onDeletePage,
 }: PageNavigationProps) {
   return (
-    <div className="flex items-center justify-center gap-2 border-t border-white/6 bg-deep-navy py-3">
+    <div className="flex items-center justify-center gap-2 border-t border-white/6 bg-surface py-3">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 0}
@@ -750,7 +750,7 @@ export function StrategyReviewSheet({
           </div>
 
           {/* RIGHT COLUMN — Comments / Chat */}
-          <div className="flex w-[380px] shrink-0 flex-col border-l border-white/6 bg-deep-navy">
+          <div className="flex w-[380px] shrink-0 flex-col border-l border-white/6 bg-surface">
             <div className="border-b border-white/6 px-6 py-4">
               <h3 className="font-semibold text-soft-white">Comments</h3>
               <p className="text-sm text-steel-gray">
@@ -818,7 +818,7 @@ export function StrategyReviewSheet({
       {/* Approve confirmation dialog — renders inside the sheet's z-context */}
       {showApproveDialog && role === 'compliance' && (props as ComplianceReviewProps).onApprove && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-xl bg-deep-navy p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
             <h3 className="mb-2 text-lg font-bold text-soft-white">Approve Strategy</h3>
             <p className="mb-6 text-steel-gray">
               Are you sure you want to approve this strategy? It will be marked as complete and sent
@@ -863,7 +863,7 @@ export function StrategyReviewSheet({
       {/* Reject confirmation dialog — renders inside the sheet's z-context */}
       {showRejectDialog && role === 'compliance' && props.onReject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-xl bg-deep-navy p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
             <h3 className="mb-1 text-lg font-semibold text-soft-white">Reject Strategy</h3>
             <p className="mb-4 text-sm text-steel-gray">
               Provide a reason for the rejection. The strategist will be notified.

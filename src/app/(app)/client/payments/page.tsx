@@ -221,7 +221,7 @@ export default function ClientPaymentsPage() {
         {/* Payment Summary Cards */}
         <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {/* Total Open Card */}
-          <div className="rounded-xl border border-white/10 bg-deep-navy px-4 py-6">
+          <div className="rounded-xl border border-white/10 bg-surface px-4 py-6">
             <div className="mb-2 text-3xl font-semibold text-soft-white tabular-nums">
               {formatCurrency(totalOpen)}
             </div>
@@ -235,7 +235,7 @@ export default function ClientPaymentsPage() {
           </div>
 
           {/* Overdue Invoices Card */}
-          <div className="rounded-xl border border-white/10 bg-deep-navy px-4 py-6">
+          <div className="rounded-xl border border-white/10 bg-surface px-4 py-6">
            <div className="mb-2 text-3xl font-semibold text-soft-white tabular-nums">
               {formatCurrency(totalOverdue)}
             </div>
@@ -248,7 +248,7 @@ export default function ClientPaymentsPage() {
           </div>
 
           {/* Paid Invoices Card */}
-          <div className="rounded-xl border border-white/10 bg-deep-navy px-4 py-6">
+          <div className="rounded-xl border border-white/10 bg-surface px-4 py-6">
            <div className="mb-2 text-3xl font-semibold text-soft-white tabular-nums">
               {formatCurrency(totalPaid)}
             </div>

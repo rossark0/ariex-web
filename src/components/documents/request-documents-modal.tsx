@@ -155,7 +155,7 @@ export function RequestDocumentsModal({
       {/* Modal Container */}
       <div
         className={cn(
-          'relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-deep-navy p-6 shadow-2xl transition-all duration-200',
+          'relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-surface p-6 shadow-2xl transition-all duration-200',
           !isClosing ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
         )}
       >
@@ -240,7 +240,7 @@ export function RequestDocumentsModal({
                 {documentNames.map((name, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between rounded-md bg-deep-navy px-3 py-2 shadow-sm"
+                    className="flex items-center justify-between rounded-md bg-surface px-3 py-2 shadow-sm"
                   >
                     <div className="flex items-center gap-2">
                       <div className="h-2 w-2 rounded-full bg-electric-blue" />

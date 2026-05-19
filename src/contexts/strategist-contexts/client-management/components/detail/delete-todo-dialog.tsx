@@ -17,7 +17,7 @@ export const DeleteTodoDialog = memo(function DeleteTodoDialog({ todo, isDeletin
         onClick={() => !isDeleting && onCancel()}
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
       />
-      <div className="relative z-10 w-full max-w-sm rounded-xl bg-deep-navy p-6 shadow-xl">
+      <div className="relative z-10 w-full max-w-sm rounded-xl bg-surface p-6 shadow-xl">
         <h3 className="text-lg font-semibold text-soft-white">Delete Document Request</h3>
         <p className="mt-2 text-sm text-steel-gray">
           Are you sure you want to delete the request for <strong>&quot;{todo.title}&quot;</strong>?

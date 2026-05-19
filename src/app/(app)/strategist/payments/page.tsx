@@ -140,13 +140,13 @@ export default function StrategistPaymentsPage() {
         {/* Summary Cards */}
         {!isLoading && payments.length > 0 && (
           <div className="mb-8 grid grid-cols-2 gap-4">
-            <div className="rounded-xl border border-white/10 bg-deep-navy p-4">
+            <div className="rounded-xl border border-white/10 bg-surface p-4">
               <p className="text-sm text-steel-gray">Total Received</p>
               <p className="text-2xl font-semibold text-emerald-400">
                 {formatCurrency(totalReceived)}
               </p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-deep-navy p-4">
+            <div className="rounded-xl border border-white/10 bg-surface p-4">
               <p className="text-sm text-steel-gray">Pending</p>
               <p className="text-2xl font-semibold text-amber-400">
                 {formatCurrency(totalPending)}
@@ -169,7 +169,7 @@ export default function StrategistPaymentsPage() {
 
         {/* Payments List */}
         {!isLoading && payments.length > 0 && (
-          <div className="rounded-xl border border-white/10 bg-deep-navy">
+          <div className="rounded-xl border border-white/10 bg-surface">
             <div className="px-4">
               {payments.map(payment => (
                 <PaymentRow key={payment.id} payment={payment} />

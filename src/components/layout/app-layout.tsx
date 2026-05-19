@@ -127,6 +127,9 @@ export default function AppLayout({ children, navItems }: AppLayoutProps) {
   }
 
   return (
+    /* Global application background — Deep Navy #13233A (spec). The sidebar
+       is Graphite and the content container is the lighter Panel; this
+       deep-navy "desk" shows in the gutter around them. */
     <div className="flex h-screen overscroll-none bg-deep-navy">
       <aside
         className={cn(

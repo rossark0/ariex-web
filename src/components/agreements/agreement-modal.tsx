@@ -118,7 +118,7 @@ export function AgreementModal({
       {/* Modal Container */}
       <div
         className={cn(
-          'relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-deep-navy p-6 shadow-2xl transition-all duration-200',
+          'relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-surface p-6 shadow-2xl transition-all duration-200',
           !isClosing ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
         )}
       >
