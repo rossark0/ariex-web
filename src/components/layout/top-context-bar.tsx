@@ -120,7 +120,7 @@ export function TopContextBar() {
 
   return (
     <header
-      className="sticky top-0 z-20 flex h-11 shrink-0 items-center justify-between gap-3 border-b border-white/6 bg-surface/95 px-3 backdrop-blur-sm"
+      className="sticky top-0 z-20 flex h-11 shrink-0 items-center justify-between gap-3 border-b border-white/6 bg-panel/95 px-3 backdrop-blur-sm"
       aria-label="Page context"
     >
       <div className="flex items-center gap-3">

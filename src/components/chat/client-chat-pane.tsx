@@ -119,7 +119,7 @@ export function ClientChatPane({ client, active = true, className }: ClientChatP
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-medium text-soft-white">{client.user.name || client.user.email}</p>
           <div className="flex items-center gap-1">
-            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-electric-blue" />
             <span className="text-[10px] text-steel-gray">Online</span>
           </div>
         </div>
@@ -192,7 +192,7 @@ export function ClientChatPane({ client, active = true, className }: ClientChatP
           placeholder={firstName ? `Message ${firstName}...` : 'Send a message...'}
           rows={1}
           disabled={isSending || !active}
-          className="min-h-[40px] w-full resize-none rounded-xl border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white duration-150 ease-linear transition-all placeholder:text-steel-gray focus:ring-2 focus:ring-electric-blue/30 focus:outline-none disabled:opacity-50"
+          className="min-h-[40px] w-full resize-none rounded-xl border border-white/10 px-3 py-2 text-sm duration-150 ease-linear transition-all focus:ring-2 focus:ring-electric-blue/30 focus:outline-none disabled:opacity-50 bg-deep-navy text-soft-white placeholder:text-steel-gray focus:border-electric-blue"
         />
       </div>
     </div>

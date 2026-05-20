@@ -20,7 +20,7 @@ export function SearchBar({ value, onChange, onRefresh, hideRefresh = false }: S
           placeholder="Search by agreement, client, or ID..."
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="w-full rounded-lg border border-white/10 bg-surface py-2 pl-9 pr-3 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none"
+          className="w-full rounded-lg border border-white/10 bg-deep-navy py-2 pl-9 pr-3 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none"
         />
       </div>
       {!hideRefresh && onRefresh && (

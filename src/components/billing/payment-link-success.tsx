@@ -20,7 +20,7 @@ export function PaymentLinkSuccess({ link, onCopy, onClose, copySuccess }: Payme
               type="text"
               readOnly
               value={link}
-              className="flex-1 rounded border border-white/10 bg-graphite px-3 py-2 text-xs text-soft-white"
+              className="flex-1 rounded border border-white/10 px-3 py-2 text-xs bg-deep-navy text-soft-white placeholder:text-steel-gray focus:border-electric-blue focus:outline-none"
             />
             <button
               onClick={onCopy}

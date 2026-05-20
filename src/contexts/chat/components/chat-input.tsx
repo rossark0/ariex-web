@@ -25,7 +25,7 @@ export function ChatInput() {
         value={input}
         onChange={e => setInput(e.target.value)}
         placeholder="Ask a tax question..."
-        className="flex-1 rounded-lg border border-white/10 px-4 py-2 text-sm transition-colors outline-none focus:border-white/20"
+        className="flex-1 rounded-lg border border-white/10 px-4 py-2 text-sm transition-colors outline-none focus:border-white/20 bg-deep-navy text-soft-white placeholder:text-steel-gray focus:outline-none"
       />
       <button
         type="submit"

@@ -26,7 +26,7 @@ function StrategistCard({
   return (
     <div
       onClick={onClick}
-      className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-white/10 bg-surface transition-all hover:border-white/20"
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-xl bg-surface transition-all hover:border-white/20"
     >
       <div className="flex flex-1 flex-col items-start p-4">
         <span
@@ -65,7 +65,7 @@ function TokenBanner({
   if (status === 'loading') {
     return (
       <div className="mx-auto mb-6 w-full max-w-[642px]">
-        <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-surface p-4">
+        <div className="flex items-center gap-3 rounded-xl bg-surface p-4">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-electric-blue border-t-transparent" />
           <p className="text-sm text-steel-gray">Accepting invitation...</p>
         </div>
@@ -146,7 +146,7 @@ function ManualTokenPanel({ onAccepted }: { onAccepted: () => void }) {
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-surface p-4">
+    <div className="rounded-xl bg-surface p-4">
       <div className="mb-3 flex items-center gap-2">
         <LinkSimple weight="bold" className="h-4 w-4 text-electric-blue" />
         <p className="text-sm font-semibold text-soft-white">Link with Invitation Token</p>
@@ -163,7 +163,7 @@ function ManualTokenPanel({ onAccepted }: { onAccepted: () => void }) {
             value={tokenInput}
             onChange={e => setTokenInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-            className="w-full rounded-lg border border-white/10 bg-graphite px-3 py-2 pr-10 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
+            className="w-full rounded-lg border border-white/10 bg-deep-navy py-2 pr-10 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
             disabled={isSubmitting}
           />
           <button
@@ -317,7 +317,7 @@ export default function ComplianceStrategistsPage() {
                   placeholder="Search..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="h-[30px] w-64 rounded-lg border border-white/10 bg-surface pr-3 pl-7 text-sm font-medium text-soft-white placeholder:text-steel-gray hover:border-white/20 focus:border-electric-blue/30 focus:outline-none"
+                  className="h-[30px] w-64 rounded-lg border border-white/10 bg-deep-navy pr-3 pl-7 text-sm font-medium text-soft-white placeholder:text-steel-gray hover:border-white/15 focus:border-electric-blue/30 focus:outline-none"
                 />
               </div>
               <div className="flex items-center gap-2">

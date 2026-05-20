@@ -256,7 +256,7 @@ function FilterDropdown<T extends string>({
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 z-40 mt-1 w-56 overflow-hidden rounded-lg border border-white/10 bg-surface py-1 shadow-xl">
+        <div className="absolute top-full left-0 z-40 mt-1 w-56 overflow-hidden rounded-lg border border-white/10 bg-deep-navy py-1 shadow-xl">
           {options.map(opt => {
             const isSelected = selected.includes(opt.value);
             return (

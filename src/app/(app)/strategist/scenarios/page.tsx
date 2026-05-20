@@ -127,7 +127,7 @@ export default function ScenarioListPage() {
                           {scenario.name}
                         </p>
                         {linkedClientName && (
-                          <span className="flex shrink-0 items-center gap-1 rounded-full border border-electric-blue/30 bg-electric-blue/10 px-2 py-0.5 text-[10px] font-medium text-electric-blue">
+                          <span className="flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-white/8 px-2 py-0.5 text-[10px] font-medium text-body">
                             <User weight="fill" className="h-2.5 w-2.5" />
                             {linkedClientName}
                           </span>

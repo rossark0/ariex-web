@@ -38,7 +38,7 @@ export default function ConfirmEmailPage() {
         <div className="w-full max-w-md">
           {/* Title */}
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-electric-blue/15">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/8">
               <svg
                 className="h-8 w-8 text-electric-blue"
                 fill="none"

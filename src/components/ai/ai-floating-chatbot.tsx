@@ -162,7 +162,7 @@ export function AiFloatingChatbot({
     <div
       ref={wrapperRef}
       className={cn(
-        'relative sticky -bottom-1 z-50 mx-auto flex w-full max-w-2xl flex-col bg-transparent',
+        'pointer-events-none absolute bottom-4 left-1/2 z-50 flex w-full max-w-2xl -translate-x-1/2 flex-col bg-transparent *:pointer-events-auto',
         showSelectionBar ? 'bg-transparent' : 'bg-transparent'
       )}
     >
@@ -194,7 +194,7 @@ export function AiFloatingChatbot({
               <button
                 onClick={onDownload}
                 disabled={isDownloading}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-surface py-1.5 pr-3 pl-2 text-sm font-medium text-soft-white shadow-lg duration-150 ease-linear transition-colors hover:bg-white/8 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-deep-navy py-1.5 pr-3 pl-2 text-sm font-medium text-soft-white shadow-lg duration-150 ease-linear transition-colors hover:bg-white/8 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isDownloading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -230,7 +230,7 @@ export function AiFloatingChatbot({
           className="absolute bottom-0 mb-2 w-full transition-all duration-300"
           aria-label="AI Chat Panel"
         >
-          <div className="z-50 flex flex-col gap-3 rounded-[36px] border border-white/10 bg-black shadow-2xl">
+          <div className="z-50 flex flex-col gap-3 rounded-[36px] border border-white/10 bg-[#11233a] shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/6 px-4 py-4">
               <div className="flex flex-col pl-2">
                 <span className="text-sm font-medium text-soft-white">
@@ -445,7 +445,7 @@ export function AiFloatingChatbot({
       {/* Input anchored at bottom, grows upward */}
       {isAiChatOpen ? (
         <div className="z-40 -translate-y-4 scale-[97%] transition-all duration-300">
-          <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-graphite shadow-2xl duration-200 ease-linear transition-all focus-within:ring-2 focus-within:ring-electric-blue/30">
+          <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-[#11233a] shadow-2xl duration-200 ease-linear transition-all focus-within:ring-2 focus-within:ring-electric-blue/30">
             {/* Textarea */}
             <textarea
               ref={textareaRef}
@@ -465,7 +465,7 @@ export function AiFloatingChatbot({
                   requestAnimationFrame(() => autoResize());
                 }
               }}
-              className="min-h-[56px] flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-normal text-soft-white placeholder:text-steel-gray focus:outline-none"
+              className="min-h-[56px] flex-1 resize-none px-6 py-4 text-sm leading-relaxed font-medium tracking-normal focus:outline-none text-soft-white placeholder:text-steel-gray"
             />
 
             {/* Attachment Button */}
@@ -492,7 +492,7 @@ export function AiFloatingChatbot({
                 type="button"
                 disabled={!input.trim()}
                 onClick={handleSendMessage}
-                className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-electric-blue text-soft-white duration-150 ease-linear transition-all hover:bg-electric-blue/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-steel-gray"
+                className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-electric-blue text-soft-white duration-150 ease-linear transition-all hover:bg-electric-blue/80 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-steel-gray/60"
                 aria-label="Send message"
               >
                 <ArrowUp size={20} weight="bold" />
@@ -502,7 +502,7 @@ export function AiFloatingChatbot({
         </div>
       ) : (
         <div className="z-40 -translate-y-4 scale-[97%] transition-all duration-300">
-          <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-graphite shadow-2xl duration-200 ease-linear transition-all focus-within:ring-2 focus-within:ring-electric-blue/30">
+          <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-[#11233a] shadow-2xl duration-200 ease-linear transition-all focus-within:ring-2 focus-within:ring-electric-blue/30">
             {/* Textarea */}
             <textarea
               ref={textareaRef}
@@ -520,7 +520,7 @@ export function AiFloatingChatbot({
                   requestAnimationFrame(() => autoResize());
                 }
               }}
-              className="min-h-[56px] flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-normal text-soft-white placeholder:text-steel-gray focus:outline-none"
+              className="min-h-[56px] flex-1 resize-none px-6 py-4 text-sm leading-relaxed font-medium tracking-normal focus:outline-none text-soft-white placeholder:text-steel-gray"
             />
 
             {/* Floating Button - Right Side */}
@@ -532,9 +532,9 @@ export function AiFloatingChatbot({
                     textareaRef.current?.focus();
                   }, 0);
                 }}
-                className="mr-3 flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-surface px-2 py-2 duration-150 ease-linear transition-all hover:bg-white/8"
+                className="mr-3 flex cursor-pointer items-center gap-2 rounded-full border border-black/10 bg-white/8 px-2 py-2 duration-150 ease-linear transition-all hover:bg-white/12"
               >
-                <div className="flex h-5 w-8 items-center justify-center rounded-md bg-electric-blue/15">
+                <div className="flex h-5 w-8 items-center justify-center rounded-md bg-white/8">
                   <kbd className="text-xs font-extrabold text-electric-blue">TAB</kbd>
                 </div>
                 <span className="text-sm font-medium text-soft-white">Tax Assistant</span>

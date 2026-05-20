@@ -32,11 +32,16 @@
      Color communicates hierarchy + decision states; it does not decorate.
      ────────────────────────────────────────────────────────────────────── */
 
-  /* Core surfaces (darkest → lightest, builds architectural depth) */
-  --color-graphite: #111315;     /* sidebar / nav / darkest chrome        */
-  --color-deep-navy: #13233a;    /* global application background          */
-  --color-panel: #162b46;        /* main content panels                   */
-  --color-surface: #1a2f4a;      /* cards, containers, AI Copilot panel    */
+  /* Core surfaces — 2-tier role-based allocation.
+     Background (chrome) #070707  ·  Panel content (contained surfaces) #0f0f10.
+     Token names kept as legacy aliases; the VALUES are the source of truth. */
+  /* Brand-only palette per the ARIEX brand board.
+     Everything = Graphite EXCEPT cards = Deep Navy. Cards are the only
+     navy-tinted surface — they pop as the data containers. */
+  --color-graphite: #111315;     /* everything: app, sidebar, panel, composer, rails, sheets, modals, inputs */
+  --color-deep-navy: #111315;    /* now graphite — the bg-deep-navy utility is no longer a distinct color */
+  --color-panel: #111315;        /* alias of graphite                        */
+  --color-surface: #050d18;      /* cards — very dark navy, no borders (deep recessed wells) */
 
   /* Text */
   --color-soft-white: #f7f8fa;   /* primary headings ONLY                  */
@@ -59,59 +64,61 @@
 
 @layer base {
   :root {
-    /* ARIEX dark surface palette mapped onto the existing semantic tokens.
-       Values are HSL components consumed via hsl(var(--token)). */
-    --background: 210 14% 7%; /* Graphite #111315 */
-    --foreground: 220 22% 97%; /* Soft White #F7F8FA */
-    --card: 215 50% 15%; /* Deep Navy #13233A */
+    /* Semantic HSL tokens (consumed by shadcn-derived utilities like bg-card,
+       bg-popover, bg-secondary, bg-muted). Aligned to brand palette:
+       background = Graphite #111315, cards = Deep Navy #11233A,
+       all other contained surfaces = Graphite. */
+    --background: 210 14% 7%;        /* Graphite #111315 */
+    --foreground: 220 22% 97%;        /* Soft White */
+    --card: 213 66% 6%;               /* Very dark navy #050D18 — cards */
     --card-foreground: 220 22% 97%;
-    --popover: 215 50% 15%;
+    --popover: 210 14% 7%;            /* Graphite (popovers are NOT cards) */
     --popover-foreground: 220 22% 97%;
-    --primary: 222 100% 59%; /* Electric Blue #2F6BFF */
+    --primary: 222 100% 59%;          /* Electric Blue #2F6BFF */
     --primary-foreground: 220 22% 97%;
-    --secondary: 215 50% 15%;
+    --secondary: 210 14% 7%;          /* Graphite */
     --secondary-foreground: 220 22% 97%;
-    --muted: 215 30% 18%;
-    --muted-foreground: 213 14% 60%; /* Steel Gray #8B96A5 */
+    --muted: 210 11% 12%;             /* Slightly lighter graphite */
+    --muted-foreground: 213 14% 60%;  /* Steel Gray */
     --accent: 222 100% 59%;
     --accent-foreground: 220 22% 97%;
     --destructive: 0 72% 55%;
     --destructive-foreground: 220 22% 97%;
-    --border: 213 14% 25%;
-    --input: 213 14% 25%;
+    --border: 0 0% 14%;
+    --input: 0 0% 14%;
     --ring: 222 100% 59%;
     --radius: 0.5rem;
     --chart-1: 222 100% 59%;
     --chart-2: 213 14% 60%;
-    --chart-3: 215 50% 35%;
+    --chart-3: 0 0% 35%;
     --chart-4: 200 80% 70%;
     --chart-5: 222 100% 75%;
   }
 
   .dark {
-    /* The ARIEX UI is dark-by-default; .dark mirrors :root for compatibility. */
+    /* Mirrors :root — ARIEX is dark-by-default. */
     --background: 210 14% 7%;
     --foreground: 220 22% 97%;
-    --card: 215 50% 15%;
+    --card: 215 55% 15%;
     --card-foreground: 220 22% 97%;
-    --popover: 215 50% 15%;
+    --popover: 210 14% 7%;
     --popover-foreground: 220 22% 97%;
     --primary: 222 100% 59%;
     --primary-foreground: 220 22% 97%;
-    --secondary: 215 50% 15%;
+    --secondary: 210 14% 7%;
     --secondary-foreground: 220 22% 97%;
-    --muted: 215 30% 18%;
+    --muted: 210 11% 12%;
     --muted-foreground: 213 14% 60%;
     --accent: 222 100% 59%;
     --accent-foreground: 220 22% 97%;
     --destructive: 0 72% 55%;
     --destructive-foreground: 220 22% 97%;
-    --border: 213 14% 25%;
-    --input: 213 14% 25%;
+    --border: 0 0% 14%;
+    --input: 0 0% 14%;
     --ring: 222 100% 59%;
     --chart-1: 222 100% 59%;
     --chart-2: 213 14% 60%;
-    --chart-3: 215 50% 35%;
+    --chart-3: 0 0% 35%;
     --chart-4: 200 80% 70%;
     --chart-5: 222 100% 75%;
   }

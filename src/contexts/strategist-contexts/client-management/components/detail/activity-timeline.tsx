@@ -402,7 +402,7 @@ export function ActivityTimeline({
                       </span>
                       <button
                         onClick={onStrategistSign}
-                        className="flex w-fit items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                        className="flex w-fit items-center gap-1 rounded bg-electric-blue px-2 py-1 text-xs font-semibold text-soft-white hover:bg-electric-blue/85"
                       >
                         Complete signing
                       </button>
@@ -419,7 +419,7 @@ export function ActivityTimeline({
                     className={`mt-2 flex w-fit items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${
                       hasAgreementSent
                         ? 'bg-white/8 text-steel-gray hover:bg-white/12'
-                        : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        : 'bg-electric-blue text-soft-white hover:bg-electric-blue/85'
                     }`}
                   >
                     {hasAgreementSent ? 'Resend agreement' : 'Send agreement'}
@@ -433,7 +433,7 @@ export function ActivityTimeline({
                   onStrategistSign && (
                     <button
                       onClick={onStrategistSign}
-                      className="mt-2 flex w-fit items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                      className="mt-2 flex w-fit items-center gap-1 rounded bg-electric-blue px-2 py-1 text-xs font-semibold text-soft-white hover:bg-electric-blue/85"
                     >
                       Sign agreement
                     </button>
@@ -485,7 +485,7 @@ export function ActivityTimeline({
                   className={`mt-2 flex w-fit items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${
                     step3Sent
                       ? 'bg-white/8 text-steel-gray hover:bg-white/12'
-                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                      : 'bg-electric-blue text-soft-white hover:bg-electric-blue/85'
                   } ${isSendingPayment ? 'cursor-not-allowed opacity-50' : ''}`}
                 >
                   {isSendingPayment ? (
@@ -624,7 +624,7 @@ export function ActivityTimeline({
                                   disabled={
                                     acceptingDocId === documentId || decliningDocId === documentId
                                   }
-                                  className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                                  className="flex items-center gap-1 rounded bg-electric-blue px-2 py-1 text-xs font-medium text-soft-white hover:bg-electric-blue/85 disabled:opacity-50"
                                 >
                                   {acceptingDocId === documentId ? (
                                     <SpinnerGap className="h-3 w-3 animate-spin" />
@@ -739,7 +739,7 @@ export function ActivityTimeline({
                     <button
                       onClick={handleAdvanceToStrategy}
                       disabled={isAdvancingToStrategy}
-                      className="mt-2 flex w-fit items-center gap-1 rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                      className="mt-2 flex w-fit items-center gap-1 rounded bg-electric-blue px-3 py-1.5 text-xs font-semibold text-soft-white hover:bg-electric-blue/85 disabled:opacity-50"
                     >
                       {isAdvancingToStrategy ? (
                         <>
@@ -933,7 +933,7 @@ export function ActivityTimeline({
                         ? 'bg-amber-600 text-white hover:bg-amber-700'
                         : step5State?.strategySent
                           ? 'bg-white/8 text-steel-gray hover:bg-white/12'
-                          : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                          : 'bg-electric-blue text-soft-white hover:bg-electric-blue/85'
                     }`}
                   >
                     {step5State?.complianceRejected || step5State?.clientDeclined
@@ -964,7 +964,7 @@ export function ActivityTimeline({
                     <button
                       onClick={() => onCompleteAgreement()}
                       disabled={isCompletingAgreement}
-                      className="w-fit rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700 disabled:bg-emerald-400"
+                      className="w-fit rounded bg-electric-blue px-2 py-1 text-xs font-semibold text-soft-white hover:bg-electric-blue/85 disabled:bg-electric-blue/50"
                     >
                       {isCompletingAgreement ? (
                         <span className="flex items-center gap-1">

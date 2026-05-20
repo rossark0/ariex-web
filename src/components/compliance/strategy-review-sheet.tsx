@@ -307,7 +307,7 @@ export function CommentsSection({
               placeholder="Add a comment…"
               rows={1}
               disabled={isSending || !documentId || !strategistUserId}
-              className="flex-1 resize-none rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none disabled:opacity-50"
+              className="flex-1 resize-none rounded-lg border border-white/10 bg-deep-navy px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none disabled:opacity-50"
             />
             <button
               onClick={handleSubmit}
@@ -624,7 +624,7 @@ export function StrategyReviewSheet({
       {/* Sheet container */}
       <div
         className={cn(
-          'relative flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-graphite shadow-2xl transition-transform duration-200 ease-linear',
+          'relative flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-deep-navy shadow-2xl transition-transform duration-200 ease-linear',
           isVisible && !isClosing ? 'translate-y-0' : 'translate-y-full'
         )}
       >
@@ -723,7 +723,7 @@ export function StrategyReviewSheet({
                       type="text"
                       value={title}
                       onChange={e => setTitle(e.target.value)}
-                      className="w-full border-none bg-transparent text-2xl font-semibold text-soft-white outline-none placeholder:text-steel-gray focus:outline-none"
+                      className="w-full border text-2xl font-semibold outline-none focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray border-white/10 rounded-md px-3 focus:border-electric-blue"
                       placeholder="Enter document title..."
                     />
                     <p className="mt-1 text-xs font-semibold text-steel-gray uppercase">
@@ -782,7 +782,7 @@ export function StrategyReviewSheet({
                       id="compliance-select"
                       value={selectedUserId || ''}
                       onChange={e => setSelectedUserId(e.target.value)}
-                      className="w-full rounded-md border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white shadow-sm ring-electric-blue outline-none focus:border-electric-blue/50 focus:ring-1"
+                      className="w-full rounded-md border border-white/10 bg-deep-navy px-3 py-2 text-sm text-soft-white shadow-sm ring-electric-blue outline-none focus:border-electric-blue/50 focus:ring-1"
                     >
                       {complianceUsers.map((user: ApiClient & { complianceUserId?: string }) => (
                         <option
@@ -818,7 +818,7 @@ export function StrategyReviewSheet({
       {/* Approve confirmation dialog — renders inside the sheet's z-context */}
       {showApproveDialog && role === 'compliance' && (props as ComplianceReviewProps).onApprove && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-xl bg-deep-navy p-6 shadow-xl">
             <h3 className="mb-2 text-lg font-bold text-soft-white">Approve Strategy</h3>
             <p className="mb-6 text-steel-gray">
               Are you sure you want to approve this strategy? It will be marked as complete and sent
@@ -863,7 +863,7 @@ export function StrategyReviewSheet({
       {/* Reject confirmation dialog — renders inside the sheet's z-context */}
       {showRejectDialog && role === 'compliance' && props.onReject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-xl bg-deep-navy p-6 shadow-xl">
             <h3 className="mb-1 text-lg font-semibold text-soft-white">Reject Strategy</h3>
             <p className="mb-4 text-sm text-steel-gray">
               Provide a reason for the rejection. The strategist will be notified.
@@ -873,7 +873,7 @@ export function StrategyReviewSheet({
               onChange={e => setRejectReason(e.target.value)}
               placeholder="Enter rejection reason…"
               rows={4}
-              className="mb-4 w-full resize-none rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none"
+              className="mb-4 w-full resize-none rounded-lg border border-white/10 bg-deep-navy px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none"
             />
             <div className="flex justify-end gap-2">
               <Button

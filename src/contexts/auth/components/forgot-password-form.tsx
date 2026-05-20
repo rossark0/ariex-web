@@ -82,7 +82,7 @@ export function ForgotPasswordForm() {
         <p className="text-steel-gray">Your password has been successfully reset.</p>
         <Link
           href="/login"
-          className="mt-4 inline-flex h-11 items-center justify-center rounded-lg bg-emerald-600 px-6 font-medium text-white hover:bg-emerald-700"
+          className="mt-4 inline-flex h-11 items-center justify-center rounded-lg bg-electric-blue px-6 font-medium text-soft-white hover:bg-electric-blue/85"
         >
           Sign In
         </Link>
@@ -112,7 +112,7 @@ export function ForgotPasswordForm() {
             placeholder="Enter 6-digit code"
             value={code}
             onChange={e => setCode(e.target.value)}
-            className="rounded-lg border border-white/15 px-4 py-2.5 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+            className="rounded-lg border border-white/10 px-4 py-2.5 text-sm transition-colors focus:ring-2 focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray focus:border-electric-blue"
             required
             autoComplete="one-time-code"
           />
@@ -129,7 +129,7 @@ export function ForgotPasswordForm() {
               placeholder="••••••••"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
-              className="w-full rounded-lg border border-white/15 px-4 py-2.5 pr-10 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+              className="w-full rounded-lg border border-white/10 px-4 py-2.5 pr-10 text-sm transition-colors focus:ring-2 focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray focus:border-electric-blue"
               required
               autoComplete="new-password"
               minLength={8}
@@ -137,7 +137,7 @@ export function ForgotPasswordForm() {
             <button
               type="button"
               onClick={() => setShowNewPassword(!showNewPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-steel-gray/60 hover:text-steel-gray"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-steel-gray hover:text-soft-white"
               aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
             >
               {showNewPassword ? <EyeSlash className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -156,14 +156,14 @@ export function ForgotPasswordForm() {
               placeholder="••••••••"
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
-              className="w-full rounded-lg border border-white/15 px-4 py-2.5 pr-10 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+              className="w-full rounded-lg border border-white/10 px-4 py-2.5 pr-10 text-sm transition-colors focus:ring-2 focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray focus:border-electric-blue"
               required
               autoComplete="new-password"
             />
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-steel-gray/60 hover:text-steel-gray"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-steel-gray hover:text-soft-white"
               aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
             >
               {showConfirmPassword ? (
@@ -178,7 +178,7 @@ export function ForgotPasswordForm() {
         <Button
           type="submit"
           disabled={isLoading}
-          className="mt-2 h-11 bg-emerald-600 text-white hover:bg-emerald-700"
+          className="mt-2 h-11 bg-electric-blue text-soft-white hover:bg-electric-blue/85"
         >
           {isLoading ? 'Resetting...' : 'Reset Password'}
         </Button>
@@ -214,7 +214,7 @@ export function ForgotPasswordForm() {
           placeholder="you@example.com"
           value={email}
           onChange={e => setEmail(e.target.value)}
-          className="rounded-lg border border-white/15 px-4 py-2.5 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+          className="rounded-lg border border-white/10 px-4 py-2.5 text-sm transition-colors focus:ring-2 focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray focus:border-electric-blue"
           required
           autoComplete="email"
         />
@@ -223,7 +223,7 @@ export function ForgotPasswordForm() {
       <Button
         type="submit"
         disabled={isLoading}
-        className="mt-2 h-11 bg-emerald-600 text-white hover:bg-emerald-700"
+        className="mt-2 h-11 bg-electric-blue text-soft-white hover:bg-electric-blue/85"
       >
         {isLoading ? 'Sending...' : 'Send Reset Code'}
       </Button>

@@ -153,7 +153,7 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
               {!isExpanded && (
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               )}
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-electric-blue" />
             </div>
             <span className="text-xs text-steel-gray">Online</span>
           </div>
@@ -240,7 +240,7 @@ export function ClientFloatingChat({ client }: ClientFloatingChatProps) {
               placeholder={`Message ${client.user.name?.split(' ')[0]}...`}
               rows={1}
               disabled={isSending}
-              className="min-h-[44px] flex-1 resize-none rounded-2xl border border-white/10 bg-graphite px-4 py-3 text-sm text-soft-white duration-200 ease-linear transition-all placeholder:text-steel-gray focus:ring-2 focus:ring-electric-blue/30 focus:outline-none disabled:opacity-50"
+              className="min-h-[44px] flex-1 resize-none rounded-2xl border border-white/10 px-4 py-3 text-sm duration-200 ease-linear transition-all focus:ring-2 focus:ring-electric-blue/30 focus:outline-none disabled:opacity-50 bg-deep-navy text-soft-white placeholder:text-steel-gray focus:border-electric-blue"
             />
           </div>
         </div>

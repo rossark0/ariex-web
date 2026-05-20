@@ -42,7 +42,7 @@ export function ClientDetailRail({ className }: ClientDetailRailProps) {
   return (
     <aside
       className={cn(
-        'flex w-72 shrink-0 flex-col rounded-lg border border-white/10 bg-surface',
+        'flex w-72 shrink-0 flex-col rounded-lg border border-white/10 bg-deep-navy',
         className
       )}
       aria-label="Client detail rail"

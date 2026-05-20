@@ -214,7 +214,12 @@ export function Chat({
   // In multi mode, show conversations list if no conversation is selected
   if (mode === 'multi' && !activeChat) {
     return (
-      <div className={cn('flex h-full flex-col bg-graphite', className)}>
+      <div
+        className={cn(
+          'flex h-full flex-col rounded-lg border border-white/10 bg-deep-navy px-4',
+          className
+        )}
+      >
         <ChatConversationsList
           conversations={clients}
           onSelectConversation={handleSelectConversation}
@@ -227,7 +232,7 @@ export function Chat({
 
   // Show chat view
   return (
-    <div className={cn('flex h-full w-full flex-col rounded-xl', className)}>
+    <div className={cn('flex h-full w-full flex-col rounded-lg border border-white/10', className)}>
       {showHeader && (
         <ChatHeader
           title={displayName}

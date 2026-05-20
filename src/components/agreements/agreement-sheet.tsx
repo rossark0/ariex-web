@@ -410,7 +410,7 @@ function UploadCard({ onFileSelect, onSkipUpload, isProcessing }: UploadCardProp
           </>
         ) : (
           <>
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-electric-blue/15">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/8">
               <CloudArrowUp className="h-8 w-8 text-electric-blue" weight="duotone" />
             </div>
             <p className="mt-4 text-base font-semibold text-soft-white">Upload your agreement PDF</p>
@@ -849,7 +849,7 @@ function AiAssistant({
 
       {/* Input - matching ai-floating-chatbot style */}
       <div className="p-3">
-        <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-graphite shadow-2xl transition-all duration-200 focus-within:ring-2 focus-within:ring-electric-blue/30 hover:bg-graphite">
+        <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-deep-navy shadow-2xl transition-all duration-200 focus-within:ring-2 focus-within:ring-electric-blue/30 hover:bg-deep-navy">
           {/* Textarea */}
           <textarea
             value={input}
@@ -857,7 +857,7 @@ function AiAssistant({
             onKeyDown={handleKeyDown}
             placeholder="Ask AI..."
             rows={1}
-            className="min-h-14 flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-soft-white placeholder:text-steel-gray focus:outline-none"
+            className="min-h-14 flex-1 resize-none px-6 py-4 text-sm leading-relaxed font-medium tracking-tight focus:outline-none text-soft-white placeholder:text-steel-gray"
           />
 
           {/* Hidden file input */}
@@ -1473,7 +1473,7 @@ export function AgreementSheet({
       {/* Bottom Sheet Container */}
       <div
         className={cn(
-          'relative flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-graphite shadow-2xl transition-transform duration-200 ease-linear',
+          'relative flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-deep-navy shadow-2xl transition-transform duration-200 ease-linear',
           isVisible && !isClosing ? 'translate-y-0' : 'translate-y-full'
         )}
       >
@@ -1547,7 +1547,7 @@ export function AgreementSheet({
                       type="text"
                       value={title}
                       onChange={e => setTitle(e.target.value)}
-                      className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2 text-lg font-semibold text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none"
+                      className="w-full rounded-lg border border-white/10 bg-deep-navy px-3 py-2 text-lg font-semibold text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none"
                       placeholder="Enter document title..."
                     />
                   </div>
@@ -1561,7 +1561,7 @@ export function AgreementSheet({
                         step={1}
                         value={price}
                         onChange={e => setPrice(Number(e.target.value) || 0)}
-                        className="w-full rounded-lg border border-white/10 bg-surface py-2 pr-3 pl-7 text-lg font-semibold text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none"
+                        className="w-full rounded-lg border border-white/10 bg-deep-navy py-2 pr-3 pl-7 text-lg font-semibold text-soft-white placeholder:text-steel-gray focus:border-electric-blue/30 focus:outline-none"
                         placeholder="499"
                       />
                     </div>

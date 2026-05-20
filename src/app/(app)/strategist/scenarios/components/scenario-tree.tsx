@@ -24,13 +24,13 @@ interface ScenarioTreeProps {
  * connected by a smooth cubic-Bezier path; the rendered SVG also overlays
  * positioned HTML for the node labels so they remain crisp + interactive.
  */
-const NODE_WIDTH = 220;
-const ROOT_NODE_WIDTH = 200;
-const NODE_HEIGHT = 76;
-const HORIZONTAL_GAP = 200;
-const VERTICAL_STRIDE = 96;
-const VERTICAL_PADDING = 40;
-const SVG_LEFT_PADDING = 24;
+const NODE_WIDTH = 208;
+const ROOT_NODE_WIDTH = 180;
+const NODE_HEIGHT = 72;
+const HORIZONTAL_GAP = 130;
+const VERTICAL_STRIDE = 84;
+const VERTICAL_PADDING = 20;
+const SVG_LEFT_PADDING = 8;
 
 export function ScenarioTree({
   scenario,
@@ -67,11 +67,19 @@ export function ScenarioTree({
   const baselineRate = (computation.baseline.effectiveRate * 100).toFixed(1);
 
   return (
-    <div
-      className="relative w-full overflow-auto rounded-lg border border-white/6 bg-surface"
-      style={{ minHeight: layout.svgHeight }}
-    >
-      <svg
+    <section className="rounded-xl bg-surface p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-[11px] font-medium uppercase tracking-wide text-steel-gray">
+          Strategy paths
+        </h3>
+        <span className="text-[11px] text-steel-gray/60">Tap a strategy to toggle</span>
+      </div>
+      <div className="overflow-x-auto">
+        <div
+          className="relative mx-auto"
+          style={{ width: layout.svgWidth, height: layout.svgHeight }}
+        >
+          <svg
         viewBox={`0 0 ${layout.svgWidth} ${layout.svgHeight}`}
         width={layout.svgWidth}
         height={layout.svgHeight}
@@ -126,8 +134,8 @@ export function ScenarioTree({
           height: NODE_HEIGHT,
         }}
       >
-        <div className="flex h-full flex-col justify-center rounded-lg border border-electric-blue/30 bg-electric-blue/10 px-3 py-2">
-          <span className="text-[10px] font-semibold tracking-wide text-electric-blue uppercase">
+        <div className="flex h-full flex-col justify-center rounded-xl bg-surface px-3 py-2">
+          <span className="text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
             Baseline
           </span>
           <p className="mt-0.5 text-sm font-medium text-soft-white">
@@ -152,10 +160,10 @@ export function ScenarioTree({
             disabled={!isApplicable}
             data-focus-item
             className={cn(
-              'absolute flex flex-col justify-center rounded-lg border px-3 py-2 text-left transition-all duration-200 ease-linear',
+              'absolute flex flex-col justify-center rounded-xl border px-3 py-2 text-left transition-all duration-200 ease-linear',
               'disabled:cursor-not-allowed disabled:opacity-40',
               enabled
-                ? 'border-electric-blue/50 bg-electric-blue/12 shadow-[0_0_0_1px_rgba(47,107,255,0.25)]'
+                ? 'border-electric-blue bg-electric-blue/15 shadow-[0_0_0_1px_rgba(47,107,255,0.45)]'
                 : 'border-white/10 bg-surface hover:border-white/20 hover:bg-white/5'
             )}
             style={{
@@ -207,6 +215,8 @@ export function ScenarioTree({
           </button>
         );
       })}
-    </div>
+        </div>
+      </div>
+    </section>
   );
 }

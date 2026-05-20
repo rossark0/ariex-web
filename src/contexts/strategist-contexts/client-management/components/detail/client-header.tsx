@@ -91,7 +91,7 @@ export const ClientHeader = memo(function ClientHeader({
               onClick={canSendStrategy ? onStrategyClick : undefined}
               className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-sm font-medium transition-colors duration-150 ease-linear ${
                 canSendStrategy
-                  ? 'cursor-pointer border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600'
+                  ? 'cursor-pointer border-electric-blue bg-electric-blue text-soft-white hover:bg-electric-blue'
                   : 'cursor-not-allowed border-white/10 bg-white/6 text-steel-gray/60'
               }`}
             >

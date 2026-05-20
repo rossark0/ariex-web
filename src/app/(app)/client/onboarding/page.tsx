@@ -432,7 +432,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
               placeholder="(555) 000-0000"
               value={formData.phoneNumber}
               onChange={e => handleInputChange('phoneNumber', e.target.value)}
-              className="w-full border-b border-white/10 bg-transparent py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
+              className="w-full border border-white/10 py-2 text-sm focus:border-electric-blue focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray rounded-md px-3"
             />
           </div>
 
@@ -443,7 +443,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
               placeholder="City, State"
               value={formData.address}
               onChange={e => handleInputChange('address', e.target.value)}
-              className="w-full border-b border-white/10 bg-transparent py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
+              className="w-full border border-white/10 py-2 text-sm focus:border-electric-blue focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray rounded-md px-3"
             />
           </div>
         </div>
@@ -459,7 +459,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
             <select
               value={formData.filingStatus}
               onChange={e => handleInputChange('filingStatus', e.target.value)}
-              className="w-full border-b border-white/10 bg-transparent py-2 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
+              className="w-full border border-white/10 py-2 text-sm focus:border-electric-blue focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray rounded-md px-3"
             >
               {FILING_STATUS_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>
@@ -479,7 +479,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
                 placeholder="0"
                 value={formData.dependents}
                 onChange={e => handleInputChange('dependents', e.target.value)}
-                className="w-full border-b border-white/10 bg-transparent py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
+                className="w-full border border-white/10 py-2 text-sm focus:border-electric-blue focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray rounded-md px-3"
               />
             </div>
             <div>
@@ -494,7 +494,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
                   placeholder="120,000"
                   value={formData.estimatedIncome}
                   onChange={e => handleInputChange('estimatedIncome', e.target.value)}
-                  className="w-full border-b border-white/10 bg-transparent py-2 pl-4 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
+                  className="w-full border border-white/10 py-2 pl-4 text-sm focus:border-electric-blue focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray rounded-md"
                 />
               </div>
             </div>
@@ -522,7 +522,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
               }`}
             >
               <span
-                className={`inline-block h-3 w-3 transform rounded-full bg-soft-white transition-transform duration-150 ease-linear ${
+                className={`inline-block h-3 w-3 transform rounded-full bg-deep-navy transition-transform duration-150 ease-linear ${
                   formData.hasBusiness ? 'translate-x-3.5' : 'translate-x-0.5'
                 }`}
               />
@@ -540,7 +540,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
                   placeholder="Your business name"
                   value={formData.businessName}
                   onChange={e => handleInputChange('businessName', e.target.value)}
-                  className="w-full border-b border-white/10 bg-transparent py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
+                  className="w-full border border-white/10 py-2 text-sm focus:border-electric-blue focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray rounded-md px-3"
                 />
               </div>
 
@@ -549,7 +549,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
                 <select
                   value={formData.businessType}
                   onChange={e => handleInputChange('businessType', e.target.value)}
-                  className="w-full border-b border-white/10 bg-transparent py-2 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
+                  className="w-full border border-white/10 py-2 text-sm focus:border-electric-blue focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray rounded-md px-3"
                 >
                   {BUSINESS_TYPES.map(type => (
                     <option key={type.value} value={type.value}>
@@ -573,7 +573,7 @@ function ProfileStep({ onContinue, onBack, dashboardData, isFirst, onProfileUpda
                         value={formData.taxId}
                         onChange={e => handleInputChange('taxId', e.target.value)}
                         autoComplete="off"
-                        className="w-full border-b border-white/10 bg-transparent py-2 text-sm tabular-nums text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
+                        className="w-full border border-white/10 py-2 text-sm tabular-nums focus:border-electric-blue focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray rounded-md px-3"
                       />
                       <p className="mt-1 text-[11px] leading-relaxed text-steel-gray/70">
                         {entityCopy.taxIdHelper}
@@ -1003,7 +1003,7 @@ function AgreementStep({
           {signatureVerified ? (
             <button
               onClick={onContinue}
-              className="flex-1 cursor-pointer rounded-md bg-emerald-600 py-3 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+              className="flex-1 cursor-pointer rounded-md bg-electric-blue py-3 text-sm font-medium text-soft-white transition-colors hover:bg-electric-blue/85"
             >
               Continue
             </button>
@@ -1623,7 +1623,7 @@ function CompleteStep({ dashboardData }: { dashboardData: ClientDashboardData | 
         <h3 className="mb-3 text-xs font-medium text-steel-gray/60 uppercase">What happens next</h3>
         <ul className="space-y-2 text-xs text-steel-gray">
           <li className="flex items-start gap-2">
-            <span className="mt-1 h-1 w-1 rounded-full bg-emerald-500" />
+            <span className="mt-1 h-1 w-1 rounded-full bg-electric-blue" />
             <span>Sign the agreement</span>
           </li>
           <li className="flex items-start gap-2">

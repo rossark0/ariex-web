@@ -11,8 +11,8 @@ const buttonVariants = cva(
       variant: {
         default: 'bg-electric-blue text-soft-white hover:bg-electric-blue/80',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-        outline: 'border border-white/10 bg-transparent text-soft-white hover:bg-white/8',
-        secondary: 'bg-white/8 text-soft-white hover:bg-white/12',
+        outline: 'border border-white/12 bg-transparent text-soft-white hover:bg-white/8',
+        secondary: 'border border-white/12 bg-transparent text-soft-white hover:bg-white/8',
         ghost: 'hover:bg-white/8 hover:text-soft-white',
         link: 'text-electric-blue underline-offset-4 hover:underline',
       },

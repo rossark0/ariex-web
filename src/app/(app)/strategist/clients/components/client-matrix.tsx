@@ -126,7 +126,7 @@ export function ClientMatrix({ clients, agreements }: ClientMatrixProps) {
     <div className="flex flex-col gap-2">
       {rankingsSource === 'ai' && (
         <div className="flex items-center gap-1.5 self-end">
-          <span className="inline-flex items-center gap-1 rounded-full border border-electric-blue/30 bg-electric-blue/10 px-2 py-0.5 text-[10px] font-medium tracking-wide text-electric-blue uppercase">
+          <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/8 px-2 py-0.5 text-[10px] font-medium tracking-wide text-steel-gray uppercase">
             AI-ranked
           </span>
         </div>

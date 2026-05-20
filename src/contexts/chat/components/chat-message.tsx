@@ -14,8 +14,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
   return (
     <div className={cn('flex gap-3', isUser ? 'justify-end' : 'justify-start')}>
       {!isUser && (
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-electric-blue">
-          <Robot weight="fill" className="h-5 w-5 text-white" />
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/8">
+          <Robot weight="fill" className="h-5 w-5 text-body" />
         </div>
       )}
       <div

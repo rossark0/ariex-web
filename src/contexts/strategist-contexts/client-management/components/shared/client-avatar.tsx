@@ -20,7 +20,7 @@ export function ClientAvatar({ name, size = 'md', className = '' }: ClientAvatar
 
   return (
     <div
-      className={`flex items-center justify-center rounded-full bg-electric-blue/85 font-medium text-white ${sizeClasses[size]} ${className}`}
+      className={`flex items-center justify-center rounded-full bg-steel-gray/20 font-medium text-body ${sizeClasses[size]} ${className}`}
     >
       {initials}
     </div>

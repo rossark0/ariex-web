@@ -212,11 +212,11 @@ export function CreatePaymentLinkModal({
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-2xl rounded-xl bg-surface shadow-xl">
+      <div className="w-full max-w-2xl rounded-xl bg-deep-navy shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/6 p-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-electric-blue/15">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/8">
               <CreditCard className="h-5 w-5 text-electric-blue" weight="duotone" />
             </div>
             <div>
@@ -261,7 +261,7 @@ export function CreatePaymentLinkModal({
                     placeholder="Search by name or email..."
                     value={clientSearch}
                     onChange={e => setClientSearch(e.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-graphite py-2 pl-10 pr-3 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:outline-none focus:ring-1 focus:ring-electric-blue/30"
+                    className="w-full rounded-lg border border-white/10 bg-deep-navy py-2 pl-10 pr-3 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:outline-none focus:ring-1 focus:ring-electric-blue/30"
                   />
                 </div>
               </div>
@@ -327,7 +327,7 @@ export function CreatePaymentLinkModal({
                     placeholder="Search by name or ID..."
                     value={agreementSearch}
                     onChange={e => setAgreementSearch(e.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-graphite py-2 pl-10 pr-3 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:outline-none focus:ring-1 focus:ring-electric-blue/30"
+                    className="w-full rounded-lg border border-white/10 bg-deep-navy py-2 pl-10 pr-3 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:outline-none focus:ring-1 focus:ring-electric-blue/30"
                   />
                 </div>
               </div>
@@ -394,7 +394,7 @@ export function CreatePaymentLinkModal({
                   placeholder="499.00"
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
-                  className="w-full rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:outline-none focus:ring-1 focus:ring-electric-blue/30"
+                  className="w-full rounded-lg border border-white/10 bg-deep-navy px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:outline-none focus:ring-1 focus:ring-electric-blue/30"
                 />
               </div>
 
@@ -407,7 +407,7 @@ export function CreatePaymentLinkModal({
                   placeholder="Payment for services..."
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  className="w-full rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:outline-none focus:ring-1 focus:ring-electric-blue/30"
+                  className="w-full rounded-lg border border-white/10 bg-deep-navy px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:outline-none focus:ring-1 focus:ring-electric-blue/30"
                 />
               </div>
             </div>

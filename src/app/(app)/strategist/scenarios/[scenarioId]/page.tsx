@@ -116,7 +116,7 @@ export default function ScenarioWorkspacePage() {
         </p>
         <button
           onClick={() => router.push('/strategist/scenarios')}
-          className="mt-2 rounded-md border border-white/10 bg-surface px-3 py-1.5 text-sm font-medium text-soft-white transition-colors duration-150 ease-linear hover:bg-white/8"
+          className="mt-2 flex h-9 items-center rounded-lg border border-white/10 bg-surface px-4 text-sm font-medium text-soft-white transition-colors duration-150 ease-linear hover:bg-white/8"
         >
           Back to scenarios
         </button>
@@ -326,47 +326,42 @@ export default function ScenarioWorkspacePage() {
   // ─── Render ──────────────────────────────────────────────────────────
   return (
     <div className="flex h-full flex-col">
-      {/* Top toolbar — three regions: nav · identity · actions */}
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/6 px-4">
-        {/* ── Region 1: Nav ─────────────────────────────────────────── */}
-        <div className="flex shrink-0 items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center">
+      {/* Top toolbar — nav · title · actions, single rhythm (h-9 controls) */}
+      <header className="flex h-16 shrink-0 items-center gap-4 border-b border-white/6 px-6">
+        {/* Nav */}
+        <div className="flex shrink-0 items-center gap-1">
+          <div className="flex h-9 w-9 items-center justify-center">
             <SidebarToggle />
           </div>
-          <span aria-hidden="true" className="h-5 w-px shrink-0 bg-white/10" />
           <button
             type="button"
             onClick={() => router.push('/strategist/scenarios')}
-            className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white"
+            className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white"
           >
-            <ArrowLeft weight="bold" className="h-3.5 w-3.5" />
+            <ArrowLeft weight="bold" className="h-4 w-4" />
             Scenarios
           </button>
         </div>
 
-        <span aria-hidden="true" className="h-5 w-px shrink-0 bg-white/10" />
-
-        {/* ── Region 2: Identity (editable title) ───────────────────── */}
+        {/* Title */}
         <div className="flex min-w-0 flex-1 items-center">
           <input
             value={draft.name}
             onChange={e => setDraft({ ...draft, name: e.target.value })}
             placeholder="Untitled scenario"
             aria-label="Scenario name"
-            className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-soft-white placeholder:text-steel-gray/50 transition-colors duration-150 ease-linear hover:border-white/10 hover:bg-surface focus:border-electric-blue/40 focus:bg-surface focus:outline-none"
+            className="h-9 w-full max-w-md rounded-lg border border-white/10 bg-deep-navy px-3 text-sm font-medium text-soft-white placeholder:text-steel-gray transition-colors duration-150 ease-linear focus:border-electric-blue focus:outline-none"
           />
         </div>
 
-        {/* ── Region 3: Actions (client · primary · secondary · destr.) */}
+        {/* Actions */}
         <div className="flex shrink-0 items-center gap-2">
           <ScenarioClientPicker
             selectedClientId={draft.clientId}
             onSelect={clientId => handleClientChange(clientId)}
           />
 
-          <span aria-hidden="true" className="h-5 w-px shrink-0 bg-white/10" />
-
-          {/* Primary action — filled, prominent */}
+          {/* Primary — dominant */}
           <button
             type="button"
             onClick={handleGenerateFromClient}
@@ -376,63 +371,63 @@ export default function ScenarioWorkspacePage() {
                 ? "Pull this client's profile, documents, and agreements, then ask ARIEX to propose a tailored scenario."
                 : 'Link a client first to generate a scenario from their data.'
             }
-            className="flex h-7 items-center gap-1.5 rounded-md bg-electric-blue px-3 text-xs font-medium text-soft-white shadow-sm transition-colors duration-150 ease-linear hover:bg-electric-blue/85 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-9 items-center gap-2 rounded-lg bg-electric-blue px-4 text-sm font-semibold text-soft-white shadow-sm transition-colors duration-150 ease-linear hover:bg-electric-blue/85 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isGenerating ? (
-              <ArrowsClockwise weight="bold" className="h-3.5 w-3.5 animate-spin" />
+              <ArrowsClockwise weight="bold" className="h-4 w-4 animate-spin" />
             ) : (
-              <MagicWand weight="fill" className="h-3.5 w-3.5" />
+              <MagicWand weight="fill" className="h-4 w-4" />
             )}
             <span>{isGenerating ? 'Generating' : 'Generate'}</span>
           </button>
 
-          {/* Secondary action — ghost */}
+          {/* Secondary — ghost */}
           <button
             type="button"
             onClick={handleCopySummary}
             disabled={!computation}
             title="Copy a paste-ready summary to your clipboard — useful when drafting the strategy document for this client."
-            className="flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white disabled:opacity-40"
+            className="flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white disabled:opacity-40"
           >
             {copied ? (
-              <Check weight="bold" className="h-3.5 w-3.5 text-emerald-300" />
+              <Check weight="bold" className="h-4 w-4 text-emerald-300" />
             ) : (
-              <Copy weight="bold" className="h-3.5 w-3.5" />
+              <Copy weight="bold" className="h-4 w-4" />
             )}
             <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
 
-          {/* Destructive action — icon-only, isolated by border */}
+          {/* Destructive — icon-only */}
           <button
             type="button"
             onClick={handleDelete}
             title="Delete this scenario"
             aria-label="Delete scenario"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-steel-gray transition-colors duration-150 ease-linear hover:bg-red-500/15 hover:text-red-300"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-steel-gray transition-colors duration-150 ease-linear hover:bg-red-500/15 hover:text-red-300"
           >
-            <Trash weight="bold" className="h-3.5 w-3.5" />
+            <Trash weight="bold" className="h-4 w-4" />
           </button>
         </div>
       </header>
 
-      {/* Body: tree on left, impact panel on right */}
-      <div className="flex flex-1 min-h-0 gap-4 overflow-hidden p-6">
-        <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-y-auto">
+      {/* Body: canvas on left, impact panel on right */}
+      <div className="flex flex-1 min-h-0 gap-6 overflow-hidden p-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
           {generationError && (
             <Reveal>
-              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2">
-                <p className="text-xs font-medium text-red-300">
+              <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">
+                <p className="text-sm font-medium text-red-300">
                   Couldn&apos;t generate a scenario
                 </p>
-                <p className="mt-0.5 text-[11px] text-red-300/80">{generationError}</p>
+                <p className="mt-1 text-xs text-red-300/80">{generationError}</p>
               </div>
             </Reveal>
           )}
 
           {generationResult && (
             <Reveal>
-              <div className="rounded-lg border border-electric-blue/30 bg-electric-blue/10 px-3 py-2.5">
-                <div className="flex items-start gap-2">
+              <div className="rounded-xl bg-surface p-4">
+                <div className="flex items-start gap-3">
                   <MagicWand weight="fill" className="mt-0.5 h-4 w-4 shrink-0 text-electric-blue" />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-soft-white">
@@ -466,7 +461,7 @@ export default function ScenarioWorkspacePage() {
                   <button
                     type="button"
                     onClick={() => setGenerationResult(null)}
-                    className="flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white"
+                    className="flex shrink-0 items-center rounded-lg px-2 py-1 text-[11px] font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white"
                   >
                     Dismiss
                   </button>
@@ -477,8 +472,8 @@ export default function ScenarioWorkspacePage() {
 
           {draft.clientId && (
             <Reveal>
-              <div className="flex items-start justify-between gap-3 rounded-lg border border-electric-blue/25 bg-electric-blue/8 px-3 py-2">
-                <div className="flex items-start gap-2">
+              <div className="flex items-start justify-between gap-3 rounded-xl bg-surface p-4">
+                <div className="flex items-start gap-3">
                   <Info weight="fill" className="mt-0.5 h-4 w-4 shrink-0 text-electric-blue" />
                   <div>
                     <p className="text-xs font-medium text-soft-white">
@@ -508,7 +503,7 @@ export default function ScenarioWorkspacePage() {
                   onClick={handleResyncFromClient}
                   disabled={isSyncing}
                   title="Re-pull the latest profile values from this client"
-                  className="flex shrink-0 items-center gap-1 rounded-md border border-white/10 bg-surface/40 px-2 py-1 text-[11px] font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white disabled:opacity-40"
+                  className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-white/10 bg-surface px-3 text-xs font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white disabled:opacity-40"
                 >
                   <ArrowsClockwise
                     weight="bold"
@@ -533,7 +528,7 @@ export default function ScenarioWorkspacePage() {
             )}
           </Reveal>
         </div>
-        <aside className="hidden w-[340px] shrink-0 overflow-y-auto rounded-lg border border-white/6 bg-surface p-4 lg:block">
+        <aside className="hidden w-[360px] shrink-0 overflow-y-auto lg:block">
           {computation && <ScenarioImpactPanel computation={computation} />}
         </aside>
       </div>

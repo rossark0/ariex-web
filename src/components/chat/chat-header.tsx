@@ -75,7 +75,7 @@ export function ChatHeader({
             <span
               className={cn(
                 'relative inline-flex h-1.5 w-1.5 rounded-full',
-                isOnline ? 'bg-emerald-500' : 'bg-steel-gray'
+                isOnline ? 'bg-electric-blue' : 'bg-steel-gray'
               )}
             />
           </div>

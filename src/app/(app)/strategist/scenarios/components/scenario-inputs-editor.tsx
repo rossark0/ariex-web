@@ -92,16 +92,16 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
   const stateIsValid = !!STATE_TAX[draft.state];
 
   return (
-    <section className="rounded-lg border border-white/6 bg-surface p-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+    <section className="rounded-xl bg-surface p-5">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         <div>
-          <label className="mb-1 block text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
+          <label className="mb-1.5 flex min-h-[28px] items-start text-[11px] font-medium uppercase leading-tight tracking-wide text-steel-gray">
             Tax year
           </label>
           <select
             value={draft.year}
             onChange={e => setField('year', Number(e.target.value) as TaxYear)}
-            className="w-full rounded-md border border-white/10 bg-surface px-2.5 py-1.5 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
+            className="h-9 w-full rounded-lg border border-white/10 bg-deep-navy px-3 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
           >
             {SUPPORTED_TAX_YEARS.map(y => (
               <option key={y} value={y}>
@@ -113,13 +113,13 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
         </div>
 
         <div>
-          <label className="mb-1 block text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
+          <label className="mb-1.5 flex min-h-[28px] items-start text-[11px] font-medium uppercase leading-tight tracking-wide text-steel-gray">
             Filing status
           </label>
           <select
             value={draft.filingStatus}
             onChange={e => setField('filingStatus', e.target.value as FilingStatus)}
-            className="w-full rounded-md border border-white/10 bg-surface px-2.5 py-1.5 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
+            className="h-9 w-full rounded-lg border border-white/10 bg-deep-navy px-3 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
           >
             {FILING_STATUS_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>
@@ -130,13 +130,13 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
         </div>
 
         <div>
-          <label className="mb-1 block text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
+          <label className="mb-1.5 flex min-h-[28px] items-start text-[11px] font-medium uppercase leading-tight tracking-wide text-steel-gray">
             State
           </label>
           <select
             value={stateIsValid ? draft.state : 'none'}
             onChange={e => setField('state', e.target.value as UsState)}
-            className="w-full rounded-md border border-white/10 bg-surface px-2.5 py-1.5 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
+            className="h-9 w-full rounded-lg border border-white/10 bg-deep-navy px-3 text-sm text-soft-white focus:border-electric-blue focus:outline-none"
           >
             {US_STATES.map(s => {
               const info = STATE_TAX[s];
@@ -160,7 +160,7 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
           placeholder="0"
         />
         <Field
-          label="SE / Pass-through"
+          label="SE income"
           value={draft.selfEmploymentIncome}
           onChange={v => setField('selfEmploymentIncome', v)}
           placeholder="120,000"
@@ -173,21 +173,21 @@ export function ScenarioInputsEditor({ inputs, onChange }: ScenarioInputsEditorP
         />
       </div>
 
-      <div className="mt-3 flex flex-col gap-1">
+      <div className="mt-4 flex flex-col gap-1.5">
         {projected && (
-          <p className="text-[10px] leading-relaxed text-amber-300/85">
+          <p className="text-[11px] leading-relaxed text-amber-300/85">
             Using projected {draft.year} brackets (inflation-extrapolated from
             {' '}{draft.year - 1}). Replace with final IRS values when Rev. Proc.
             {' '}{draft.year - 1}-XX is loaded.
           </p>
         )}
         {stateIsValid && draft.state !== 'none' && stateInfo.note && (
-          <p className="text-[10px] leading-relaxed text-steel-gray/80">
+          <p className="text-[11px] leading-relaxed text-steel-gray/80">
             {stateInfo.name}: {stateInfo.note}
           </p>
         )}
         {stateIsValid && draft.state !== 'none' && (
-          <p className="text-[10px] leading-relaxed text-steel-gray/60">
+          <p className="text-[11px] leading-relaxed text-steel-gray/60">
             State tax estimated at top marginal rate × AGI. Doesn&apos;t model
             per-state deductions, credits, or city add-ons.
           </p>
@@ -210,17 +210,17 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
+      <label className="mb-1.5 flex min-h-[28px] items-start text-[11px] font-medium uppercase leading-tight tracking-wide text-steel-gray">
         {label}
       </label>
       <div className="relative">
-        <span className="absolute top-1.5 left-2 text-sm text-steel-gray/70">$</span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-steel-gray">$</span>
         <input
           inputMode="numeric"
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-md border border-white/10 bg-surface px-2.5 py-1.5 pl-5 text-sm tabular-nums text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
+          className="h-9 w-full rounded-lg border border-white/10 bg-deep-navy px-3 pl-7 text-sm tabular-nums text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
         />
       </div>
     </div>

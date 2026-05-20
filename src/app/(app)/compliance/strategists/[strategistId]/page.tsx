@@ -273,7 +273,7 @@ export default function ComplianceStrategistDetailPage({ params }: Props) {
                     placeholder="Search..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="h-[32px] w-64 rounded-lg bg-white/8 pr-2 pl-7 text-sm font-medium text-soft-white placeholder:text-steel-gray/60 hover:bg-surface focus:border-white/15 focus:outline-none"
+                    className="h-[32px] w-64 rounded-lg bg-deep-navy pr-2 pl-7 text-sm font-medium text-soft-white placeholder:text-steel-gray/60 hover:bg-deep-navy focus:border-white/10 focus:outline-none"
                   />
                 </div>
                 <button className="inline-flex h-[32px] cursor-pointer items-center gap-1.5 rounded-lg bg-white/8 px-2 py-1 text-xs font-semibold text-steel-gray shadow transition-colors hover:bg-white/8">

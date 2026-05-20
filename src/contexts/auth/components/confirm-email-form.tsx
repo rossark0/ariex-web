@@ -34,7 +34,7 @@ export function ConfirmEmailForm() {
       </p>
 
       <Link href="/login">
-        <Button className="h-11 w-full bg-emerald-600 text-white hover:bg-emerald-700">
+        <Button className="h-11 w-full bg-electric-blue text-soft-white hover:bg-electric-blue/85">
           Go to login
         </Button>
       </Link>

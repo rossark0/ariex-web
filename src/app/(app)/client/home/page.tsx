@@ -715,7 +715,7 @@ export default function ClientDashboardPage() {
                       <Check weight="bold" className="h-3 w-3 text-emerald-500" />
                     ) : (
                       <div
-                        className={`h-2 w-2 rounded-full ${step2Sent ? 'bg-emerald-500' : 'bg-steel-gray'}`}
+                        className={`h-2 w-2 rounded-full ${step2Sent ? 'bg-electric-blue' : 'bg-steel-gray'}`}
                       />
                     )}
                   </div>
@@ -796,7 +796,7 @@ export default function ClientDashboardPage() {
                       <Check weight="bold" className="h-3 w-3 text-emerald-500" />
                     ) : (
                       <div
-                        className={`h-2 w-2 rounded-full ${step3Sent ? 'bg-emerald-500' : 'bg-steel-gray'}`}
+                        className={`h-2 w-2 rounded-full ${step3Sent ? 'bg-electric-blue' : 'bg-steel-gray'}`}
                       />
                     )}
                   </div>
@@ -866,7 +866,7 @@ export default function ClientDashboardPage() {
                       <Check weight="bold" className="h-3 w-3 text-emerald-500" />
                     ) : (
                       <div
-                        className={`h-2 w-2 rounded-full ${step4Sent ? 'bg-emerald-500' : 'bg-steel-gray'}`}
+                        className={`h-2 w-2 rounded-full ${step4Sent ? 'bg-electric-blue' : 'bg-steel-gray'}`}
                       />
                     )}
                   </div>
@@ -965,7 +965,7 @@ export default function ClientDashboardPage() {
                       <Check weight="bold" className="h-3 w-3 text-emerald-500" />
                     ) : (
                       <div
-                        className={`h-2 w-2 rounded-full ${step5Sent ? 'bg-emerald-500' : 'bg-steel-gray'}`}
+                        className={`h-2 w-2 rounded-full ${step5Sent ? 'bg-electric-blue' : 'bg-steel-gray'}`}
                       />
                     )}
                   </div>
@@ -1080,7 +1080,7 @@ export default function ClientDashboardPage() {
                               }
                             }}
                             disabled={isApprovingStrategy || isDecliningStrategy || !strategyDocumentId}
-                            className="flex w-fit items-center gap-1 rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-soft-white hover:bg-emerald-700 disabled:opacity-50"
+                            className="flex w-fit items-center gap-1 rounded bg-electric-blue px-3 py-1.5 text-xs font-semibold text-soft-white hover:bg-electric-blue/85 disabled:opacity-50"
                           >
                             {isApprovingStrategy ? (
                               <>

@@ -152,7 +152,7 @@ function RejectStrategyModal({
 
   return (
     <div className="fixed inset-0 z-100000 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-xl bg-deep-navy p-6 shadow-xl">
         <h3 className="mb-1 text-lg font-semibold text-soft-white">Reject Strategy</h3>
         <p className="mb-4 text-sm text-steel-gray">
           Provide a reason for the rejection. The strategist will be notified.
@@ -162,7 +162,7 @@ function RejectStrategyModal({
           onChange={e => setReason(e.target.value)}
           placeholder="Enter rejection reason…"
           rows={4}
-          className="mb-4 w-full resize-none rounded-lg border border-white/10 px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-white/20 focus:outline-none"
+          className="mb-4 w-full resize-none rounded-lg border border-white/10 bg-deep-navy px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
         />
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose} disabled={isRejecting}>
@@ -205,7 +205,7 @@ function ApproveStrategyModal({
 
   return (
     <div className="fixed inset-0 z-100000 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-xl bg-deep-navy p-6 shadow-xl">
         <h3 className="mb-1 text-lg font-semibold text-soft-white">Approve Strategy</h3>
         <p className="mb-4 text-sm text-steel-gray">
           Once approved, this strategy will be sent to the client for review. This action cannot be
@@ -218,7 +218,7 @@ function ApproveStrategyModal({
           <Button
             onClick={onApprove}
             disabled={isApproving}
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
+            className="bg-electric-blue text-soft-white hover:bg-electric-blue/85"
           >
             {isApproving ? (
               <>
@@ -313,7 +313,7 @@ function CommentsPanel({
           }}
           placeholder="Add a comment…"
           rows={1}
-          className="flex-1 resize-none rounded-lg border border-white/10 px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-white/20 focus:outline-none"
+          className="flex-1 resize-none rounded-lg border border-white/10 bg-deep-navy px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
           disabled={isSending}
         />
         <Button size="sm" onClick={handleSubmit} disabled={!newComment.trim() || isSending}>
@@ -649,7 +649,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
 
           {/* Header Section */}
           <div className="flex flex-col gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-electric-blue/85 text-2xl font-medium text-white">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-steel-gray/20 text-2xl font-medium text-body">
               {getInitials(clientName)}
             </div>
             <h1 className="z-20 text-2xl font-semibold">{clientName}</h1>
@@ -675,7 +675,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                 onClick={strategyPdfUrl ? () => setIsStrategySheetOpen(true) : undefined}
                 className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-sm font-medium transition-colors ${
                   strategyPdfUrl
-                    ? 'cursor-pointer border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600'
+                    ? 'cursor-pointer border-electric-blue bg-electric-blue text-soft-white hover:bg-electric-blue'
                     : 'cursor-not-allowed border-white/10 bg-white/8 text-steel-gray/60'
                 }`}
               >
@@ -707,7 +707,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                   <Button
                     onClick={() => setIsApproveModalOpen(true)}
                     disabled={isApproving || isRejecting}
-                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                    className="bg-electric-blue text-soft-white hover:bg-electric-blue/85"
                   >
                     {isApproving ? (
                       <>
@@ -754,7 +754,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
             <div className="mb-4 rounded-xl bg-surface p-5">
               <div className="mb-4 flex items-center gap-2">
                 <span className="text-sm text-steel-gray">About</span>
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-electric-blue/85 text-xs font-medium text-white">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-steel-gray/20 text-xs font-medium text-body">
                   {getInitials(clientName)}
                 </div>
                 <span className="text-sm font-medium text-steel-gray">{clientName}</span>
@@ -815,7 +815,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                   {/* Step 1: Account Created */}
                   <div className="relative flex gap-4 pb-6">
                     <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
-                      <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                      <div className="h-2 w-2 rounded-full bg-electric-blue" />
                     </div>
                     <div className="absolute top-5 bottom-2 -left-[19px] w-[2px] bg-emerald-500/30" />
                     <div className="flex flex-1 flex-col">
@@ -835,7 +835,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                   <div className="relative flex gap-4 pb-6">
                     <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
                       <div
-                        className={`h-2 w-2 rounded-full ${step2Sent || step2Complete ? 'bg-emerald-500' : 'bg-white/20'}`}
+                        className={`h-2 w-2 rounded-full ${step2Sent || step2Complete ? 'bg-electric-blue' : 'bg-white/20'}`}
                       />
                     </div>
                     <div
@@ -868,7 +868,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                   <div className="relative flex gap-4 pb-6">
                     <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
                       <div
-                        className={`h-2 w-2 rounded-full ${step3Sent || step3Complete ? 'bg-emerald-500' : 'bg-white/20'}`}
+                        className={`h-2 w-2 rounded-full ${step3Sent || step3Complete ? 'bg-electric-blue' : 'bg-white/20'}`}
                       />
                     </div>
                     <div
@@ -903,7 +903,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                   <div className="relative flex gap-4 pb-6">
                     <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
                       <div
-                        className={`h-2 w-2 rounded-full ${step4Sent || step4Complete ? 'bg-emerald-500' : 'bg-white/20'}`}
+                        className={`h-2 w-2 rounded-full ${step4Sent || step4Complete ? 'bg-electric-blue' : 'bg-white/20'}`}
                       />
                     </div>
                     <div
@@ -938,7 +938,7 @@ export default function ComplianceClientDetailPage({ params }: Props) {
                   <div className="relative flex gap-4">
                     <div className="absolute top-1.5 -left-6 flex h-3 w-3 items-center justify-center">
                       <div
-                        className={`h-2 w-2 rounded-full ${step5State.strategySent || step5State.isComplete ? 'bg-emerald-500' : 'bg-white/20'}`}
+                        className={`h-2 w-2 rounded-full ${step5State.strategySent || step5State.isComplete ? 'bg-electric-blue' : 'bg-white/20'}`}
                       />
                     </div>
                     <div className="flex flex-1 flex-col">

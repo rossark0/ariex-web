@@ -28,8 +28,8 @@ function MetricCountUp({
 }) {
   const animated = useCountUp(value, 300);
   return (
-    <div className="rounded-lg border border-white/6 bg-surface p-3">
-      <p className="text-[10px] font-semibold tracking-wide text-steel-gray uppercase">{label}</p>
+    <div className="rounded-xl bg-surface p-4">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-steel-gray">{label}</p>
       <p
         className={cn(
           'mt-1 text-xl font-medium tabular-nums',
@@ -54,12 +54,12 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
   return (
     <div className="flex h-full flex-col gap-4">
       {/* Headline savings */}
-      <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/8 p-4">
-        <p className="text-[10px] font-semibold tracking-wide text-emerald-300 uppercase">
+      <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/8 p-5">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-emerald-300">
           Estimated annual savings
         </p>
         <MetricCountUpInline value={totalAnnualSavings} />
-        <p className="mt-1 text-[11px] text-steel-gray">
+        <p className="mt-1.5 text-xs text-steel-gray">
           {baselineRate}% → {projectedRate}% effective rate
           {effectiveDelta < 0 ? '' : ''}
         </p>
@@ -72,8 +72,8 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
       </div>
 
       {/* Tax composition breakdown (baseline → projected) */}
-      <div className="rounded-lg border border-white/6 bg-surface p-3">
-        <p className="mb-2 text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
+      <div className="rounded-xl bg-surface p-4">
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-steel-gray">
           Tax composition
         </p>
         <CompositionRow label="Federal income" before={baseline.federalIncomeTax} after={projected.federalIncomeTax} />
@@ -90,9 +90,9 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
       </div>
 
       {/* Confidence */}
-      <div className="rounded-lg border border-white/6 bg-surface p-3">
+      <div className="rounded-xl bg-surface p-4">
         <div className="mb-1.5 flex items-center justify-between">
-          <p className="text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-steel-gray">
             Combined confidence
           </p>
           <span className="text-sm tabular-nums text-soft-white">{Math.round(animatedConfidence)}%</span>
@@ -111,18 +111,18 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
       {/* Per-strategy breakdown */}
       {strategyImpacts.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h3 className="text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
+          <h3 className="text-[11px] font-medium uppercase tracking-wide text-steel-gray">
             Impact by strategy
           </h3>
           <ul className="flex flex-col gap-2">
             {strategyImpacts.map(item => (
               <li
                 key={item.id}
-                className="flex items-center justify-between rounded-lg border border-white/6 bg-surface px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded-xl bg-surface px-4 py-3"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-soft-white">{item.title}</p>
-                  <p className="text-[10px] tracking-wide text-steel-gray uppercase">
+                  <p className="mt-0.5 text-[11px] uppercase tracking-wide text-steel-gray">
                     {item.category} · {Math.round(item.confidence * 100)}% conf.
                   </p>
                 </div>
@@ -144,10 +144,10 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
       {/* Assumptions */}
       {allAssumptions.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h3 className="text-[10px] font-semibold tracking-wide text-steel-gray uppercase">
+          <h3 className="text-[11px] font-medium uppercase tracking-wide text-steel-gray">
             Assumptions in play
           </h3>
-          <ul className="flex flex-col gap-1.5 rounded-lg border border-white/6 bg-surface p-3">
+          <ul className="flex flex-col gap-1.5 rounded-xl bg-surface p-4">
             {allAssumptions.map((a, i) => (
               <li key={i} className="flex gap-2 text-[11px] leading-relaxed text-soft-white/85">
                 <span className="mt-1 inline-block h-1 w-1 shrink-0 rounded-full bg-electric-blue" />
@@ -158,7 +158,7 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
         </section>
       )}
 
-      <p className="mt-auto text-[10px] leading-relaxed text-steel-gray/60">
+      <p className="mt-auto pt-1 text-[11px] leading-relaxed text-steel-gray/55">
         Estimates use{' '}
         {TAX_YEAR_IS_PROJECTED[baseline.year] ? `projected ${baseline.year}` : `${baseline.year}`}
         {' '}federal brackets, standard deduction, flat 20% §199A QBI, SE tax, NIIT (3.8%), and
@@ -178,7 +178,7 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
 function MetricCountUpInline({ value }: { value: number }) {
   const animated = useCountUp(value, 300);
   return (
-    <p className="mt-1 text-3xl font-medium tabular-nums text-soft-white">
+    <p className="mt-2 text-[2rem] font-semibold leading-none tracking-tight tabular-nums text-soft-white">
       {formatCurrency(Math.max(0, Math.round(animated)))}
     </p>
   );
@@ -203,7 +203,7 @@ function CompositionRow({
         <span className="text-steel-gray/60 line-through">{formatCurrency(before)}</span>
         <span className="text-soft-white">{formatCurrency(Math.round(animatedAfter))}</span>
         {delta !== 0 && (
-          <span className={cn('text-[10px]', delta > 0 ? 'text-emerald-300' : 'text-amber-300')}>
+          <span className={cn('text-[11px]', delta > 0 ? 'text-emerald-300' : 'text-amber-300')}>
             {delta > 0 ? '−' : '+'}
             {formatCurrency(Math.abs(delta))}
           </span>

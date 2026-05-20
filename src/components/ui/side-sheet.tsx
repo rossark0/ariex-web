@@ -100,7 +100,7 @@ export function SideSheet({
       {/* Side Sheet Container */}
       <div
         className={cn(
-          'relative ml-auto flex h-full flex-col bg-surface shadow-2xl transition-transform duration-200 ease-linear',
+          'relative ml-auto flex h-full flex-col bg-deep-navy shadow-2xl transition-transform duration-200 ease-linear',
           widthClasses[width],
           isVisible && !isClosing ? 'translate-x-0' : 'translate-x-full'
         )}

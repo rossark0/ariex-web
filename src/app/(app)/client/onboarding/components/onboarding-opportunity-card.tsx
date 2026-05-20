@@ -105,7 +105,7 @@ export function OnboardingOpportunityCard({
   if (!enabled) return null;
 
   return (
-    <div className="rounded-xl border border-electric-blue/25 bg-electric-blue/8 p-4">
+    <div className="rounded-xl bg-surface p-4">
       <div className="mb-3 flex items-center gap-2">
         <Sparkle weight="fill" className="h-4 w-4 text-electric-blue" />
         <h4 className="text-sm font-medium text-soft-white">Planning opportunities</h4>

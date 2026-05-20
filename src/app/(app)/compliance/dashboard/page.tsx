@@ -194,7 +194,7 @@ function ReviewRow({
         </div>
         <div className="text-xs text-steel-gray/60">Submitted {submitted}</div>
       </div>
-      <button className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+      <button className="rounded-lg bg-electric-blue px-4 py-2 text-sm font-medium text-soft-white hover:bg-electric-blue/85">
         Review
       </button>
     </div>

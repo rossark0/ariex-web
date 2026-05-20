@@ -98,7 +98,7 @@ export function DocumentPreviewModal({
       {/* Modal */}
       <div
         className={cn(
-          'relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-surface shadow-2xl transition-all duration-200',
+          'relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-deep-navy shadow-2xl transition-all duration-200',
           isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
         )}
       >

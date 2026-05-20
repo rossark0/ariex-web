@@ -55,7 +55,7 @@ export function LoginForm() {
           placeholder="you@example.com"
           value={email}
           onChange={e => setEmail(e.target.value)}
-          className="rounded-lg border border-white/15 px-4 py-2.5 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+          className="rounded-lg border border-white/10 px-4 py-2.5 text-sm transition-colors focus:ring-2 focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray focus:border-electric-blue"
           required
           autoComplete="email"
         />
@@ -76,7 +76,7 @@ export function LoginForm() {
           placeholder="••••••••"
           value={password}
           onChange={e => setPassword(e.target.value)}
-          className="rounded-lg border border-white/15 px-4 py-2.5 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+          className="rounded-lg border border-white/10 px-4 py-2.5 text-sm transition-colors focus:ring-2 focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray focus:border-electric-blue"
           required
           autoComplete="current-password"
         />
@@ -85,7 +85,7 @@ export function LoginForm() {
       <Button
         type="submit"
         disabled={isLoading}
-        className="mt-2 h-11 bg-emerald-600 text-white hover:bg-emerald-700"
+        className="mt-2 h-11 bg-electric-blue text-soft-white hover:bg-electric-blue/85"
       >
         {isLoading ? 'Signing in...' : 'Sign In'}
       </Button>

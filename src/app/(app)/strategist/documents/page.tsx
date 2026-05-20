@@ -80,7 +80,7 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
   switch (status?.toUpperCase()) {
     case 'COMPLETED':
     case 'SIGNED':
-      return { bg: 'bg-emerald-500/15', text: 'text-emerald-300', dot: 'bg-emerald-500' };
+      return { bg: 'bg-emerald-500/15', text: 'text-emerald-300', dot: 'bg-electric-blue' };
     case 'PENDING':
     case 'PROCESSING':
       return { bg: 'bg-amber-500/10', text: 'text-amber-300', dot: 'bg-amber-500' };
@@ -182,14 +182,14 @@ function ClientFilterDropdown({
       {open && (
         <div className="absolute left-0 z-50 mt-1.5 w-64 overflow-hidden rounded-lg border border-white/10 bg-surface shadow-lg">
           <div className="border-b border-white/6 p-2">
-            <div className="flex items-center gap-2 rounded-md bg-surface px-2.5 py-1.5">
-              <MagnifyingGlass className="h-3.5 w-3.5 text-steel-gray/60" />
+            <div className="flex items-center gap-2 rounded-md border border-white/10 bg-deep-navy px-2.5 py-1.5">
+              <MagnifyingGlass className="h-3.5 w-3.5 text-steel-gray" />
               <input
                 type="text"
                 placeholder="Search clients..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="flex-1 bg-transparent text-sm text-soft-white placeholder:text-steel-gray/60 focus:outline-none"
+                className="flex-1 text-sm focus:outline-none text-soft-white placeholder:text-steel-gray"
               />
             </div>
           </div>
@@ -665,13 +665,13 @@ export default function StrategistDocumentsPage() {
 
           {/* Search on the right */}
           <div className="ml-auto flex items-center gap-2 rounded-md border border-white/10 bg-surface px-2.5 py-1.5">
-            <MagnifyingGlass className="h-3.5 w-3.5 text-steel-gray/60" />
+            <MagnifyingGlass className="h-3.5 w-3.5 text-steel-gray" />
             <input
               type="text"
               placeholder="Search documents..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-48 bg-transparent text-sm text-soft-white placeholder:text-steel-gray/60 focus:outline-none"
+              className="w-48 text-sm focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray border border-white/10 rounded-md px-3 focus:border-electric-blue"
             />
             {searchQuery && (
               <button

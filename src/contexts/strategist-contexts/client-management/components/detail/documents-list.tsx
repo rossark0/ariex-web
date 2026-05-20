@@ -80,7 +80,7 @@ export const DocumentsList = memo(function DocumentsList({
         {onRequestDocuments && (
           <button
             onClick={onRequestDocuments}
-            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+            className="rounded-lg bg-electric-blue px-3 py-1.5 text-sm font-medium text-soft-white hover:bg-electric-blue/85"
           >
             Request documents
           </button>

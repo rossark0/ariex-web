@@ -202,7 +202,7 @@ function AgreementItem({ agreement }: { agreement: ClientAgreement }) {
   const hasCeremonyUrl = !!agreement.signatureCeremonyUrl;
 
   return (
-    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-surface p-4 transition-all hover:border-white/20">
+    <div className="flex items-center justify-between rounded-xl bg-surface p-4 transition-all hover:border-white/20">
       <div className="flex items-start gap-4">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/8">
           <FileIcon className="h-5 w-5 text-steel-gray" weight="fill" />

@@ -136,7 +136,7 @@ export default function StrategistOnboardingPage() {
                   setError(null);
                 }}
                 placeholder="sk_live_..."
-                className="w-full border-b border-white/10 bg-transparent py-3 text-sm text-soft-white placeholder:text-steel-gray/60 focus:border-electric-blue focus:outline-none"
+                className="w-full border border-white/10 py-3 text-sm focus:border-electric-blue focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray rounded-md px-3"
               />
             </div>
 

@@ -53,7 +53,7 @@ export function CompletePasswordForm() {
         </div>
         <Button
           onClick={() => router.push('/login')}
-          className="h-11 bg-emerald-600 text-white hover:bg-emerald-700"
+          className="h-11 bg-electric-blue text-soft-white hover:bg-electric-blue/85"
         >
           Go to Login
         </Button>
@@ -113,7 +113,7 @@ export function CompletePasswordForm() {
             placeholder="••••••••"
             value={newPassword}
             onChange={e => setNewPassword(e.target.value)}
-            className="w-full rounded-lg border border-white/15 px-4 py-2.5 pr-10 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+            className="w-full rounded-lg border border-white/10 px-4 py-2.5 pr-10 text-sm transition-colors focus:ring-2 focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray focus:border-electric-blue"
             required
             autoComplete="new-password"
             minLength={8}
@@ -121,7 +121,7 @@ export function CompletePasswordForm() {
           <button
             type="button"
             onClick={() => setShowNewPassword(!showNewPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-steel-gray/60 hover:text-steel-gray"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-steel-gray hover:text-soft-white"
           >
             {showNewPassword ? <EyeSlash className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
           </button>
@@ -140,14 +140,14 @@ export function CompletePasswordForm() {
             placeholder="••••••••"
             value={confirmPassword}
             onChange={e => setConfirmPassword(e.target.value)}
-            className="w-full rounded-lg border border-white/15 px-4 py-2.5 pr-10 text-sm transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+            className="w-full rounded-lg border border-white/10 px-4 py-2.5 pr-10 text-sm transition-colors focus:ring-2 focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray focus:border-electric-blue"
             required
             autoComplete="new-password"
           />
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-steel-gray/60 hover:text-steel-gray"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-steel-gray hover:text-soft-white"
           >
             {showConfirmPassword ? <EyeSlash className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
           </button>
@@ -157,7 +157,7 @@ export function CompletePasswordForm() {
       <Button
         type="submit"
         disabled={isLoading}
-        className="mt-2 h-11 bg-emerald-600 text-white hover:bg-emerald-700"
+        className="mt-2 h-11 bg-electric-blue text-soft-white hover:bg-electric-blue/85"
       >
         {isLoading ? 'Setting password...' : 'Set Password & Continue'}
       </Button>

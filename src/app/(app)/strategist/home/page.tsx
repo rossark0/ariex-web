@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/auth/AuthStore';
 import { listClients, listAgreements, type ApiAgreement, type ApiClient } from '@/lib/api/strategist.api';
 import { useCountUp } from '@/hooks/use-count-up';
 import { Reveal } from '@/components/ui/reveal';
-import { ArrowRight, Warning } from '@phosphor-icons/react';
+import { ArrowRight } from '@phosphor-icons/react';
 import { useAiPageContext } from '@/contexts/ai/hooks/use-ai-page-context';
 import { useClientRankings } from '@/hooks/use-client-rankings';
 
@@ -88,7 +88,7 @@ function PriorityRow({ activity, index }: { activity: ClientActivity; index: num
           {initials}
           {activity.atRisk && (
             <span
-              className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-electric-blue animate-risk-pulse"
+              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-400 ring-2 ring-graphite"
               aria-label="Needs attention"
             />
           )}
@@ -98,21 +98,13 @@ function PriorityRow({ activity, index }: { activity: ClientActivity; index: num
             <span className="truncate font-medium text-soft-white">
               {activity.clientName}
             </span>
-            {activity.atRisk && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-electric-blue/30 bg-electric-blue/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-electric-blue uppercase">
-                <Warning weight="fill" className="h-3 w-3" />
-                Needs attention
-              </span>
-            )}
           </div>
           <div className="flex min-w-0 items-center gap-2">
             {activity.signal && (
               <span
                 title={activity.reasoning || undefined}
-                className={`inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
-                  activity.atRisk
-                    ? 'bg-amber-500/15 text-amber-300'
-                    : 'bg-white/8 text-steel-gray'
+                className={`shrink-0 text-[11px] font-medium ${
+                  activity.atRisk ? 'text-amber-400/90' : 'text-steel-gray'
                 }`}
               >
                 {activity.signal}
@@ -285,7 +277,7 @@ export default function StrategistDashboardPage() {
             {clients.length > 0 && (
               <div className="grid grid-cols-2 gap-3">
                 <Reveal delay={120}>
-                  <div className="rounded-xl border border-white/6 bg-surface p-4">
+                  <div className="rounded-xl bg-surface p-4">
                     <p className="text-xs font-medium tracking-wide text-steel-gray uppercase">
                       Clients
                     </p>
@@ -295,17 +287,15 @@ export default function StrategistDashboardPage() {
                   </div>
                 </Reveal>
                 <Reveal delay={180}>
-                  <div className="rounded-xl border border-white/6 bg-surface p-4">
+                  <div className="rounded-xl bg-surface p-4">
                     <p className="text-xs font-medium tracking-wide text-steel-gray uppercase">
                       Need attention
                     </p>
-                    <p
-                      className={
-                        'mt-1 text-3xl font-medium tabular-nums ' +
-                        (displayAtRisk > 0 ? 'text-electric-blue' : 'text-soft-white')
-                      }
-                    >
+                    <p className="mt-1 flex items-baseline gap-2 text-3xl font-medium text-soft-white tabular-nums">
                       {displayAtRisk}
+                      {displayAtRisk > 0 && (
+                        <span className="h-1.5 w-1.5 self-center rounded-full bg-amber-400" aria-hidden />
+                      )}
                     </p>
                   </div>
                 </Reveal>
@@ -323,7 +313,7 @@ export default function StrategistDashboardPage() {
                   <h2 className="font-medium text-soft-white">Priorities</h2>
                   {rankingsSource === 'ai' ? (
                     <span
-                      className="inline-flex items-center gap-1 rounded-full border border-electric-blue/30 bg-electric-blue/10 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-electric-blue uppercase"
+                      className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/8 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-steel-gray uppercase"
                       title="Ranked by ARIEX from your live client and agreement data"
                     >
                       AI-ranked

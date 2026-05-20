@@ -494,7 +494,7 @@ function TiptapEditor({ content, onChange, onOverflow }: TiptapEditorProps) {
   }, [content, onOverflow]);
 
   return (
-    <div className="flex h-full flex-col bg-graphite">
+    <div className="flex h-full flex-col bg-surface">
       <div
         ref={editorContainerRef}
         className="relative flex-1 overflow-auto"
@@ -823,14 +823,14 @@ function AiAssistant({
 
       {/* Input */}
       <div className="p-3">
-        <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-graphite shadow-2xl transition-all duration-200 focus-within:ring-2 focus-within:ring-electric-blue/30 hover:bg-graphite">
+        <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-deep-navy shadow-2xl transition-all duration-200 focus-within:ring-2 focus-within:ring-electric-blue/30 hover:bg-deep-navy">
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask AI..."
             rows={1}
-            className="min-h-14 flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-tight text-soft-white placeholder:text-steel-gray focus:outline-none"
+            className="min-h-14 flex-1 resize-none px-6 py-4 text-sm leading-relaxed font-medium tracking-tight focus:outline-none text-soft-white placeholder:text-steel-gray"
           />
 
           <input
@@ -1300,7 +1300,7 @@ export function StrategySheet({
       {/* Bottom Sheet Container */}
       <div
         className={cn(
-          'relative flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-graphite shadow-2xl transition-transform duration-200 ease-linear',
+          'relative flex flex-1 flex-col overflow-hidden rounded-t-2xl bg-deep-navy shadow-2xl transition-transform duration-200 ease-linear',
           isVisible && !isClosing ? 'translate-y-0' : 'translate-y-full'
         )}
       >
@@ -1379,7 +1379,7 @@ export function StrategySheet({
                     type="text"
                     value={title}
                     onChange={e => setTitle(e.target.value)}
-                    className="w-full border-none bg-transparent text-2xl font-semibold text-soft-white outline-none placeholder:text-steel-gray focus:outline-none"
+                    className="w-full border text-2xl font-semibold outline-none focus:outline-none bg-deep-navy text-soft-white placeholder:text-steel-gray border-white/10 rounded-md px-3 focus:border-electric-blue"
                     placeholder="Enter document title..."
                   />
 
@@ -1484,7 +1484,7 @@ export function StrategySheet({
                         id="compliance-select"
                         value={selectedComplianceUserId || ''}
                         onChange={e => setSelectedComplianceUserId(e.target.value)}
-                        className="w-full rounded-md border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white shadow-sm ring-electric-blue outline-none focus:border-electric-blue/50 focus:ring-1"
+                        className="w-full rounded-md border border-white/10 bg-deep-navy px-3 py-2 text-sm text-soft-white shadow-sm ring-electric-blue outline-none focus:border-electric-blue/50 focus:ring-1"
                       >
                         {complianceUsers.map(user => (
                           <option

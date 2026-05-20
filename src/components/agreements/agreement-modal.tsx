@@ -118,7 +118,7 @@ export function AgreementModal({
       {/* Modal Container */}
       <div
         className={cn(
-          'relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-surface p-6 shadow-2xl transition-all duration-200',
+          'relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-deep-navy p-6 shadow-2xl transition-all duration-200',
           !isClosing ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
         )}
       >
@@ -151,7 +151,7 @@ export function AgreementModal({
               type="text"
               value={formData.title}
               onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              className="w-full rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
+              className="w-full rounded-lg border border-white/10 bg-deep-navy px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
               placeholder="Enter agreement title"
               required
               disabled={isLoading}
@@ -168,7 +168,7 @@ export function AgreementModal({
               value={formData.description}
               onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
               rows={3}
-              className="w-full resize-none rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
+              className="w-full resize-none rounded-lg border border-white/10 bg-deep-navy px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
               placeholder="Describe the services included..."
               disabled={isLoading}
             />
@@ -190,7 +190,7 @@ export function AgreementModal({
                 step="1"
                 value={formData.price}
                 onChange={e => setFormData(prev => ({ ...prev, price: Number(e.target.value) }))}
-                className="w-full rounded-lg border border-white/10 bg-graphite py-2 pr-3 pl-7 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
+                className="w-full rounded-lg border border-white/10 bg-deep-navy py-2 pr-3 pl-7 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
                 placeholder="499"
                 required
                 disabled={isLoading}
@@ -205,10 +205,10 @@ export function AgreementModal({
             </label>
 
             {/* Auto-generated todo - always shown */}
-            <div className="mb-2 flex items-center gap-2 rounded-lg bg-electric-blue/10 px-3 py-2 text-sm text-electric-blue">
-              <div className="h-2 w-2 rounded-full bg-electric-blue" />
+            <div className="mb-2 flex items-center gap-2 rounded-lg border border-white/10 bg-surface px-3 py-2 text-sm text-body">
+              <div className="h-2 w-2 rounded-full bg-steel-gray" />
               <span>Sign service agreement</span>
-              <span className="ml-auto text-xs text-electric-blue/70">Auto-created</span>
+              <span className="ml-auto text-xs text-steel-gray">Auto-created</span>
             </div>
 
             {/* Custom todos list */}
@@ -241,7 +241,7 @@ export function AgreementModal({
                 value={newTodoTitle}
                 onChange={e => setNewTodoTitle(e.target.value)}
                 onKeyDown={handleTodoKeyDown}
-                className="flex-1 rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
+                className="flex-1 rounded-lg border border-white/10 bg-deep-navy px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
                 placeholder="Add a task for the client..."
                 disabled={isLoading}
               />

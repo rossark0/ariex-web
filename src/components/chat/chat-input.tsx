@@ -62,7 +62,7 @@ export function ChatInput({
 
   return (
     <div className={cn('relative -translate-y-4 p-0', className)}>
-      <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-surface shadow-2xl duration-200 ease-linear transition-all focus-within:ring-2 focus-within:ring-electric-blue/30">
+      <div className="relative flex items-center gap-2 rounded-4xl border border-white/10 bg-deep-navy shadow-2xl duration-200 ease-linear transition-all focus-within:ring-2 focus-within:ring-electric-blue/30">
         {/* Textarea */}
         <textarea
           ref={textareaRef}
@@ -72,7 +72,7 @@ export function ChatInput({
           placeholder={placeholder}
           disabled={disabled || isLoading}
           rows={1}
-          className="flex-1 min-h-[56px] resize-none bg-transparent px-6 py-4 text-sm leading-relaxed font-medium tracking-normal text-soft-white placeholder:text-steel-gray focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1 min-h-[56px] resize-none px-6 py-4 text-sm leading-relaxed font-medium tracking-normal focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 text-soft-white placeholder:text-steel-gray"
         />
 
         {/* Attachment Button */}
@@ -91,7 +91,7 @@ export function ChatInput({
           type="button"
           onClick={handleSubmit}
           disabled={!message.trim() || disabled || isLoading}
-          className="mr-3 flex cursor-pointer h-9 w-9 items-center justify-center rounded-full bg-electric-blue text-soft-white duration-150 ease-linear transition-all hover:bg-electric-blue/80 disabled:bg-white/10 disabled:text-steel-gray disabled:cursor-not-allowed"
+          className="mr-3 flex cursor-pointer h-9 w-9 items-center justify-center rounded-full bg-electric-blue text-soft-white duration-150 ease-linear transition-all hover:bg-electric-blue/80 disabled:bg-white/10 disabled:text-steel-gray/60 disabled:cursor-not-allowed"
           aria-label="Send message"
         >
           <ArrowUp size={20} weight="bold" />

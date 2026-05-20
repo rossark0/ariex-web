@@ -11,7 +11,7 @@ interface AgreementViewerProps {
 export function AgreementViewer({ agreementId, onClose }: AgreementViewerProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="relative mx-4 flex h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl">
+      <div className="relative mx-4 flex h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-deep-navy shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/6 px-6 py-4">
           <div className="flex items-center gap-3">
@@ -96,7 +96,7 @@ export function AgreementViewer({ agreementId, onClose }: AgreementViewerProps) 
 
                 {/* Service Card 2 */}
                 <div className="rounded-xl border border-white/10 p-5 transition-colors hover:bg-white/4">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-electric-blue/15">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-white/8">
                     <FileText className="h-6 w-6 text-electric-blue" weight="bold" />
                   </div>
                   <h3 className="mb-2 font-semibold text-soft-white">Quarterly Consultations</h3>

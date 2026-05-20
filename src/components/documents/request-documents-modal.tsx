@@ -155,7 +155,7 @@ export function RequestDocumentsModal({
       {/* Modal Container */}
       <div
         className={cn(
-          'relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-surface p-6 shadow-2xl transition-all duration-200',
+          'relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-deep-navy p-6 shadow-2xl transition-all duration-200',
           !isClosing ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
         )}
       >
@@ -190,7 +190,7 @@ export function RequestDocumentsModal({
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="flex-1 rounded-lg border border-white/10 bg-graphite px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
+                className="flex-1 rounded-lg border border-white/10 bg-deep-navy px-3 py-2 text-sm text-soft-white placeholder:text-steel-gray focus:border-electric-blue/50 focus:ring-1 focus:ring-electric-blue/30 focus:outline-none"
                 placeholder="Type document name and press Enter..."
                 disabled={isLoading}
                 autoFocus
