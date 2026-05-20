@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowsClockwise, Check, Copy, Info, MagicWand, Trash } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowsClockwise, Check, Copy, DownloadSimple, Info, MagicWand, Trash } from '@phosphor-icons/react';
 import { Reveal } from '@/components/ui/reveal';
 import {
   computeScenario,
+  STRATEGIES,
   useScenarios,
   type Scenario,
   type StrategyId,
@@ -13,6 +14,7 @@ import {
 import { DEFAULT_TAX_YEAR, type ScenarioInputs } from '@/lib/tax/calculator';
 import { getClientById } from '@/lib/api/strategist.api';
 import { clientProfileToScenarioInputs } from '@/lib/tax/from-client-profile';
+import { downloadScenarioPdf } from '@/lib/tax/scenario-pdf';
 import { fetchClientAggregate } from '@/lib/tax/client-aggregate';
 import { sanitizePageContext } from '@/lib/ai/sanitize-pii';
 import { SidebarToggle } from '@/components/layout/sidebar-toggle';
@@ -126,7 +128,17 @@ export default function ScenarioWorkspacePage() {
 
   // ─── Handlers ────────────────────────────────────────────────────────
   const handleInputsChange = (next: ScenarioInputs) => {
-    setDraft(prev => (prev ? { ...prev, inputs: next } : prev));
+    setDraft(prev => {
+      if (!prev) return prev;
+      // Prune any enabled strategies that the new inputs make ineligible.
+      // Prevents the impact panel from silently dropping a "still-on" strategy
+      // and prevents the user from being stuck with a disabled tree button.
+      const stillEligible = prev.enabledStrategies.filter(id => {
+        const strat = STRATEGIES[id];
+        return strat ? strat.isApplicable(next) : false;
+      });
+      return { ...prev, inputs: next, enabledStrategies: stillEligible };
+    });
   };
 
   const handleToggleStrategy = (id: StrategyId) => {
@@ -280,6 +292,15 @@ export default function ScenarioWorkspacePage() {
     router.push('/strategist/scenarios');
   };
 
+  const handleDownloadPdf = () => {
+    if (!computation) return;
+    downloadScenarioPdf({
+      scenario: draft,
+      computation,
+      clientName: profileSync?.clientName,
+    });
+  };
+
   const handleCopySummary = async () => {
     if (!computation) return;
     const lines: string[] = [];
@@ -395,6 +416,18 @@ export default function ScenarioWorkspacePage() {
               <Copy weight="bold" className="h-4 w-4" />
             )}
             <span>{copied ? 'Copied' : 'Copy'}</span>
+          </button>
+
+          {/* PDF — client-ready deliverable */}
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            disabled={!computation}
+            title="Download a client-ready PDF proposal with citations, deadlines, cash deployed, and implementation checklist."
+            className="flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-steel-gray transition-colors duration-150 ease-linear hover:bg-white/8 hover:text-soft-white disabled:opacity-40"
+          >
+            <DownloadSimple weight="bold" className="h-4 w-4" />
+            <span>PDF</span>
           </button>
 
           {/* Destructive — icon-only */}
@@ -528,7 +561,7 @@ export default function ScenarioWorkspacePage() {
             )}
           </Reveal>
         </div>
-        <aside className="hidden w-[360px] shrink-0 overflow-y-auto lg:block">
+        <aside className="hidden w-90 shrink-0 overflow-y-auto lg:block">
           {computation && <ScenarioImpactPanel computation={computation} />}
         </aside>
       </div>

@@ -42,9 +42,23 @@ function MetricCountUp({
   );
 }
 
+const RISK_TONE: Record<'low' | 'medium' | 'high', { dot: string; label: string }> = {
+  low: { dot: 'bg-emerald-400', label: 'text-emerald-300' },
+  medium: { dot: 'bg-amber-400', label: 'text-amber-300' },
+  high: { dot: 'bg-red-400', label: 'text-red-300' },
+};
+
 export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
-  const { baseline, projected, totalAnnualSavings, overallConfidence, strategyImpacts, allAssumptions } =
-    computation;
+  const {
+    baseline,
+    projected,
+    totalAnnualSavings,
+    totalCashOutlay,
+    ineligibleEnabled,
+    overallConfidence,
+    strategyImpacts,
+    allAssumptions,
+  } = computation;
 
   const effectiveDelta = projected.effectiveRate - baseline.effectiveRate;
   const projectedRate = (projected.effectiveRate * 100).toFixed(1);
@@ -63,7 +77,38 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
           {baselineRate}% → {projectedRate}% effective rate
           {effectiveDelta < 0 ? '' : ''}
         </p>
+        {totalCashOutlay > 0 && (
+          <p className="mt-3 border-t border-white/6 pt-3 text-[11px] text-steel-gray">
+            Cash deployed:{' '}
+            <span className="font-medium tabular-nums text-soft-white">
+              {formatCurrency(totalCashOutlay)}
+            </span>{' '}
+            <span className="text-steel-gray/70">
+              (contributions, fees & purchases needed to implement)
+            </span>
+          </p>
+        )}
       </div>
+
+      {/* Ineligible warnings — strategies toggled on but not applicable */}
+      {ineligibleEnabled.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h3 className="text-[11px] font-medium uppercase tracking-wide text-amber-300">
+            Won&apos;t apply at current inputs
+          </h3>
+          <ul className="flex flex-col gap-2">
+            {ineligibleEnabled.map(x => (
+              <li
+                key={x.id}
+                className="rounded-xl border border-amber-500/25 bg-amber-500/8 p-4"
+              >
+                <p className="text-sm font-medium text-amber-200">{x.title}</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-soft-white/80">{x.reason}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Baseline vs projected */}
       <div className="grid grid-cols-2 gap-3">
@@ -108,35 +153,100 @@ export function ScenarioImpactPanel({ computation }: ScenarioImpactPanelProps) {
         </p>
       </div>
 
-      {/* Per-strategy breakdown */}
+      {/* Per-strategy breakdown — strategist-grade detail */}
       {strategyImpacts.length > 0 && (
         <section className="flex flex-col gap-2">
           <h3 className="text-[11px] font-medium uppercase tracking-wide text-steel-gray">
             Impact by strategy
           </h3>
           <ul className="flex flex-col gap-2">
-            {strategyImpacts.map(item => (
-              <li
-                key={item.id}
-                className="flex items-center justify-between gap-3 rounded-xl bg-surface px-4 py-3"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-soft-white">{item.title}</p>
-                  <p className="mt-0.5 text-[11px] uppercase tracking-wide text-steel-gray">
-                    {item.category} · {Math.round(item.confidence * 100)}% conf.
-                  </p>
-                </div>
-                <span
-                  className={cn(
-                    'shrink-0 text-sm font-medium tabular-nums',
-                    item.annualSavings > 0 ? 'text-emerald-300' : 'text-steel-gray'
+            {strategyImpacts.map(item => {
+              const risk = RISK_TONE[item.auditRisk];
+              return (
+                <li key={item.id} className="rounded-xl bg-surface p-4">
+                  {/* Title + savings */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-soft-white">{item.title}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] uppercase tracking-wide text-steel-gray">
+                        <span>{item.category}</span>
+                        <span className="text-steel-gray/40">·</span>
+                        <span>{Math.round(item.confidence * 100)}% conf</span>
+                        <span className="text-steel-gray/40">·</span>
+                        <span className={cn('flex items-center gap-1', risk.label)}>
+                          <span className={cn('h-1.5 w-1.5 rounded-full', risk.dot)} aria-hidden />
+                          {item.auditRisk} risk
+                        </span>
+                      </div>
+                    </div>
+                    <span
+                      className={cn(
+                        'shrink-0 text-base font-semibold tabular-nums',
+                        item.annualSavings > 0 ? 'text-emerald-300' : 'text-steel-gray'
+                      )}
+                    >
+                      {item.annualSavings > 0 ? '−' : ''}
+                      {formatCurrency(Math.max(0, item.annualSavings))}
+                    </span>
+                  </div>
+
+                  {/* Cash deployed */}
+                  {item.cashOutlay > 0 && (
+                    <div className="mt-3 flex items-baseline justify-between text-[11px]">
+                      <span className="text-steel-gray">Cash deployed</span>
+                      <span className="tabular-nums text-soft-white">
+                        {formatCurrency(item.cashOutlay)}
+                      </span>
+                    </div>
                   )}
-                >
-                  {item.annualSavings > 0 ? '-' : ''}
-                  {formatCurrency(Math.max(0, item.annualSavings))}
-                </span>
-              </li>
-            ))}
+
+                  {/* Authority + Deadline */}
+                  <div className="mt-3 border-t border-white/6 pt-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-steel-gray/80">
+                      Authority
+                    </p>
+                    <p className="mt-0.5 text-[11px] leading-relaxed text-soft-white/90">
+                      {item.authority.label}
+                    </p>
+                    {item.authority.detail && (
+                      <p className="mt-1 text-[11px] leading-relaxed text-steel-gray/80">
+                        {item.authority.detail}
+                      </p>
+                    )}
+                  </div>
+                  <div className="mt-2">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-steel-gray/80">
+                      Deadline
+                    </p>
+                    <p className="mt-0.5 text-[11px] leading-relaxed text-electric-blue/90">
+                      {item.deadline}
+                    </p>
+                  </div>
+
+                  {/* Next steps */}
+                  {item.nextSteps.length > 0 && (
+                    <div className="mt-3 border-t border-white/6 pt-3">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-steel-gray/80">
+                        Next steps
+                      </p>
+                      <ol className="mt-1.5 flex flex-col gap-1.5">
+                        {item.nextSteps.map((step, i) => (
+                          <li
+                            key={i}
+                            className="flex gap-2 text-[11px] leading-relaxed text-soft-white/85"
+                          >
+                            <span className="shrink-0 tabular-nums text-steel-gray/70">
+                              {i + 1}.
+                            </span>
+                            <span>{step}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

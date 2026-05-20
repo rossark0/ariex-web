@@ -67,6 +67,16 @@ export interface Strategy {
   assumptions: string[];
   /** 0–1 confidence in the impact estimate given typical caveats. */
   confidence: number;
+  /** IRC / Treasury Reg / form citation the strategist can quote. */
+  authority: { label: string; detail?: string };
+  /** Implementation deadline a strategist must work backward from. */
+  deadline: (year: TaxYear) => string;
+  /** Cash that actually leaves the client's account to implement (vs tax savings). */
+  cashOutlay: (inputs: ScenarioInputs) => number;
+  /** IRS scrutiny / documentation requirement level. */
+  auditRisk: 'low' | 'medium' | 'high';
+  /** Concrete steps the strategist must execute to implement. */
+  nextSteps: string[];
   /** Returns transformed inputs + a list of dynamic assumption strings. */
   apply: (inputs: ScenarioInputs) => {
     inputs: ScenarioInputs;
@@ -74,6 +84,8 @@ export interface Strategy {
   };
   /** Whether this strategy is applicable to the baseline (gates the UI). */
   isApplicable: (inputs: ScenarioInputs) => boolean;
+  /** Human-readable explanation when isApplicable returns false. */
+  ineligibleReason: (inputs: ScenarioInputs) => string | null;
 }
 
 /**
@@ -100,7 +112,25 @@ const sCorpElection: Strategy = {
     'Excludes the cost of running payroll and additional state-level S-Corp fees.',
   ],
   confidence: 0.78,
+  authority: {
+    label: 'IRC § 1361–1379 · Form 2553',
+    detail: 'Reasonable-compensation standard: Rev. Rul. 59-221; Watson v. Commissioner (8th Cir. 2012).',
+  },
+  deadline: year =>
+    `Form 2553 by March 15, ${year} (for current-year election) or within 75 days of entity formation.`,
+  cashOutlay: () => 1500,
+  auditRisk: 'medium',
+  nextSteps: [
+    'File Form 2553 with the IRS (March 15 cutoff for current year).',
+    'Set up payroll (Gusto / ADP) and run the reasonable W-2 salary year-round.',
+    'Document the reasonable-comp basis (industry data, role, hours) in a board memo.',
+    'Confirm state-level S-Corp recognition + any state franchise/excise filings.',
+  ],
   isApplicable: inputs => inputs.selfEmploymentIncome >= 60000,
+  ineligibleReason: inputs =>
+    inputs.selfEmploymentIncome < 60000
+      ? `Needs ≥ $60k SE income — at $${inputs.selfEmploymentIncome.toLocaleString()}, payroll + state fees (~$1,500/yr) likely exceed SE tax saved.`
+      : null,
   apply: inputs => {
     const salary = Math.round(inputs.selfEmploymentIncome * S_CORP_REASONABLE_SALARY_RATIO);
     const distribution = inputs.selfEmploymentIncome - salary;
@@ -135,7 +165,33 @@ const solo401k: Strategy = {
     'Contribution comes from SE income first, then W-2 wages if available.',
   ],
   confidence: 0.92,
+  authority: {
+    label: 'IRC § 401(k); Treas. Reg. 1.401(k)-1',
+    detail: 'Annual deferral limit per IRC § 402(g); SECURE 2.0 retroactive plan adoption permitted.',
+  },
+  deadline: year =>
+    `Adopt the plan by Dec 31, ${year}. Employee deferral elected by Dec 31. Fund by tax-filing deadline (incl. extensions).`,
+  cashOutlay: inputs => {
+    const year = resolveYear(inputs.year);
+    const limit = SOLO_401K_DEFERRAL_LIMIT[year];
+    const fromSe = Math.min(inputs.selfEmploymentIncome, limit);
+    const fromWages = Math.min(inputs.wages, limit - fromSe);
+    return fromSe + fromWages;
+  },
+  auditRisk: 'low',
+  nextSteps: [
+    'Adopt a Solo 401(k) plan document (Fidelity, Schwab, E*TRADE all offer free).',
+    'Open the Solo 401(k) custodian account.',
+    'Elect the year\'s deferral by Dec 31 (must be in writing).',
+    'Fund the contribution by the tax-filing deadline (April 15 + extensions).',
+  ],
   isApplicable: inputs => inputs.selfEmploymentIncome + inputs.wages >= 30000,
+  ineligibleReason: inputs => {
+    const total = inputs.selfEmploymentIncome + inputs.wages;
+    return total < 30000
+      ? `Needs ≥ $30k earned income — currently $${total.toLocaleString()} (W-2 + SE). Below this threshold the deferral is capped too low to move the tax needle.`
+      : null;
+  },
   apply: inputs => {
     const year = resolveYear(inputs.year);
     const limit = SOLO_401K_DEFERRAL_LIMIT[year];
@@ -175,7 +231,25 @@ const section179Vehicle: Strategy = {
     'Recapture exposure if business use drops below 50% in later years.',
   ],
   confidence: 0.6,
+  authority: {
+    label: 'IRC § 179; Treas. Reg. 1.179-1',
+    detail:
+      'SUV/heavy-truck rules: § 179(b)(5) cap (inflation-indexed annually for vehicles > 6,000 lb GVWR — verify current Rev. Proc. for the year of purchase). Recapture under § 179(d)(10) if business use drops below 50%.',
+  },
+  deadline: year => `Vehicle must be placed in service (titled, registered, used) by Dec 31, ${year}.`,
+  cashOutlay: () => 20000,
+  auditRisk: 'high',
+  nextSteps: [
+    'Verify vehicle GVWR > 6,000 lbs (manufacturer label on door jamb).',
+    'Document > 50% business use — start a contemporaneous mileage log (date, miles, purpose).',
+    'Place vehicle in service before Dec 31 (title transferred + actually used for business).',
+    'Retain purchase agreement, title, and mileage log for 6 years post-recapture window.',
+  ],
   isApplicable: inputs => inputs.selfEmploymentIncome >= 40000,
+  ineligibleReason: inputs =>
+    inputs.selfEmploymentIncome < 40000
+      ? `Needs ≥ $40k SE income — at $${inputs.selfEmploymentIncome.toLocaleString()}, the $20k cash outlay rarely justifies the tax savings; recapture risk if business use drops below 50%.`
+      : null,
   apply: inputs => ({
     inputs: {
       ...inputs,
@@ -200,7 +274,32 @@ const hsaContribution: Strategy = {
     'Contribution reduces SE income first, then W-2 wages.',
   ],
   confidence: 0.95,
+  authority: {
+    label: 'IRC § 223; Treas. Reg. 1.223-1',
+    detail:
+      'Requires enrollment in an HDHP (deductible/OOP minimums per Rev. Proc. annually). Triple-tax advantage: deductible going in, growth tax-free, distributions tax-free for qualified medical (§ 213(d)).',
+  },
+  deadline: year =>
+    `Contribute by April 15, ${year + 1} (the year-${year} return due date). Plan elections via cafeteria plan must be made before each pay period.`,
+  cashOutlay: inputs => {
+    const year = resolveYear(inputs.year);
+    const limit =
+      inputs.filingStatus === 'married_filing_jointly'
+        ? HSA_LIMIT_FAMILY[year]
+        : HSA_LIMIT_SELF[year];
+    const fromSe = Math.min(inputs.selfEmploymentIncome, limit);
+    const fromWages = Math.min(inputs.wages, limit - fromSe);
+    return fromSe + fromWages;
+  },
+  auditRisk: 'low',
+  nextSteps: [
+    'Confirm HDHP enrollment for every month being contributed for.',
+    'Open an HSA at a custodian that allows investment (Fidelity HSA is fee-free).',
+    'Contribute up to the year\'s limit by April 15 of the following year.',
+    'Save medical receipts indefinitely — reimburse yourself later, tax-free.',
+  ],
   isApplicable: () => true,
+  ineligibleReason: () => null,
   apply: inputs => {
     const year = resolveYear(inputs.year);
     const limit =
@@ -263,9 +362,27 @@ export interface ScenarioComputation {
     confidence: number;
     assumptions: string[];
     dynamicAssumptions: string[];
+    /** Cash that leaves the client's account to implement this strategy. */
+    cashOutlay: number;
+    /** annualSavings − cashOutlay. Negative = strategy costs more than it saves in year 1. */
+    netBenefit: number;
+    /** IRC / Reg / form citation. */
+    authority: { label: string; detail?: string };
+    /** Implementation deadline text resolved for the scenario year. */
+    deadline: string;
+    /** IRS scrutiny / documentation rigor. */
+    auditRisk: 'low' | 'medium' | 'high';
+    /** Concrete implementation checklist. */
+    nextSteps: string[];
   }>;
   /** Combined annual savings (baseline.totalTax - projected.totalTax). */
   totalAnnualSavings: number;
+  /** Total cash the client must put up to implement all enabled strategies. */
+  totalCashOutlay: number;
+  /** totalAnnualSavings − totalCashOutlay. The real year-1 benefit. */
+  netBenefit: number;
+  /** Strategies currently enabled but not applicable (with reason). Surface as warnings. */
+  ineligibleEnabled: Array<{ id: StrategyId; title: string; reason: string }>;
   /** Weighted overall confidence across enabled strategies. */
   overallConfidence: number;
   /** All assumptions concatenated for display. */
@@ -284,14 +401,26 @@ export function computeScenario(scenario: Scenario): ScenarioComputation {
   let runningInputs = scenario.inputs;
   let runningResult = baseline;
   const strategyImpacts: ScenarioComputation['strategyImpacts'] = [];
+  const ineligibleEnabled: ScenarioComputation['ineligibleEnabled'] = [];
   const allAssumptions: string[] = [];
+  const scenarioYear =
+    scenario.inputs.year && SOLO_401K_DEFERRAL_LIMIT[scenario.inputs.year]
+      ? scenario.inputs.year
+      : DEFAULT_TAX_YEAR;
 
   for (const id of scenario.enabledStrategies) {
     const strat = STRATEGIES[id];
     if (!strat) continue;
-    if (!strat.isApplicable(runningInputs)) continue;
+    if (!strat.isApplicable(runningInputs)) {
+      const reason = strat.ineligibleReason(runningInputs);
+      if (reason) {
+        ineligibleEnabled.push({ id: strat.id, title: strat.title, reason });
+      }
+      continue;
+    }
 
     const before = runningResult;
+    const cashOutlay = strat.cashOutlay(runningInputs);
     const { inputs: nextInputs, dynamicAssumptions } = strat.apply(runningInputs);
     runningInputs = nextInputs;
     runningResult = computeTax(runningInputs);
@@ -305,12 +434,20 @@ export function computeScenario(scenario: Scenario): ScenarioComputation {
       confidence: strat.confidence,
       assumptions: strat.assumptions,
       dynamicAssumptions,
+      cashOutlay,
+      netBenefit: annualSavings - cashOutlay,
+      authority: strat.authority,
+      deadline: strat.deadline(scenarioYear),
+      auditRisk: strat.auditRisk,
+      nextSteps: strat.nextSteps,
     });
     allAssumptions.push(...dynamicAssumptions);
   }
 
   const projected = runningResult;
   const totalAnnualSavings = baseline.totalTax - projected.totalTax;
+  const totalCashOutlay = strategyImpacts.reduce((acc, s) => acc + s.cashOutlay, 0);
+  const netBenefit = totalAnnualSavings - totalCashOutlay;
 
   // Combined confidence: weighted by individual savings magnitude. Falls back
   // to a simple average when no strategies produce savings.
@@ -338,6 +475,9 @@ export function computeScenario(scenario: Scenario): ScenarioComputation {
     projected,
     strategyImpacts,
     totalAnnualSavings,
+    totalCashOutlay,
+    netBenefit,
+    ineligibleEnabled,
     overallConfidence,
     allAssumptions,
   };

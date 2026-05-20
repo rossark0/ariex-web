@@ -180,7 +180,8 @@ export function ScenarioTree({
             title={
               isApplicable
                 ? undefined
-                : 'Not applicable based on current baseline (e.g., insufficient SE income).'
+                : strategy.ineligibleReason(scenario.inputs) ??
+                  'Not applicable at current baseline.'
             }
           >
             <style>{`
